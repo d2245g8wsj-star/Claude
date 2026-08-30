@@ -1,0 +1,190 @@
+# CREST — IndieWave Audio
+
+A converter and clipper. Drive a signal into a ceiling it cannot cross, choose
+how the corner is rounded, and optionally run the result through a converter
+style output stage with word length, dither and noise shaping.
+
+![The Crest editor](docs/ui.png)
+
+Built with JUCE 8. Ships as **VST3** and **Standalone** on Windows, macOS and
+Linux, plus **AU** on macOS.
+
+---
+
+## What it does
+
+A clipper trades crest factor for level: it removes the tips of the peaks so the
+whole signal can sit higher without the peaks going over. The two things that
+decide whether that sounds like loudness or like damage are *where* the ceiling
+sits and *how* the transfer curve turns the corner. Crest gives you both, and
+shows you the curve you are actually using.
+
+Around that sits the part most clippers leave out: the stage a converter would
+have added anyway. A little level dependent softening on the way in, and a real
+quantiser with dither on the way out.
+
+### Signal flow
+
+```
+in ─┬─────────────────────────── dry (delay matched to the wet path) ──┐
+    │                                                                  │
+    └─ input trim ─ ÷ceiling ─┬─ upsample ─ colour ─ shaper ─ downsample ┴─ mix ─ output trim ─ quantiser ─ out
+                              │                     ▲
+                              │           character · knee · bias
+                              └─ stereo link: one gain from the louder channel
+```
+
+Everything between the input trim and the downsampler runs in a normalised
+domain where **1.0 is the ceiling**, which is what makes the ceiling exact: the
+shaper cannot produce a value above 1.0 by construction, at any setting.
+
+---
+
+## Controls
+
+### Gain staging
+
+| Control | Range | What it does |
+| --- | --- | --- |
+| **Input** | −12 … +30 dB | How hard the signal is driven into the ceiling. This is the amount of clipping. |
+| **Ceiling** | −24 … 0 dBFS | The level the output is not allowed to cross. |
+| **Output** | −24 … +12 dB | Final trim, after the mix. |
+| **Mix** | 0 … 100 % | Parallel clipping. The dry path is delay matched, so this nulls properly. |
+
+### Character
+
+| Control | What it does |
+| --- | --- |
+| **SLICE** | True hard clip. Instant corner, widest harmonic spread. |
+| **GLASS** | Sine knee. Short corner, bright. |
+| **EDGE** | Cubic knee. Reaches the ceiling at a finite level, so it still clips flat. |
+| **SILK** | Tanh knee. Smooth and asymptotic, closer to compression. |
+| **TUBE** | Arctan knee. The slowest corner, weighted towards low order harmonics. |
+| **Knee** | 0 % is a hard corner for every character. At 100 % the knee opens down to a quarter of the ceiling. |
+| **Bias** | Moves the positive and negative thresholds apart. This is the even harmonic control. |
+| **Colour** | The analogue input stage: level dependent treble softening and a small asymmetric non‑linearity. At 100 % the softening tops out around −1.5 dB at 20 kHz. |
+
+Below the knee threshold the gain is exactly 1.0 — not approximately. Every
+character keeps that guarantee, and the offline checks assert it.
+
+### Converter
+
+| Control | What it does |
+| --- | --- |
+| **OS** | Oversampling: off, 2x, 4x, 8x, 16x. Linear phase half band FIR, with the passband loss measured and compensated at load, so switching factors does not change the level. |
+| **WORD** | Output word length: off, 24, 20 or 16 bit. |
+| **DITHER** | Off, TPDF, or TPDF with second order noise shaping. |
+
+### Switches
+
+| Switch | What it does |
+| --- | --- |
+| **AUTO** | Level matches the output against the input trim, for A/B without a loudness bias. |
+| **TP SAFE** | Catches the overshoot the downsampling filter can ring past the ceiling. Leave it on unless you are measuring the filter. |
+| **DELTA** | Monitors wet minus dry: only the material the clipper is removing. Silent when nothing is being clipped. |
+| **LINK** | Derives one gain from the louder of the two channels and applies it to both, so hard panned peaks are not pulled toward the centre. |
+| **BYPASS** | Latency compensated, so bypassing does not shift the signal in time. |
+
+---
+
+## Measured behaviour
+
+From `crest_tests`, at 48 kHz:
+
+| Oversampling | Latency | Gain error below the ceiling | THD+N below the ceiling |
+| --- | --- | --- | --- |
+| off | 0 smp | 0.0000 dB | −153.6 dB |
+| 2x | 49 smp | 0.0001 dB | −145.3 dB |
+| 4x | 61 smp | 0.0001 dB | −143.4 dB |
+| 8x | 65 smp | 0.0001 dB | −143.0 dB |
+| 16x | 67 smp | 0.0001 dB | −142.9 dB |
+
+The ceiling is held at every oversampling factor with the input driven 24 dB
+into it, at ceilings from 0 to −12 dBFS.
+
+---
+
+## Building
+
+Requires CMake 3.22+ and a C++20 compiler.
+
+```bash
+# JUCE is fetched automatically...
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+# ...or point at a local checkout
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_PATH=/path/to/JUCE
+
+cmake --build build --parallel
+```
+
+The VST3 lands in `build/Crest_artefacts/Release/VST3/Crest.vst3`.
+
+On Linux, JUCE needs the usual development headers:
+
+```bash
+sudo apt install libx11-dev libxext-dev libxrandr-dev libxinerama-dev \
+                 libxcursor-dev libfreetype-dev libfontconfig1-dev \
+                 libasound2-dev libcurl4-openssl-dev
+```
+
+### Offline checks
+
+```bash
+cmake -B build -DCREST_BUILD_TESTS=ON
+cmake --build build --target crest_tests --parallel
+./build/crest_tests_artefacts/Release/crest_tests
+```
+
+These assert the properties that break silently: the ceiling holding at every
+setting, transparency below the knee, latency matching what the plugin reports
+to the host, sample aligned bypass, a silent delta below the ceiling, finite
+output across sample rates and block sizes, and state surviving a save.
+
+### Editor snapshot
+
+Layout regressions do not fail a compile, so the editor can be painted to a PNG
+without opening a window:
+
+```bash
+cmake -B build -DCREST_BUILD_TOOLS=ON
+cmake --build build --target crest_shot --parallel
+./build/crest_shot_artefacts/Release/crest_shot docs/ui.png 880
+```
+
+---
+
+## Layout of the source
+
+```
+src/dsp/Shaper.h        the five transfer curves, shared by the DSP and the curve display
+src/dsp/ColorStage.h    the analogue input stage and the DC blocker
+src/dsp/Quantizer.h     word length, dither, noise shaping
+src/dsp/Meters.h        lock free metering between the audio thread and the editor
+src/PluginProcessor.*   parameters, gain staging, oversampling, the audio chain
+src/gui/                painted controls: knob, meters, transfer view, segmented control, switch
+src/PluginEditor.*      layout, scaled as a whole from one design size
+tests/Tests.cpp         the offline checks
+tools/Snapshot.cpp      offscreen editor render
+```
+
+The curve display and the audio thread call the same `Shaper`, so the picture
+cannot drift away from what you are hearing.
+
+---
+
+## Originality
+
+Crest is an independent implementation. The transfer curves, the colour and
+quantiser stages, the gain staging, the metering and the entire interface were
+written for this project. No code, DSP model, graphics, preset data or interface
+element was taken from, decompiled from, or derived from any other product.
+
+Converter emulation and clipping are categories of audio processing, not
+protected designs — but a specific implementation of one is protected, so the
+implementation here is its own.
+
+## Licence
+
+See `LICENSE`. JUCE and the VST3 SDK carry their own terms, and those terms
+decide how you are allowed to distribute a build — read `NOTICE.md` before you
+ship a binary.

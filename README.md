@@ -89,7 +89,8 @@ character keeps that guarantee, and the offline checks assert it.
 
 ## Measured behaviour
 
-From `crest_tests`, at 48 kHz:
+From `crest_tests`, at 48 kHz. The same numbers come out of the Linux build
+and the macOS universal build, which is checked in CI on every push:
 
 | Oversampling | Latency | Gain error below the ceiling | THD+N below the ceiling |
 | --- | --- | --- | --- |

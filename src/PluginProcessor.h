@@ -8,6 +8,7 @@
 #include "dsp/Quantizer.h"
 #include "dsp/LowSplit.h"
 #include "dsp/ClipEnvelope.h"
+#include "dsp/HarmonicStage.h"
 #include "dsp/Meters.h"
 
 namespace crest
@@ -24,6 +25,8 @@ namespace pid
     inline constexpr const char* adapt    = "adapt";
     inline constexpr const char* bias     = "bias";
     inline constexpr const char* colour   = "colour";
+    inline constexpr const char* harmonics = "harmonics";
+    inline constexpr const char* series    = "series";
     inline constexpr const char* sidechain = "sclpf";
     inline constexpr const char* mix      = "mix";
     inline constexpr const char* output   = "output";
@@ -122,6 +125,8 @@ private:
     juce::AudioParameterFloat*  adaptParam    { nullptr };
     juce::AudioParameterFloat*  biasParam     { nullptr };
     juce::AudioParameterFloat*  colourParam   { nullptr };
+    juce::AudioParameterFloat*  harmonicsParam { nullptr };
+    juce::AudioParameterFloat*  seriesParam    { nullptr };
     juce::AudioParameterFloat*  sidechainParam { nullptr };
     juce::AudioParameterFloat*  mixParam      { nullptr };
     juce::AudioParameterFloat*  outputParam   { nullptr };
@@ -151,7 +156,8 @@ private:
     Shaper                   shaper;
     std::array<ColorStage, 2> colour;
     std::array<LowSplit, 2>   lowSplit;
-    std::array<ClipEnvelope, 2> clipEnvelope;
+    std::array<ClipEnvelope, 2>  clipEnvelope;
+    std::array<HarmonicStage, 2> harmonics;
     std::array<DCBlocker, 2>  dcBlockers;
     std::array<Quantizer, 2>  quantizers;
 

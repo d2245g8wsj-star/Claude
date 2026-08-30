@@ -68,6 +68,8 @@ shaper cannot produce a value above 1.0 by construction, at any setting.
 | **Knee** | The corner for *sustained* material. 0 % is a square corner for every character — there is no separate "hard clip" mode because at zero knee all four already are one. At 100 % the knee opens down to a quarter of the ceiling. |
 | **Adapt** | How much harder a *transient* is clipped than the knee setting. See below. |
 | **Bias** | Moves the positive and negative thresholds apart. This is the even harmonic control. |
+| **Harmonics** | How much harmonic content is generated from the material the clipper is working on. Silent while nothing is clipping. |
+| **Series** | Even ↔ odd. Even order is the octave: thickness. Odd order is the fifth: density and edge. |
 | **Colour** | The analogue input stage: level dependent treble softening and a small asymmetric non‑linearity. At 100 % the softening tops out around −1.5 dB at 20 kHz. |
 | **SC LPF** | Off, or 20 Hz … 800 Hz. Hands the low frequency part of the clipping back, so the bass keeps its shape while everything above the cutoff still clips. See below. |
 
@@ -117,6 +119,41 @@ on transients.
 
 The scope shows both curves — the bright trace is what the audio thread is
 applying right now, the ghost behind it is the curve as dialled in.
+
+### Harmonics
+
+Two decisions separate this from a saturation stage bolted on the front.
+
+**When.** It is scaled by the same envelope that drives Adapt, so it colours
+sustained material, leaves transients alone, and produces nothing at all while
+the clipper is idle. The plugin's one hard promise stays intact: below the
+ceiling the signal comes out exactly as it went in, whatever these controls are
+set to. The colour is a property of the clipping rather than an effect running
+alongside it.
+
+**Where in the spectrum.** Harmonics of the low and low mid are heard as weight
+and body; harmonics of the top octaves are heard as fizz. The reason most
+saturation controls sound cheap is that they distort the whole spectrum.
+Generation here is fed from a band limited copy, so the series lands where it is
+musical and nothing is added above it.
+
+The stage removes the offset from its own output rather than leaving it to the
+DC blocker downstream, so the main path keeps its phase response at any setting.
+And it runs before the shaper, so the ceiling is still guaranteed by
+construction — whatever it adds, the clipper is still the last word on level.
+
+Measured at 48 kHz on a 217 Hz tone driven 8 dB into the ceiling, harmonic
+level relative to the fundamental:
+
+| Series | 2nd | 3rd |
+| --- | --- | --- |
+| Harmonics off | — | −20.2 dBc |
+| **EVEN** | **−21.8 dBc** | −20.3 dBc |
+| **ODD** | — | **−14.7 dBc** |
+
+A symmetric clipper on a sine produces odd harmonics only, so the second
+harmonic is a clean place to watch the even series arrive — and to see that the
+odd setting does not touch it.
 
 ### SC LPF
 
@@ -304,6 +341,7 @@ src/dsp/Quantizer.h     word length, dither, noise shaping
 src/dsp/Meters.h        lock free metering between the audio thread and the editor
 src/PluginProcessor.*   parameters, gain staging, oversampling, the audio chain
 src/dsp/ClipEnvelope.h  how long the clipper has been working, which drives Adapt
+src/dsp/HarmonicStage.h the band limited harmonic generator
 src/dsp/LowSplit.h      the sidechain low pass
 src/gui/Hardware.*      the panel: brushed metal, machined knobs, lamps, ladders, scope
 src/PluginEditor.*      layout, scaled as a whole from one design size

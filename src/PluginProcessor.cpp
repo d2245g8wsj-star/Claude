@@ -80,6 +80,23 @@ juce::AudioProcessorValueTreeState::ParameterLayout CrestProcessor::createParame
                                                         })));
     }
 
+    layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::harmonics, 1 }, "Harmonics",
+                                          juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 25.0f,
+                                          Attr().withLabel ("%").withStringFromValueFunction (percentString)));
+
+    layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::series, 1 }, "Even / Odd",
+                                          juce::NormalisableRange<float> (-100.0f, 100.0f, 1.0f), 0.0f,
+                                          Attr().withStringFromValueFunction (
+                                              [] (float value, int) -> juce::String
+                                              {
+                                                  if (value < -95.0f) return "EVEN";
+                                                  if (value >  95.0f) return "ODD";
+                                                  if (std::abs (value) < 5.0f) return "BOTH";
+
+                                                  return (value < 0.0f ? "EVEN " : "ODD ")
+                                                       + juce::String (juce::roundToInt (std::abs (value)));
+                                              })));
+
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::mix, 1 }, "Mix",
                                           juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 100.0f,
                                           Attr().withLabel ("%").withStringFromValueFunction (percentString)));
@@ -119,6 +136,8 @@ CrestProcessor::CrestProcessor()
     adaptParam      = findParameter<juce::AudioParameterFloat>  (pid::adapt);
     biasParam       = findParameter<juce::AudioParameterFloat>  (pid::bias);
     colourParam     = findParameter<juce::AudioParameterFloat>  (pid::colour);
+    harmonicsParam  = findParameter<juce::AudioParameterFloat>  (pid::harmonics);
+    seriesParam     = findParameter<juce::AudioParameterFloat>  (pid::series);
     sidechainParam  = findParameter<juce::AudioParameterFloat>  (pid::sidechain);
     mixParam        = findParameter<juce::AudioParameterFloat>  (pid::mix);
     outputParam     = findParameter<juce::AudioParameterFloat>  (pid::output);
@@ -178,6 +197,7 @@ void CrestProcessor::prepareToPlay (double sampleRate, int maximumExpectedSample
     for (auto& c : colour)     c.prepare (sampleRate);
     for (auto& l : lowSplit)   l.prepare (sampleRate);
     for (auto& e : clipEnvelope) e.prepare (sampleRate);
+    for (auto& h : harmonics)    h.prepare (sampleRate);
     for (auto& d : dcBlockers) d.prepare (sampleRate);
 
     for (size_t i = 0; i < quantizers.size(); ++i)
@@ -204,6 +224,7 @@ void CrestProcessor::releaseResources()
     for (auto& c : colour)     c.reset();
     for (auto& l : lowSplit)   l.reset();
     for (auto& e : clipEnvelope) e.reset();
+    for (auto& h : harmonics)    h.reset();
     for (auto& d : dcBlockers) d.reset();
     for (auto& q : quantizers) q.reset();
 
@@ -297,6 +318,9 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
         for (auto& e : clipEnvelope)
             e.prepare (osRate);
 
+        for (auto& h : harmonics)
+            h.prepare (osRate);
+
         dryDelay.reset();
     }
 
@@ -361,10 +385,15 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     // actually be heard. Adapt pulls transients back towards a square one,
     // because a few samples taken squarely off a peak are inaudible and keep
     // the punch that a rounded corner would smear.
-    const auto adaptedKnee = [baseKnee, adaptation] (float density)
+    const auto adaptedKnee = [baseKnee, adaptation] (float shapedDensity)
     {
-        return baseKnee * (1.0f - adaptation * (1.0f - ClipEnvelope::shape (density)));
+        return baseKnee * (1.0f - adaptation * (1.0f - shapedDensity));
     };
+
+    const auto harmonicAmount = harmonicsParam->get() * 0.01f;
+
+    for (auto& h : harmonics)
+        h.setParameters (harmonicAmount, seriesParam->get() * 0.01f);
 
     displayThresholdPos.store (shaper.thresholdPos, std::memory_order_relaxed);
     displayThresholdNeg.store (shaper.thresholdNeg, std::memory_order_relaxed);
@@ -399,6 +428,9 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     // hundredth of a percent produces an offset far below the noise floor of
     // any word length this plugin can output, which is not worth a high pass
     // and the phase rotation that comes with it.
+    // Harmonics are deliberately absent from this test: the stage removes the
+    // offset from its own output, so the main path never needs a high pass on
+    // its account and keeps its phase response untouched.
     const auto needsDcBlocker = std::abs (biasParam->get()) > 0.01f || colourAmount > 0.0001f;
 
     if (needsDcBlocker && ! dcBlockerActive)
@@ -449,8 +481,16 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
         for (int n = 0; n < numOsSamples; ++n)
         {
-            const auto l = colour[0].process (left[n]);
-            const auto r = colour[1].process (right[n]);
+            const auto rawL = colour[0].process (left[n]);
+            const auto rawR = colour[1].process (right[n]);
+
+            // The envelope reads the pair before the harmonics are added, so
+            // the stage it scales cannot feed back into its own trigger.
+            const auto density = ClipEnvelope::shape (clipEnvelope[0].process (
+                juce::jmax (std::abs (rawL), std::abs (rawR)) > triggerLevel));
+
+            const auto l = harmonics[0].process (rawL, density);
+            const auto r = harmonics[1].process (rawR, density);
 
             // Clipping the loudest of the pair and applying the resulting gain
             // to both keeps the stereo image where it was; clipping the two
@@ -458,11 +498,7 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
             const auto peak = juce::jmax (std::abs (l), std::abs (r));
 
             if (adaptive)
-            {
-                const auto density = clipEnvelope[0].process (peak > triggerLevel);
-
                 shaper.setParameters (mode, adaptedKnee (density), biasAmount);
-            }
 
             auto gain = 1.0f;
 
@@ -502,15 +538,15 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
             for (int n = 0; n < numOsSamples; ++n)
             {
-                const auto x = colour[static_cast<size_t> (ch)].process (samples[n]);
+                const auto raw = colour[static_cast<size_t> (ch)].process (samples[n]);
+
+                const auto density = ClipEnvelope::shape (
+                    clipEnvelope[static_cast<size_t> (ch)].process (std::abs (raw) > triggerLevel));
+
+                const auto x = harmonics[static_cast<size_t> (ch)].process (raw, density);
 
                 if (adaptive)
-                {
-                    const auto density = clipEnvelope[static_cast<size_t> (ch)]
-                                             .process (std::abs (x) > triggerLevel);
-
                     shaper.setParameters (mode, adaptedKnee (density), biasAmount);
-                }
 
                 const auto y = shaper.process (x);
 
@@ -535,7 +571,7 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     oversampler.processSamplesDown (block);
 
     {
-        const auto density = adaptive ? clipEnvelope[0].value() : 0.0f;
+        const auto density = ClipEnvelope::shape (clipEnvelope[0].value());
 
         displayDensity.store (density, std::memory_order_relaxed);
         displayKnee.store (adaptive ? adaptedKnee (density) : baseKnee, std::memory_order_relaxed);

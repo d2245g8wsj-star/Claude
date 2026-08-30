@@ -332,6 +332,7 @@ void testTransparencyAndLatency()
         setParam (processor, crest::pid::output,  0.0f);
         setParam (processor, crest::pid::knee,    0.0f);
         setParam (processor, crest::pid::colour,  0.0f);
+        setParam (processor, crest::pid::harmonics, 0.0f);
         setParam (processor, crest::pid::bias,    0.0f);
         setParam (processor, crest::pid::mix,     100.0f);
         setParam (processor, crest::pid::word,    0.0f);
@@ -422,6 +423,145 @@ void testTransparencyAndLatency()
     }
 }
 
+void testHarmonics()
+{
+    section ("Harmonics");
+
+    constexpr double sampleRate = 48000.0;
+    constexpr int    blockSize  = 256;
+    constexpr int    window     = 8192;
+    constexpr int    settle     = 8192;
+
+    constexpr double fundamental = sampleRate * 37.0 / (double) window;   // 216.8 Hz, exact bin
+
+    auto configure = [&] (crest::CrestProcessor& processor, float amount, float series,
+                          float drive, float ceiling)
+    {
+        processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
+        processor.prepareToPlay (sampleRate, blockSize);
+
+        setParam (processor, crest::pid::os,        2.0f);
+        setParam (processor, crest::pid::mode,      1.0f);
+        setParam (processor, crest::pid::knee,      0.0f);
+        setParam (processor, crest::pid::adapt,     0.0f);
+        setParam (processor, crest::pid::bias,      0.0f);
+        setParam (processor, crest::pid::colour,    0.0f);
+        setParam (processor, crest::pid::sidechain, 15.0f);
+        setParam (processor, crest::pid::mix,       100.0f);
+        setParam (processor, crest::pid::word,      0.0f);
+        setParam (processor, crest::pid::input,     drive);
+        setParam (processor, crest::pid::ceiling,   ceiling);
+        setParam (processor, crest::pid::output,    0.0f);
+        setParam (processor, crest::pid::harmonics, amount);
+        setParam (processor, crest::pid::series,    series);
+    };
+
+    // ---------------------------------------------------------------------
+    // The stage is scaled by the clip envelope, so with nothing reaching the
+    // ceiling it must produce nothing at all - at any setting. This is what
+    // keeps the transparency promise true whatever the colour controls say.
+    // ---------------------------------------------------------------------
+    for (float series : { -100.0f, 0.0f, 100.0f })
+    {
+        crest::CrestProcessor processor;
+        configure (processor, 100.0f, series, 0.0f, 0.0f);
+
+        juce::AudioBuffer<float> reference (2, settle + window + 512);
+        fillSine (reference, sampleRate, fundamental, 0.25f);
+
+        juce::AudioBuffer<float> buffer;
+        buffer.makeCopyOf (reference);
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto latency = processor.getLatencySamples();
+
+        float worst = 0.0f;
+
+        for (int n = settle; n < settle + window; ++n)
+            worst = std::max (worst, std::abs (buffer.getSample (0, n)
+                                               - reference.getSample (0, n - latency)));
+
+        check (worst < 1.0e-4f,
+               "harmonics at series " + juce::String (series, 0)
+                   + " coloured a signal below the ceiling by " + juce::String (worst, 9));
+    }
+
+    // ---------------------------------------------------------------------
+    // Generated before the shaper, so the ceiling is still guaranteed.
+    // ---------------------------------------------------------------------
+    for (float ceiling : { 0.0f, -6.0f })
+    {
+        crest::CrestProcessor processor;
+        configure (processor, 100.0f, -100.0f, 18.0f, ceiling);
+
+        juce::AudioBuffer<float> buffer (2, 16384);
+        fillSine (buffer, sampleRate, fundamental, 0.9f);
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto peakDb = juce::Decibels::gainToDecibels (
+            buffer.getMagnitude (2048, buffer.getNumSamples() - 2048));
+
+        check (peakDb <= ceiling + 0.1f,
+               "harmonics pushed the output past the ceiling: " + juce::String (peakDb, 3)
+                   + " dB against " + juce::String (ceiling, 1));
+    }
+
+    // ---------------------------------------------------------------------
+    // What the series control actually does. A symmetric clipper on a sine
+    // produces odd harmonics only, so the second harmonic is a clean place to
+    // watch the even series arrive.
+    // ---------------------------------------------------------------------
+    auto measure = [&] (float amount, float series)
+    {
+        crest::CrestProcessor processor;
+        configure (processor, amount, series, 8.0f, -0.3f);
+
+        juce::AudioBuffer<float> buffer (2, settle + window + 512);
+        fillSine (buffer, sampleRate, fundamental, 0.5f);
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto first  = fitSine (buffer, 0, settle, window, fundamental,       sampleRate);
+        const auto second = fitSine (buffer, 0, settle, window, fundamental * 2.0, sampleRate);
+        const auto third  = fitSine (buffer, 0, settle, window, fundamental * 3.0, sampleRate);
+
+        struct Result { double secondDb, thirdDb; };
+
+        return Result { juce::Decibels::gainToDecibels (second.amplitude / first.amplitude, -160.0),
+                        juce::Decibels::gainToDecibels (third.amplitude  / first.amplitude, -160.0) };
+    };
+
+    const auto none = measure (  0.0f,    0.0f);
+    const auto even = measure (100.0f, -100.0f);
+    const auto odd  = measure (100.0f,  100.0f);
+
+    std::cout << "  2nd / 3rd harmonic relative to the fundamental:\n"
+              << "    off        " << juce::String (none.secondDb, 1) << " / "
+                                   << juce::String (none.thirdDb, 1) << " dBc\n"
+              << "    even       " << juce::String (even.secondDb, 1) << " / "
+                                   << juce::String (even.thirdDb, 1) << " dBc\n"
+              << "    odd        " << juce::String (odd.secondDb, 1) << " / "
+                                   << juce::String (odd.thirdDb, 1) << " dBc" << std::endl;
+
+    check (even.secondDb > none.secondDb + 12.0,
+           "the even series did not add a second harmonic ("
+               + juce::String (none.secondDb, 1) + " then " + juce::String (even.secondDb, 1) + " dBc)");
+
+    check (even.secondDb > odd.secondDb + 12.0,
+           "the series control does not separate even from odd ("
+               + juce::String (even.secondDb, 1) + " vs " + juce::String (odd.secondDb, 1) + " dBc)");
+
+    check (odd.thirdDb > none.thirdDb + 1.0,
+           "the odd series did not add a third harmonic ("
+               + juce::String (none.thirdDb, 1) + " then " + juce::String (odd.thirdDb, 1) + " dBc)");
+
+    check (even.secondDb < -12.0,
+           "the even series is louder than a colour control should be ("
+               + juce::String (even.secondDb, 1) + " dBc)");
+}
+
 void testAdaptiveClipping()
 {
     section ("Adaptive clipping");
@@ -479,6 +619,7 @@ void testAdaptiveClipping()
         setParam (processor, crest::pid::knee,      60.0f);    // the corner for sustained material
         setParam (processor, crest::pid::bias,      0.0f);
         setParam (processor, crest::pid::colour,    0.0f);
+        setParam (processor, crest::pid::harmonics, 0.0f);
         setParam (processor, crest::pid::mix,       100.0f);
         setParam (processor, crest::pid::word,      0.0f);
         setParam (processor, crest::pid::sidechain, 15.0f);
@@ -644,6 +785,7 @@ void testSidechain()
         setParam (processor, crest::pid::adapt,     0.0f);
         setParam (processor, crest::pid::bias,      0.0f);
         setParam (processor, crest::pid::colour,    0.0f);
+        setParam (processor, crest::pid::harmonics, 0.0f);
         setParam (processor, crest::pid::mix,       100.0f);
         setParam (processor, crest::pid::word,      0.0f);
         setParam (processor, crest::pid::input,     drive);
@@ -964,6 +1106,7 @@ int main()
     testCeilingIsHonoured();
     testTransparencyAndLatency();
     testAdaptiveClipping();
+    testHarmonics();
     testSidechain();
     testBypassAndDelta();
     testStabilityAcrossConfigurations();

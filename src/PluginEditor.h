@@ -8,7 +8,7 @@ namespace crest
 
 /** Design size. A 3:1 panel, laid out once and scaled as a whole, so the
     proportions of a piece of rack hardware survive any window size. */
-inline constexpr int designWidth  = 1468;
+inline constexpr int designWidth  = 1644;
 inline constexpr int designHeight = 460;
 
 class CrestEditor final : public juce::AudioProcessorEditor,
@@ -45,7 +45,8 @@ private:
         hw::ClipMeter   clipMeter;
 
         hw::Knob inputKnob, ceilingKnob, outputKnob;
-        hw::Knob kneeKnob, adaptKnob, biasKnob, colourKnob, sidechainKnob, mixKnob;
+        hw::Knob kneeKnob, adaptKnob, biasKnob;
+        hw::Knob colourKnob, harmonicsKnob, seriesKnob, sidechainKnob, mixKnob;
 
         hw::RotarySwitch characterSwitch;
         hw::LampBank     osBank, wordBank, ditherBank;

@@ -104,6 +104,55 @@ into it, at ceilings from 0 to −12 dBFS.
 
 ---
 
+## Downloads
+
+There is no download link until a build has run. Two ways to get one:
+
+**Every push builds macOS.** The `macOS` workflow builds a universal
+(arm64 + x86_64) VST3, AU and standalone on every push, runs the offline
+checks, and uploads an installable zip. Open the run under the repository's
+**Actions** tab and download `Crest-macOS-universal` from the artifact list at
+the bottom. Run artifacts expire after 90 days and can only be downloaded by
+someone signed in to GitHub with access to the repository.
+
+**Tag a version for a public release.** Pushing a `v*` tag attaches the same
+zip to a GitHub release, which anyone can download without an account:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+### Installing on macOS
+
+```
+Crest.vst3       ->  ~/Library/Audio/Plug-Ins/VST3/
+Crest.component  ->  ~/Library/Audio/Plug-Ins/Components/
+```
+
+Logic and GarageBand cache their plugin scan, so after installing the AU:
+`killall -9 AudioComponentRegistrar`, then reopen the host.
+
+### Signing
+
+Without signing secrets the workflow signs ad-hoc. That is enough to load the
+plugin on the machine that built it, but macOS quarantines anything downloaded
+from the internet and an ad-hoc signature does not clear that — whoever
+installs it has to run `xattr -dr com.apple.quarantine` on the bundles first.
+The workflow ships a note in the zip saying so.
+
+To ship something that installs without that step, add three repository
+secrets and the workflow signs with the hardened runtime instead:
+
+| Secret | What it is |
+| --- | --- |
+| `MACOS_CERTIFICATE` | Developer ID Application certificate, exported as `.p12` and base64 encoded |
+| `MACOS_CERTIFICATE_PASSWORD` | The password set when exporting the `.p12` |
+| `MACOS_SIGNING_IDENTITY` | e.g. `Developer ID Application: Your Name (TEAMID)` |
+
+That needs an Apple Developer account. Notarisation — Apple's server side
+scan, which is what finally silences Gatekeeper for a downloaded plugin — is a
+further step on top of signing and is not wired up yet.
+
 ## Building
 
 Requires CMake 3.22+ and a C++20 compiler.

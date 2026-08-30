@@ -4,7 +4,17 @@ on:
   push:
     branches: ["**"]
     tags: ["v*"]
+    # macOS runners bill at ten times the rate of Linux ones, so a change that
+    # cannot affect the binary does not start one.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
   workflow_dispatch:
 
 jobs:

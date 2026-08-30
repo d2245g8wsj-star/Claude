@@ -1,0 +1,148 @@
+name: macOS
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Universal build
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
+            -DCREST_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel 3
+
+      - name: Offline checks
+        run: ./build/crest_tests_artefacts/Release/crest_tests
+
+      - name: Confirm both architectures are present
+        run: |
+          binary="build/Crest_artefacts/Release/VST3/Crest.vst3/Contents/MacOS/Crest"
+          lipo -info "$binary"
+          lipo -info "$binary" | grep -q arm64
+          lipo -info "$binary" | grep -q x86_64
+
+      # A signature is required before macOS will load a plugin at all. Without
+      # signing secrets this is an ad-hoc one, which is enough to run the build
+      # locally but not enough for anyone else's machine - see the note in the
+      # packaging step.
+      - name: Sign
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+
+          bundles=(
+            "build/Crest_artefacts/Release/VST3/Crest.vst3"
+            "build/Crest_artefacts/Release/AU/Crest.component"
+            "build/Crest_artefacts/Release/Standalone/Crest.app"
+          )
+
+          if [ -z "${CERTIFICATE:-}" ]; then
+            echo "No signing certificate configured - signing ad-hoc."
+            for bundle in "${bundles[@]}"; do
+              codesign --force --deep --sign - --timestamp=none "$bundle"
+            done
+            echo "SIGNED_FOR_DISTRIBUTION=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          # Import the Developer ID certificate into a keychain that only
+          # exists for this run.
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(uuidgen)"
+
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 900 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+
+          echo "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -k "$keychain" -P "$CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$password" "$keychain" > /dev/null
+          security list-keychain -d user -s "$keychain" login.keychain-db
+
+          rm -f "$RUNNER_TEMP/certificate.p12"
+
+          for bundle in "${bundles[@]}"; do
+            codesign --force --deep --options runtime --timestamp \
+              --sign "$SIGNING_IDENTITY" "$bundle"
+            codesign --verify --strict --verbose=2 "$bundle"
+          done
+
+          echo "SIGNED_FOR_DISTRIBUTION=true" >> "$GITHUB_ENV"
+
+      - name: Package
+        run: |
+          set -euo pipefail
+
+          staging="$RUNNER_TEMP/Crest"
+          mkdir -p "$staging"
+
+          cp -R build/Crest_artefacts/Release/VST3/Crest.vst3      "$staging/"
+          cp -R build/Crest_artefacts/Release/AU/Crest.component   "$staging/"
+          cp -R build/Crest_artefacts/Release/Standalone/Crest.app "$staging/"
+          cp README.md LICENSE NOTICE.md "$staging/"
+
+          if [ "${SIGNED_FOR_DISTRIBUTION:-false}" != "true" ]; then
+            cat > "$staging/READ ME FIRST.txt" <<'NOTE'
+          This build is signed ad-hoc, not with a Developer ID certificate.
+
+          macOS quarantines anything downloaded from the internet, and an
+          ad-hoc signature is not enough to clear that. Before installing,
+          strip the quarantine flag:
+
+              xattr -dr com.apple.quarantine Crest.vst3 Crest.component Crest.app
+
+          Install by copying:
+
+              Crest.vst3       ->  ~/Library/Audio/Plug-Ins/VST3/
+              Crest.component  ->  ~/Library/Audio/Plug-Ins/Components/
+              Crest.app        ->  /Applications/ (optional)
+
+          Logic and GarageBand cache their plugin scan; after installing the
+          AU, run  killall -9 AudioComponentRegistrar  and reopen the host.
+          NOTE
+          fi
+
+          # ditto rather than zip: it preserves the bundle structure and the
+          # signature, which a plain zip can strip.
+          ditto -c -k --sequesterRsrc --keepParent "$staging" "$RUNNER_TEMP/Crest-macOS.zip"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crest-macOS-universal
+          path: ${{ runner.temp }}/Crest-macOS.zip
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mv "$RUNNER_TEMP/Crest-macOS.zip" "$RUNNER_TEMP/Crest-$version-macOS.zip"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Crest $version" \
+            --generate-notes \
+            "$RUNNER_TEMP/Crest-$version-macOS.zip" \
+            || gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP/Crest-$version-macOS.zip" --clobber

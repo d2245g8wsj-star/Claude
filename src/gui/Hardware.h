@@ -114,16 +114,44 @@ public:
     void mouseEnter (const juce::MouseEvent&) override { hover = true;  repaint(); }
     void mouseExit  (const juce::MouseEvent&) override { hover = false; repaint(); }
 
+    /** Drops the indicator and centres the legend, for narrow placements. */
+    void setCompact (bool shouldBeCompact) { compact = shouldBeCompact; repaint(); }
+
 private:
     juce::RangedAudioParameter& parameter;
     juce::String captionText;
     juce::Colour lamp;
+    bool compact { false };
     bool on    { false };
     bool hover { false };
 
     juce::ParameterAttachment attachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LampButton)
+};
+
+/** A momentary button, for the things that are actions rather than states. */
+class PushButton final : public juce::Component,
+                         public juce::SettableTooltipClient
+{
+public:
+    PushButton (const juce::String& caption, std::function<void()> onClick);
+
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override { held = false; repaint(); }
+    void mouseEnter (const juce::MouseEvent&) override { hover = true;  repaint(); }
+    void mouseExit  (const juce::MouseEvent&) override { hover = false; repaint(); }
+
+    void setLit (bool shouldBeLit) { if (lit != shouldBeLit) { lit = shouldBeLit; repaint(); } }
+    void setEnabledLook (bool shouldBeEnabled) { if (available != shouldBeEnabled) { available = shouldBeEnabled; repaint(); } }
+
+private:
+    juce::String          captionText;
+    std::function<void()> callback;
+    bool held { false }, hover { false }, lit { false }, available { true };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PushButton)
 };
 
 /** A row of small lamps for the short choice parameters. */

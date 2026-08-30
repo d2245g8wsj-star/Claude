@@ -505,6 +505,8 @@ void LampButton::paint (juce::Graphics& g)
 
     auto lens = bounds.reduced (2.5f);
 
+    const auto legend = compact ? lens : lens.withTrimmedLeft (18.0f).withTrimmedRight (6.0f);
+
     if (on)
     {
         juce::ColourGradient glow (lamp.withAlpha (0.85f), lens.getCentreX(), lens.getCentreY(),
@@ -530,7 +532,9 @@ void LampButton::paint (juce::Graphics& g)
     }
 
     // The legend is printed on the lens, so it lights up with it.
-    drawEngraved (g, captionText, lens, juce::Justification::horizontallyCentred, 10.0f, 1.5f,
+    drawEngraved (g, captionText, legend,
+                  compact ? juce::Justification::horizontallyCentred : juce::Justification::left,
+                  compact ? 9.5f : 10.0f, 1.5f,
                   on ? juce::Colours::black.withAlpha (0.78f) : engravedDim);
 
     // Glass highlight across the top of the lens
@@ -538,6 +542,59 @@ void LampButton::paint (juce::Graphics& g)
                                 juce::Colours::transparentWhite, 0.0f, lens.getCentreY(), false);
     g.setGradientFill (sheen);
     g.fillRoundedRectangle (lens.withHeight (lens.getHeight() * 0.5f), 2.0f);
+}
+
+// ---------------------------------------------------------------------------
+
+PushButton::PushButton (const juce::String& caption, std::function<void()> onClick)
+    : captionText (caption), callback (std::move (onClick))
+{
+}
+
+void PushButton::mouseDown (const juce::MouseEvent&)
+{
+    if (! available)
+        return;
+
+    held = true;
+    repaint();
+
+    if (callback)
+        callback();
+}
+
+void PushButton::paint (juce::Graphics& g)
+{
+    auto bounds = getLocalBounds().toFloat();
+
+    drawRecess (g, bounds, 3.0f);
+
+    auto face = bounds.reduced (2.5f);
+
+    const auto colour = lit ? lampAmber : juce::Colour (0xff242729);
+
+    juce::ColourGradient fill (colour.brighter (held ? 0.0f : 0.22f), 0.0f, face.getY(),
+                               colour.darker (held ? 0.35f : 0.12f), 0.0f, face.getBottom(), false);
+    g.setGradientFill (fill);
+    g.fillRoundedRectangle (face, 2.0f);
+
+    if (hover && available && ! lit)
+    {
+        g.setColour (lampAmber.withAlpha (0.14f));
+        g.fillRoundedRectangle (face, 2.0f);
+    }
+
+    drawEngraved (g, captionText, face, juce::Justification::horizontallyCentred, 9.5f, 1.4f,
+                  lit ? juce::Colours::black.withAlpha (0.78f)
+                      : (available ? engraved.withAlpha (0.85f) : engravedDim.withAlpha (0.4f)));
+
+    if (! held)
+    {
+        juce::ColourGradient sheen (juce::Colours::white.withAlpha (0.13f), 0.0f, face.getY(),
+                                    juce::Colours::transparentWhite, 0.0f, face.getCentreY(), false);
+        g.setGradientFill (sheen);
+        g.fillRoundedRectangle (face.withHeight (face.getHeight() * 0.5f), 2.0f);
+    }
 }
 
 // ---------------------------------------------------------------------------

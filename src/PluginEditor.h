@@ -24,16 +24,25 @@ public:
 private:
     void timerCallback() override;
 
+    /** Reveal holds the answer on screen for a few seconds, then draws again. */
+    int revealSecondsLeft { 0 };
+
     /** Everything at design scale; the editor only scales this. */
     class Panel final : public juce::Component
     {
     public:
         explicit Panel (CrestProcessor&);
 
+        std::function<void()> onReveal;
+
         void paint (juce::Graphics&) override;
         void resized() override;
 
         void setStatusText (const juce::String&);
+        void setBlindText (const juce::String&);
+
+        hw::LampButton  matchLamp, blindLamp;
+        hw::PushButton  revealButton;
 
     private:
         CrestProcessor& processor;
@@ -52,7 +61,7 @@ private:
         hw::LampBank     osBank, wordBank, ditherBank;
         hw::LampButton   autoLamp, tpSafeLamp, deltaLamp, linkLamp, bypassLamp;
 
-        juce::String statusText;
+        juce::String statusText, blindText;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Panel)
     };

@@ -212,9 +212,43 @@ ceiling clamp, so the trade is visible rather than something to discover.
 | **TP SAFE** | Catches the overshoot the downsampling filter can ring past the ceiling. Leave it on unless you are measuring the filter. |
 | **DELTA** | Monitors wet minus dry: only the material the clipper is removing. Silent when nothing is being clipped. |
 | **LINK** | Derives one gain from the louder of the two channels and applies it to both, so hard panned peaks are not pulled toward the centre. |
+| **MATCH** | Level matches the two sides of a comparison, so switching changes what you hear and not how loud it is. |
+| **BLIND** | The bypass switch still selects a side; it stops saying which. REVEAL shows the answer for three seconds and then draws again. |
 | **BYPASS** | Latency compensated, so bypassing does not shift the signal in time. |
 
 ---
+
+### Honest comparison
+
+Louder sounds better. Every clipper on the market lets you fool yourself with
+that, and most of them make it easy: the processed side is louder by
+construction, so of course it wins.
+
+**MATCH** measures both sides continuously to BS.1770 and applies the
+difference to whichever one you are monitoring, so switching changes the sound
+and not the level. **BLIND** goes further: the switch still selects a side, it
+just stops telling you which one is processed. REVEAL shows the answer for three
+seconds, then draws again so the next comparison starts from nothing known.
+
+The two sides are time aligned as well as level matched, so the switch compares
+two sounds rather than two positions.
+
+Measured, with the plugin trimmed 10 dB up:
+
+| | Integrated |
+| --- | --- |
+| Processed | −10.30 LUFS |
+| Unprocessed | −20.30 LUFS |
+| Unprocessed, matched | −10.30 LUFS |
+
+The loudness engine is ITU-R BS.1770-4 with the filter coefficients derived
+from the analogue prototypes rather than copied from the 48 kHz table in the
+specification, so it stays calibrated at 44.1, 96 and 192 kHz too. The checks
+assert the specification's own calibration point — a 1 kHz tone at −20 dBFS
+reads −20 LUFS — at all four rates.
+
+Momentary, short term and integrated loudness are shown along the bottom of the
+panel, with integrated gated in the two stages the specification requires.
 
 ## Measured behaviour
 

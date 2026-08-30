@@ -79,8 +79,14 @@ CrestEditor::Panel::Panel (CrestProcessor& p)
       tpSafeLamp (p.apvts, pid::tpSafe,   "TP SAFE"),
       deltaLamp  (p.apvts, pid::delta,    "DELTA"),
       linkLamp   (p.apvts, pid::link,     "LINK"),
-      bypassLamp (p.apvts, pid::bypass,   "BYPASS", hw::lampRed)
+      bypassLamp (p.apvts, pid::bypass,   "BYPASS", hw::lampRed),
+      matchLamp  (p.apvts, pid::match,    "MATCH",  hw::lampGreen),
+      blindLamp  (p.apvts, pid::blind,    "BLIND",  hw::lampGreen),
+      revealButton ("REVEAL", [this] { if (onReveal != nullptr) onReveal(); })
 {
+    matchLamp.setCompact (true);
+    blindLamp.setCompact (true);
+
     inputKnob  .setDiameter (100.0f);
     ceilingKnob.setDiameter (100.0f);
 
@@ -94,7 +100,8 @@ CrestEditor::Panel::Panel (CrestProcessor& p)
              &colourKnob, &harmonicsKnob, &seriesKnob, &sidechainKnob, &mixKnob,
              &characterSwitch,
              &osBank, &wordBank, &ditherBank,
-             &autoLamp, &tpSafeLamp, &deltaLamp, &linkLamp, &bypassLamp })
+             &autoLamp, &tpSafeLamp, &deltaLamp, &linkLamp, &bypassLamp,
+             &matchLamp, &blindLamp, &revealButton })
     {
         addAndMakeVisible (child);
     }
@@ -107,6 +114,15 @@ void CrestEditor::Panel::setStatusText (const juce::String& text)
 
     statusText = text;
     repaint (getLocalBounds().removeFromBottom (30));
+}
+
+void CrestEditor::Panel::setBlindText (const juce::String& text)
+{
+    if (blindText == text)
+        return;
+
+    blindText = text;
+    repaint (686, 316, 190, 18);
 }
 
 void CrestEditor::Panel::resized()
@@ -128,7 +144,11 @@ void CrestEditor::Panel::resized()
     biasKnob       .setBounds ( 594, 124,  88, 138);
 
     scope    .setBounds (690,  88, 178, 178);
-    clipMeter.setBounds (690, 276, 178,  46);
+    clipMeter.setBounds (690, 274, 178,  42);
+
+    matchLamp   .setBounds (690, 334, 57, 24);
+    blindLamp   .setBounds (749, 334, 57, 24);
+    revealButton.setBounds (808, 334, 60, 24);
 
     colourKnob   .setBounds ( 876, 124,  88, 138);
     harmonicsKnob.setBounds ( 964, 124,  88, 138);
@@ -239,6 +259,11 @@ void CrestEditor::Panel::paint (juce::Graphics& g)
         hw::drawScrew (g, corner, 7.5f, corner.x < 100.0f ? 0.6f : -0.4f);
     }
 
+    // ------------------------------------------------------- blind readout
+    hw::drawEngraved (g, blindText, juce::Rectangle<float> (690.0f, 318.0f, 178.0f, 14.0f),
+                      juce::Justification::horizontallyCentred, 9.0f, 1.6f,
+                      blindText.contains ("PROCESSED") ? hw::lampAmber : hw::lampGreen);
+
     // -------------------------------------------------------------- status
     hw::drawEngraved (g, statusText,
                       juce::Rectangle<float> (0.0f, 432.0f, bounds.getWidth(), 16.0f),
@@ -278,6 +303,8 @@ CrestEditor::CrestEditor (CrestProcessor& p)
 {
     setLookAndFeel (&lookAndFeel);
     addAndMakeVisible (panel);
+
+    panel.onReveal = [this] { revealSecondsLeft = 12; };   // three seconds at four hertz
 
     setResizable (true, true);
 
@@ -321,15 +348,60 @@ void CrestEditor::timerCallback()
     const auto rate    = processor.getSampleRate();
     const auto latency = processor.getLatencySamples();
 
+    auto lufs = [] (float value)
+    {
+        return value <= -99.0f ? juce::String ("--.-") : juce::String (value, 1);
+    };
+
     juce::String status;
-    status << juce::String (rate / 1000.0, 1) << " kHz   .   LATENCY " << latency << " SMP";
+    status << "M " << lufs (processor.displayMomentary.load())
+           << "   S " << lufs (processor.displayShortTerm.load())
+           << "   I " << lufs (processor.displayIntegrated.load()) << " LUFS";
+
+    const auto match = processor.displayMatchDb.load();
+
+    if (std::abs (match) > 0.05f)
+        status << "   .   MATCH " << juce::String (match, 1) << " DB";
+
+    status << "   .   " << juce::String (rate / 1000.0, 1) << " kHz   .   LATENCY " << latency << " SMP";
 
     if (rate > 0.0)
         status << " / " << juce::String (1000.0 * latency / rate, 2) << " MS";
 
-    status << "   .   CREST v" << JucePlugin_VersionString;
-
     panel.setStatusText (status);
+
+    // ---- blind comparison state
+    const auto blind = processor.apvts.getRawParameterValue (pid::blind)->load() > 0.5f;
+
+    if (! blind)
+    {
+        revealSecondsLeft = 0;
+        panel.revealButton.setLit (false);
+        panel.revealButton.setEnabledLook (false);
+        panel.setBlindText ({});
+        return;
+    }
+
+    panel.revealButton.setEnabledLook (true);
+
+    const auto onB = processor.apvts.getRawParameterValue (pid::bypass)->load() > 0.5f;
+
+    if (revealSecondsLeft > 0)
+    {
+        panel.revealButton.setLit (true);
+        panel.setBlindText (processor.blindInverted.load() ? "B IS PROCESSED" : "A IS PROCESSED");
+
+        if (--revealSecondsLeft == 0)
+        {
+            // A new draw, so the next comparison starts from nothing known.
+            processor.reshuffleBlind();
+            panel.revealButton.setLit (false);
+        }
+    }
+    else
+    {
+        panel.setBlindText (juce::String ("LISTENING TO ") + (onB ? "B" : "A"));
+    }
 }
 
 } // namespace crest

@@ -14,6 +14,7 @@
 #include "dsp/Shaper.h"
 #include "dsp/Quantizer.h"
 #include "dsp/ClipEnvelope.h"
+#include "dsp/Loudness.h"
 
 #include <cmath>
 #include <iostream>
@@ -562,6 +563,156 @@ void testHarmonics()
                + juce::String (even.secondDb, 1) + " dBc)");
 }
 
+void testLoudnessAndComparison()
+{
+    section ("Loudness and honest comparison");
+
+    constexpr double sampleRate = 48000.0;
+    constexpr int    blockSize  = 512;
+
+    // ---------------------------------------------------------------------
+    // The specification's own calibration: a 1 kHz sine at -20 dBFS in both
+    // channels reads -20 LUFS. If this is wrong, every number downstream of
+    // it is wrong too.
+    // ---------------------------------------------------------------------
+    for (const auto rate : { 44100.0, 48000.0, 96000.0, 192000.0 })
+    {
+        crest::LoudnessMeter meter;
+        meter.prepare (rate, 2);
+
+        const auto length = (int) (rate * 4.0);
+
+        juce::AudioBuffer<float> buffer (2, length);
+        fillSine (buffer, rate, 1000.0, 0.1f);        // -20 dBFS
+
+        meter.process (buffer.getArrayOfReadPointers(), 2, length);
+
+        const auto momentary  = meter.momentary();
+        const auto integrated = meter.integrated();
+
+        check (std::abs (momentary - -20.0f) < 0.6f,
+               juce::String (rate, 0) + " Hz: momentary reads "
+                   + juce::String (momentary, 2) + " LUFS on a -20 LUFS tone");
+
+        check (std::abs (integrated - -20.0f) < 0.6f,
+               juce::String (rate, 0) + " Hz: integrated reads "
+                   + juce::String (integrated, 2) + " LUFS on a -20 LUFS tone");
+    }
+
+    {
+        crest::LoudnessMeter meter;
+        meter.prepare (sampleRate, 2);
+
+        juce::AudioBuffer<float> silence (2, (int) sampleRate);
+        silence.clear();
+        meter.process (silence.getArrayOfReadPointers(), 2, silence.getNumSamples());
+
+        check (meter.momentary() < -90.0f,
+               "silence reads " + juce::String (meter.momentary(), 1) + " LUFS");
+    }
+
+    std::cout << "  K weighting calibrated at 44.1, 48, 96 and 192 kHz" << std::endl;
+
+    // ---------------------------------------------------------------------
+    // Loudness match. With the plugin trimmed 10 dB up, switching to the
+    // unprocessed side must not change how loud the comparison is.
+    // ---------------------------------------------------------------------
+    auto renderComparison = [&] (bool bypass, bool match)
+    {
+        crest::CrestProcessor processor;
+        processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
+        processor.prepareToPlay (sampleRate, blockSize);
+
+        setParam (processor, crest::pid::os,        1.0f);
+        setParam (processor, crest::pid::input,     0.0f);
+        setParam (processor, crest::pid::ceiling,   0.0f);
+        setParam (processor, crest::pid::output,    10.0f);    // the whole point
+        setParam (processor, crest::pid::harmonics, 0.0f);
+        setParam (processor, crest::pid::colour,    0.0f);
+        setParam (processor, crest::pid::word,      0.0f);
+        setParam (processor, crest::pid::match,     match  ? 1.0f : 0.0f);
+        setParam (processor, crest::pid::bypass,    bypass ? 1.0f : 0.0f);
+
+        juce::AudioBuffer<float> buffer (2, (int) (sampleRate * 6.0));
+        fillSine (buffer, sampleRate, 1000.0, 0.1f);
+
+        runBlocks (processor, buffer, blockSize);
+
+        // Measure only the last second, once the three second window is full.
+        const auto from = buffer.getNumSamples() - (int) sampleRate;
+
+        crest::LoudnessMeter meter;
+        meter.prepare (sampleRate, 2);
+
+        const float* pointers[2] { buffer.getReadPointer (0) + from,
+                                   buffer.getReadPointer (1) + from };
+
+        meter.process (pointers, 2, (int) sampleRate);
+
+        return meter.integrated();
+    };
+
+    const auto processed   = renderComparison (false, false);
+    const auto unmatched   = renderComparison (true,  false);
+    const auto matched     = renderComparison (true,  true);
+
+    std::cout << "  A/B loudness: processed " << juce::String (processed, 2)
+              << ", unprocessed " << juce::String (unmatched, 2)
+              << ", unprocessed matched " << juce::String (matched, 2) << " LUFS" << std::endl;
+
+    check (std::abs (unmatched - processed) > 8.0f,
+           "the comparison was already level matched without the control ("
+               + juce::String (processed, 2) + " vs " + juce::String (unmatched, 2) + " LUFS)");
+
+    check (std::abs (matched - processed) < 0.5f,
+           "loudness match left " + juce::String (matched - processed, 2)
+               + " dB between the two sides");
+
+    // ---------------------------------------------------------------------
+    // Blind comparison: the switch still selects a side, it just stops saying
+    // which. Off, it must behave exactly as before.
+    // ---------------------------------------------------------------------
+    {
+        int inverted = 0;
+
+        for (int attempt = 0; attempt < 200; ++attempt)
+        {
+            crest::CrestProcessor processor;
+            processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
+            processor.prepareToPlay (sampleRate, blockSize);
+            setParam (processor, crest::pid::blind, 1.0f);
+
+            juce::AudioBuffer<float> buffer (2, blockSize);
+            fillSine (buffer, sampleRate, 1000.0, 0.1f);
+            runBlocks (processor, buffer, blockSize);
+
+            if (processor.blindInverted.load())
+                ++inverted;
+        }
+
+        check (inverted > 60 && inverted < 140,
+               "blind assignment is not evenly drawn: " + juce::String (inverted) + " of 200");
+
+        crest::CrestProcessor processor;
+        processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
+        processor.prepareToPlay (sampleRate, blockSize);
+        setParam (processor, crest::pid::blind, 1.0f);
+
+        juce::AudioBuffer<float> buffer (2, blockSize);
+        fillSine (buffer, sampleRate, 1000.0, 0.1f);
+        runBlocks (processor, buffer, blockSize);
+
+        setParam (processor, crest::pid::blind, 0.0f);
+        runBlocks (processor, buffer, blockSize);
+
+        check (! processor.blindInverted.load(),
+               "leaving blind mode did not restore the switch to meaning what it says");
+
+        std::cout << "  blind assignment drawn " << inverted << " of 200, and cleared on exit"
+                  << std::endl;
+    }
+}
+
 void testAdaptiveClipping()
 {
     section ("Adaptive clipping");
@@ -1105,6 +1256,7 @@ int main()
     testQuantizer();
     testCeilingIsHonoured();
     testTransparencyAndLatency();
+    testLoudnessAndComparison();
     testAdaptiveClipping();
     testHarmonics();
     testSidechain();

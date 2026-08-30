@@ -9,6 +9,7 @@
 #include "dsp/LowSplit.h"
 #include "dsp/ClipEnvelope.h"
 #include "dsp/HarmonicStage.h"
+#include "dsp/Loudness.h"
 #include "dsp/Meters.h"
 
 namespace crest
@@ -37,6 +38,8 @@ namespace pid
     inline constexpr const char* tpSafe   = "tpsafe";
     inline constexpr const char* delta    = "delta";
     inline constexpr const char* link     = "link";
+    inline constexpr const char* match    = "match";
+    inline constexpr const char* blind    = "blind";
     inline constexpr const char* bypass   = "bypass";
 }
 
@@ -79,6 +82,12 @@ public:
 
     juce::AudioProcessorParameter* getBypassParameter() const override { return bypassParameter; }
 
+    /** Re-draws which side is which. Called from the editor after a reveal. */
+    void reshuffleBlind()
+    {
+        blindInverted.store (juce::Random::getSystemRandom().nextBool(), std::memory_order_relaxed);
+    }
+
     juce::AudioProcessorValueTreeState apvts;
     MeterSource                        meters;
 
@@ -98,6 +107,16 @@ public:
         transient, 1 = as sustained. The scope reads the knee so the curve on
         screen is the curve being applied. */
     std::atomic<float> displayDensity { 0.0f };
+
+    /** Which side of a blind comparison is the processed one. Deliberately not
+        a parameter: a host automation lane would give the answer away. */
+    std::atomic<bool>  blindInverted { false };
+
+    std::atomic<float> displayMomentary  { -100.0f };
+    std::atomic<float> displayShortTerm  { -100.0f };
+    std::atomic<float> displayIntegrated { -100.0f };
+    std::atomic<float> displayMatchDb    { 0.0f };
+
     std::atomic<float> displayKnee    { 0.25f };
     std::atomic<float> appliedOversamplingGain { 1.0f };
 
@@ -113,6 +132,7 @@ private:
     }
 
     void updateOversamplingLatency();
+    void publishLoudness (bool monitoringUnprocessed);
 
     /** Measures what a full up/down round trip does to the level, so switching
         oversampling factor does not also change the gain. */
@@ -137,6 +157,8 @@ private:
     juce::AudioParameterBool*   tpSafeParam   { nullptr };
     juce::AudioParameterBool*   deltaParam    { nullptr };
     juce::AudioParameterBool*   linkParam     { nullptr };
+    juce::AudioParameterBool*   matchParam    { nullptr };
+    juce::AudioParameterBool*   blindParam    { nullptr };
     juce::AudioParameterBool*   bypassParameter { nullptr };
 
     // One oversampler per factor, all prepared up front, so switching the
@@ -165,10 +187,15 @@ private:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> postGain { 1.0f };
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> makeupGain { 1.0f };
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> osCorrection { 1.0f };
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> matchGain { 1.0f };
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear>         mixAmount { 1.0f };
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> trimGain { 1.0f };
 
-    juce::AudioBuffer<float> dryBuffer;
+    juce::AudioBuffer<float> dryBuffer, monitorBuffer;
+
+    LoudnessMeter processedLoudness, unprocessedLoudness;
+
+    bool wasBlind { false };
 
     bool dcBlockerActive { false };
     bool sidechainActive { false };

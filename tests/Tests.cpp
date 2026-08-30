@@ -421,6 +421,176 @@ void testTransparencyAndLatency()
     }
 }
 
+void testSidechain()
+{
+    section ("Sidechain low pass");
+
+    constexpr double sampleRate = 48000.0;
+    constexpr int    blockSize  = 256;
+    constexpr int    window     = 8192;
+    constexpr int    settle     = 4096;
+
+    constexpr double frequency = sampleRate * 10.0 / (double) window;   // 58.6 Hz, an exact bin
+
+    auto configure = [&] (crest::CrestProcessor& processor, float cutoff, float drive, float ceiling)
+    {
+        processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
+        processor.prepareToPlay (sampleRate, blockSize);
+
+        setParam (processor, crest::pid::os,        2.0f);
+        setParam (processor, crest::pid::mode,      0.0f);    // hard clip, the worst case
+        setParam (processor, crest::pid::knee,      0.0f);
+        setParam (processor, crest::pid::bias,      0.0f);
+        setParam (processor, crest::pid::colour,    0.0f);
+        setParam (processor, crest::pid::mix,       100.0f);
+        setParam (processor, crest::pid::word,      0.0f);
+        setParam (processor, crest::pid::input,     drive);
+        setParam (processor, crest::pid::ceiling,   ceiling);
+        setParam (processor, crest::pid::output,    0.0f);
+        setParam (processor, crest::pid::sidechain, cutoff);
+    };
+
+    // ---------------------------------------------------------------------
+    // The filter runs on the clipper's difference signal, which is zero when
+    // nothing is being clipped. So no cutoff, however high, may colour a
+    // signal that stays below the ceiling.
+    // ---------------------------------------------------------------------
+    for (float cutoff : { 15.0f, 60.0f, 200.0f, 800.0f })
+    {
+        crest::CrestProcessor processor;
+        configure (processor, cutoff, 0.0f, 0.0f);
+
+        juce::AudioBuffer<float> reference (2, settle + window + 512);
+        fillSine (reference, sampleRate, frequency, 0.25f);     // -12 dBFS, never clips
+
+        juce::AudioBuffer<float> buffer;
+        buffer.makeCopyOf (reference);
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto latency = processor.getLatencySamples();
+
+        float worst = 0.0f;
+
+        for (int n = settle; n < settle + window; ++n)
+            worst = std::max (worst, std::abs (buffer.getSample (0, n)
+                                               - reference.getSample (0, n - latency)));
+
+        check (worst < 1.0e-4f,
+               "SC at " + juce::String (cutoff, 0) + " Hz colours a signal below the ceiling by "
+                   + juce::String (worst, 9));
+    }
+
+    // ---------------------------------------------------------------------
+    // What the control is actually for: a bass note sharing the signal with
+    // brighter material. The clipper flattens the peaks, which the low end
+    // dominates, and the low end loses level and shape as a result. Opening
+    // the sidechain should hand that level back while the rest still clips.
+    // ---------------------------------------------------------------------
+    constexpr double highFrequency = sampleRate * 341.0 / (double) window;   // 1998 Hz, an exact bin
+    constexpr float  lowLevel  = 0.5f;
+    constexpr float  highLevel = 0.25f;
+    constexpr float  driveDb   = 12.0f;
+
+    auto measureLowBandLoss = [&] (float cutoff, float drive, bool tpSafe)
+    {
+        crest::CrestProcessor processor;
+        configure (processor, cutoff, drive, -0.3f);
+        setParam (processor, crest::pid::tpSafe, tpSafe ? 1.0f : 0.0f);
+
+        juce::AudioBuffer<float> buffer (2, settle + window + 512);
+
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            for (int n = 0; n < buffer.getNumSamples(); ++n)
+            {
+                const auto t = (double) n / sampleRate;
+                buffer.setSample (ch, n,
+                    lowLevel  * (float) std::sin (juce::MathConstants<double>::twoPi * frequency * t)
+                  + highLevel * (float) std::sin (juce::MathConstants<double>::twoPi * highFrequency * t));
+            }
+        }
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto fit = fitSine (buffer, 0, settle, window, frequency, sampleRate);
+
+        // Where the bass would have come out had nothing touched it.
+        const auto intended = (double) lowLevel * juce::Decibels::decibelsToGain (drive);
+
+        return juce::Decibels::gainToDecibels (fit.amplitude / intended);
+    };
+
+    // The operating envelope, printed because it is the thing a user needs to
+    // know about this control and no single number captures it.
+    for (float drive : { 3.0f, 6.0f, 12.0f })
+        for (bool tp : { true, false })
+            std::cout << "  drive " << juce::String (drive, 0) << " dB, TP " << (tp ? "on " : "off")
+                      << ": off " << juce::String (measureLowBandLoss (15.0f, drive, tp), 2)
+                      << " / 120 Hz " << juce::String (measureLowBandLoss (120.0f, drive, tp), 2)
+                      << " / 400 Hz " << juce::String (measureLowBandLoss (400.0f, drive, tp), 2)
+                      << " dB" << std::endl;
+
+    // With the ceiling clamp out of the way the control does its whole job:
+    // the bass comes out at the level it went in, while everything above the
+    // cutoff is still being clipped.
+    const auto openOff = measureLowBandLoss ( 15.0f, driveDb, false);
+    const auto open120 = measureLowBandLoss (120.0f, driveDb, false);
+    const auto open400 = measureLowBandLoss (400.0f, driveDb, false);
+
+    check (openOff < -4.0,
+           "the clipper is not costing the bass any level to hand back ("
+               + juce::String (openOff, 2) + " dB)");
+
+    check (open400 > -0.5,
+           "with TP Safe off the sidechain did not restore the bass: "
+               + juce::String (open400, 2) + " dB still missing");
+
+    check (open400 > open120 && open120 > openOff,
+           "opening the cutoff further did not preserve more of the low end ("
+               + juce::String (openOff, 2) + ", " + juce::String (open120, 2)
+               + ", " + juce::String (open400, 2) + " dB)");
+
+    check (open400 < 0.5,
+           "the sidechain handed back more level than the clipper removed ("
+               + juce::String (open400, 2) + " dB)");
+
+    // With TP Safe on the ceiling wins, by design: what the sidechain hands
+    // back is only what fits underneath it. This is a trade the user makes,
+    // so it is specified here rather than left to be discovered.
+    const auto safe400 = measureLowBandLoss (400.0f, driveDb, true);
+
+    check (safe400 <= open400 + 0.01,
+           "TP Safe did not limit the sidechain to the headroom under the ceiling ("
+               + juce::String (safe400, 2) + " vs " + juce::String (open400, 2) + " dB)");
+
+    // ---------------------------------------------------------------------
+    // Handing low frequency material back means the sum can climb past the
+    // shaper's ceiling. TP Safe is the last line and has to hold it anyway.
+    // ---------------------------------------------------------------------
+    for (float ceiling : { 0.0f, -3.0f, -12.0f })
+    {
+        crest::CrestProcessor processor;
+        configure (processor, 800.0f, 24.0f, ceiling);
+        setParam (processor, crest::pid::tpSafe, 1.0f);
+
+        juce::AudioBuffer<float> buffer (2, 16384);
+        fillSine (buffer, sampleRate, frequency, 0.9f);
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto peakDb = juce::Decibels::gainToDecibels (
+            buffer.getMagnitude (2048, buffer.getNumSamples() - 2048));
+
+        check (peakDb <= ceiling + 0.1f,
+               "with the sidechain wide open and TP Safe on, ceiling " + juce::String (ceiling, 1)
+                   + " dB was exceeded: " + juce::String (peakDb, 3) + " dB");
+    }
+
+    std::cout << "  transparent below the ceiling at every cutoff, and TP Safe still holds the ceiling"
+              << std::endl;
+}
+
 void testBypassAndDelta()
 {
     section ("Bypass, delta and mix");
@@ -591,6 +761,7 @@ int main()
     testQuantizer();
     testCeilingIsHonoured();
     testTransparencyAndLatency();
+    testSidechain();
     testBypassAndDelta();
     testStabilityAcrossConfigurations();
     testStateRoundTrip();

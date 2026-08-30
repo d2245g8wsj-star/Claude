@@ -26,11 +26,13 @@ quantiser with dither on the way out.
 ### Signal flow
 
 ```
-in ─┬─────────────────────────── dry (delay matched to the wet path) ──┐
-    │                                                                  │
-    └─ input trim ─ ÷ceiling ─┬─ upsample ─ colour ─ shaper ─ downsample ┴─ mix ─ output trim ─ quantiser ─ out
-                              │                     ▲
-                              │           character · knee · bias
+in ─┬──────────────────────────── dry (delay matched to the wet path) ──┐
+    │                                                                   │
+    └─ input trim ─ ÷ceiling ─┬─ upsample ─ colour ─ shaper ─┬─ downsample ┴─ mix ─ output trim ─ quantiser ─ out
+                              │                      ▲       │
+                              │            character · knee · bias
+                              │                              └─ SC LPF ─┐
+                              │                                  (x − shaper(x))
                               └─ stereo link: one gain from the louder channel
 ```
 
@@ -63,9 +65,51 @@ shaper cannot produce a value above 1.0 by construction, at any setting.
 | **Knee** | 0 % is a hard corner for every character. At 100 % the knee opens down to a quarter of the ceiling. |
 | **Bias** | Moves the positive and negative thresholds apart. This is the even harmonic control. |
 | **Colour** | The analogue input stage: level dependent treble softening and a small asymmetric non‑linearity. At 100 % the softening tops out around −1.5 dB at 20 kHz. |
+| **SC LPF** | Off, or 20 Hz … 800 Hz. Hands the low frequency part of the clipping back, so the bass keeps its shape while everything above the cutoff still clips. See below. |
 
 Below the knee threshold the gain is exactly 1.0 — not approximately. Every
 character keeps that guarantee, and the offline checks assert it.
+
+### SC LPF
+
+Clipping a full mix flattens whatever dominates the peaks, and that is almost
+always the low end. The result is intermodulation against everything above it:
+the bass loses weight and the mids pump in time with it.
+
+Rather than splitting the signal before the clipper, Crest filters what the
+clipper *removes* and gives the low part of it back:
+
+```
+out = shaper(x) + LPF(x − shaper(x))
+```
+
+Mathematically this is the same as a band split, with one property that matters:
+when nothing is being clipped, `x − shaper(x)` is exactly zero, so the filter
+adds exactly zero — at any cutoff. Transparency below the ceiling is untouched
+by this control, which the offline checks assert at four cutoffs.
+
+**It trades against the ceiling, by design.** Handing low frequency material
+back raises the peak, so with the sidechain open the sum can climb past where
+the shaper would have held it. What happens then depends on TP Safe:
+
+| | Result |
+| --- | --- |
+| **TP SAFE on** | The ceiling stays absolute. The sidechain gives back only what fits underneath it, so the harder you drive, the less the low end can escape. |
+| **TP SAFE off** | The low end comes back in full. The shaper still limits everything it processes, but the restored low band may exceed the ceiling. |
+
+Measured, at 48 kHz on a 59 Hz tone sharing the signal with a 2 kHz tone, hard
+clip, showing how much level the bass loses:
+
+| Drive | SC off | 120 Hz | 400 Hz |
+| --- | --- | --- | --- |
+| 3 dB | −0.07 dB | −0.02 dB | −0.01 dB |
+| 6 dB, TP Safe on | −1.17 dB | −0.65 dB | −0.55 dB |
+| 6 dB, TP Safe off | −1.16 dB | −0.28 dB | −0.02 dB |
+| 12 dB, TP Safe on | −5.30 dB | −4.75 dB | −4.72 dB |
+| 12 dB, TP Safe off | −5.29 dB | −0.70 dB | −0.05 dB |
+
+The clip meter says `SC AT CEILING` when the sidechain is being limited by the
+ceiling clamp, so the trade is visible rather than something to discover.
 
 ### Converter
 
@@ -211,7 +255,8 @@ src/dsp/ColorStage.h    the analogue input stage and the DC blocker
 src/dsp/Quantizer.h     word length, dither, noise shaping
 src/dsp/Meters.h        lock free metering between the audio thread and the editor
 src/PluginProcessor.*   parameters, gain staging, oversampling, the audio chain
-src/gui/                painted controls: knob, meters, transfer view, segmented control, switch
+src/dsp/LowSplit.h      the sidechain low pass
+src/gui/Hardware.*      the panel: brushed metal, machined knobs, lamps, ladders, scope
 src/PluginEditor.*      layout, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render

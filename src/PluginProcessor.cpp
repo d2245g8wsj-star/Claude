@@ -56,6 +56,26 @@ juce::AudioProcessorValueTreeState::ParameterLayout CrestProcessor::createParame
                                           juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 35.0f,
                                           Attr().withLabel ("%").withStringFromValueFunction (percentString)));
 
+    {
+        // Skewed so the useful range - roughly 40 to 250 Hz, where the body of a
+        // kick or a bass note lives - occupies the middle of the travel instead
+        // of the first eighth of it.
+        juce::NormalisableRange<float> sidechainRange (15.0f, 800.0f, 1.0f);
+        sidechainRange.setSkewForCentre (140.0f);
+
+        layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::sidechain, 1 }, "SC LPF",
+                                              sidechainRange, 15.0f,
+                                              Attr().withLabel ("Hz")
+                                                    .withStringFromValueFunction (
+                                                        [] (float value, int) -> juce::String
+                                                        {
+                                                            if (value < sidechainOffBelowHz)
+                                                                return "OFF";
+
+                                                            return juce::String (juce::roundToInt (value)) + " Hz";
+                                                        })));
+    }
+
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::mix, 1 }, "Mix",
                                           juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 100.0f,
                                           Attr().withLabel ("%").withStringFromValueFunction (percentString)));
@@ -94,6 +114,7 @@ CrestProcessor::CrestProcessor()
     kneeParam       = findParameter<juce::AudioParameterFloat>  (pid::knee);
     biasParam       = findParameter<juce::AudioParameterFloat>  (pid::bias);
     colourParam     = findParameter<juce::AudioParameterFloat>  (pid::colour);
+    sidechainParam  = findParameter<juce::AudioParameterFloat>  (pid::sidechain);
     mixParam        = findParameter<juce::AudioParameterFloat>  (pid::mix);
     outputParam     = findParameter<juce::AudioParameterFloat>  (pid::output);
     osParam         = findParameter<juce::AudioParameterChoice> (pid::os);
@@ -150,6 +171,7 @@ void CrestProcessor::prepareToPlay (double sampleRate, int maximumExpectedSample
     dryDelay.reset();
 
     for (auto& c : colour)     c.prepare (sampleRate);
+    for (auto& l : lowSplit)   l.prepare (sampleRate);
     for (auto& d : dcBlockers) d.prepare (sampleRate);
 
     for (size_t i = 0; i < quantizers.size(); ++i)
@@ -174,6 +196,7 @@ void CrestProcessor::releaseResources()
     dryDelay.reset();
 
     for (auto& c : colour)     c.reset();
+    for (auto& l : lowSplit)   l.reset();
     for (auto& d : dcBlockers) d.reset();
     for (auto& q : quantizers) q.reset();
 
@@ -261,6 +284,9 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
         for (auto& c : colour)
             c.prepare (osRate);
 
+        for (auto& l : lowSplit)
+            l.prepare (osRate);
+
         dryDelay.reset();
     }
 
@@ -320,6 +346,24 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
     for (auto& c : colour)
         c.setAmount (colourAmount);
+
+    // The sidechain runs on the clipper's difference signal, so it is only ever
+    // fed something non-zero while the clipper is actually working.
+    const auto sidechainHz = sidechainParam->get();
+    const auto sidechainOn = sidechainHz >= sidechainOffBelowHz;
+
+    if (sidechainOn)
+    {
+        if (! sidechainActive)
+            for (auto& l : lowSplit)
+                l.reset();
+
+        for (auto& l : lowSplit)
+            l.setCutoff (sidechainHz);
+    }
+
+    sidechainActive = sidechainOn;
+    sidechainRunning.store (sidechainOn, std::memory_order_relaxed);
 
     // Only the asymmetric paths can produce an offset. With bias and colour at
     // zero the shaper is an odd function, so the high pass would cost phase
@@ -402,8 +446,18 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
                 }
             }
 
-            left[n]  = l * gain;
-            right[n] = r * gain;
+            auto outL = l * gain;
+            auto outR = r * gain;
+
+            if (sidechainActive)
+            {
+                // Hand back the low frequency part of what was just removed.
+                outL += lowSplit[0].process (l - outL);
+                outR += lowSplit[1].process (r - outR);
+            }
+
+            left[n]  = outL;
+            right[n] = outR;
         }
     }
     else
@@ -428,7 +482,9 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
                         (ch == 0 ? litL : litR) = true;
                 }
 
-                samples[n] = y;
+                samples[n] = sidechainActive
+                                 ? y + lowSplit[static_cast<size_t> (ch)].process (x - y)
+                                 : y;
             }
         }
     }

@@ -6,6 +6,7 @@
 #include "dsp/Shaper.h"
 #include "dsp/ColorStage.h"
 #include "dsp/Quantizer.h"
+#include "dsp/LowSplit.h"
 #include "dsp/Meters.h"
 
 namespace crest
@@ -21,6 +22,7 @@ namespace pid
     inline constexpr const char* knee     = "knee";
     inline constexpr const char* bias     = "bias";
     inline constexpr const char* colour   = "colour";
+    inline constexpr const char* sidechain = "sclpf";
     inline constexpr const char* mix      = "mix";
     inline constexpr const char* output   = "output";
     inline constexpr const char* os       = "os";
@@ -35,6 +37,10 @@ namespace pid
 
 /** Oversampling factors offered by the "OS" selector, as powers of two. */
 inline constexpr int maxOversamplingStages = 4;   // 1x, 2x, 4x, 8x, 16x
+
+/** Below this the sidechain filter is switched out entirely rather than left
+    running at a corner where it does nothing measurable. */
+inline constexpr float sidechainOffBelowHz = 20.0f;
 
 class CrestProcessor final : public juce::AudioProcessor
 {
@@ -81,6 +87,7 @@ public:
         and both are inaudible when they get it right and hard to find when
         they get it wrong, so they report what they actually did. */
     std::atomic<bool>  dcBlockerRunning     { false };
+    std::atomic<bool>  sidechainRunning     { false };
     std::atomic<float> appliedOversamplingGain { 1.0f };
 
 private:
@@ -106,6 +113,7 @@ private:
     juce::AudioParameterFloat*  kneeParam     { nullptr };
     juce::AudioParameterFloat*  biasParam     { nullptr };
     juce::AudioParameterFloat*  colourParam   { nullptr };
+    juce::AudioParameterFloat*  sidechainParam { nullptr };
     juce::AudioParameterFloat*  mixParam      { nullptr };
     juce::AudioParameterFloat*  outputParam   { nullptr };
     juce::AudioParameterChoice* osParam       { nullptr };
@@ -133,6 +141,7 @@ private:
 
     Shaper                   shaper;
     std::array<ColorStage, 2> colour;
+    std::array<LowSplit, 2>   lowSplit;
     std::array<DCBlocker, 2>  dcBlockers;
     std::array<Quantizer, 2>  quantizers;
 
@@ -146,6 +155,7 @@ private:
     juce::AudioBuffer<float> dryBuffer;
 
     bool dcBlockerActive { false };
+    bool sidechainActive { false };
 
     double preparedSampleRate { 44100.0 };
     int    preparedBlockSize  { 512 };

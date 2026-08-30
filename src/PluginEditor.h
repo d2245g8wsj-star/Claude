@@ -1,20 +1,15 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "gui/Theme.h"
-#include "gui/Knob.h"
-#include "gui/MeterView.h"
-#include "gui/CurveView.h"
-#include "gui/SegmentedControl.h"
-#include "gui/ToggleChip.h"
+#include "gui/Hardware.h"
 
 namespace crest
 {
 
-/** Design size. Everything is laid out against these numbers and then scaled as
-    a whole, so the proportions survive any window size the host allows. */
-inline constexpr int designWidth  = 880;
-inline constexpr int designHeight = 640;
+/** Design size. A 3:1 panel, laid out once and scaled as a whole, so the
+    proportions of a piece of rack hardware survive any window size. */
+inline constexpr int designWidth  = 1380;
+inline constexpr int designHeight = 460;
 
 class CrestEditor final : public juce::AudioProcessorEditor,
                           private juce::Timer
@@ -29,41 +24,50 @@ public:
 private:
     void timerCallback() override;
 
-    /** Holds every control at design scale; the editor only scales this. */
-    class Content final : public juce::Component
+    /** Everything at design scale; the editor only scales this. */
+    class Panel final : public juce::Component
     {
     public:
-        explicit Content (CrestProcessor&);
+        explicit Panel (CrestProcessor&);
 
         void paint (juce::Graphics&) override;
         void resized() override;
 
-        void setStatusText (const juce::String& text);
+        void setStatusText (const juce::String&);
 
     private:
         CrestProcessor& processor;
 
-        gui::LevelMeter     inputMeter;
-        gui::LevelMeter     outputMeter;
-        gui::ReductionMeter reductionMeter;
-        gui::CurveView      curve;
+        juce::Image faceplate, headerPlate, railPlate;
 
-        gui::Knob inputKnob, ceilingKnob;
-        gui::Knob kneeKnob, biasKnob, colourKnob, mixKnob, outputKnob;
+        hw::LadderMeter inputMeter, outputMeter;
+        hw::ScopeWindow scope;
+        hw::ClipMeter   clipMeter;
 
-        gui::SegmentedControl modeStrip, osStrip, wordStrip, ditherStrip;
+        hw::Knob inputKnob, ceilingKnob, outputKnob;
+        hw::Knob kneeKnob, biasKnob, colourKnob, sidechainKnob, mixKnob;
 
-        gui::ToggleChip autoChip, tpSafeChip, deltaChip, linkChip, bypassChip;
+        hw::RotarySwitch characterSwitch;
+        hw::LampBank     osBank, wordBank, ditherBank;
+        hw::LampButton   autoLamp, tpSafeLamp, deltaLamp, linkLamp, bypassLamp;
 
         juce::String statusText;
 
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Content)
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Panel)
     };
 
-    CrestProcessor&      processor;
-    theme::LookAndFeel   lookAndFeel;
-    juce::TooltipWindow  tooltips { this, 600 };
-    Content              content;
+    /** Only exists to keep the tooltips in the same material as the panel. */
+    class Tooltips final : public juce::LookAndFeel_V4
+    {
+    public:
+        Tooltips();
+        void drawTooltip (juce::Graphics&, const juce::String&, int width, int height) override;
+    };
+
+    CrestProcessor&     processor;
+    Tooltips            lookAndFeel;
+    juce::TooltipWindow tooltips { this, 650 };
+    Panel               panel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CrestEditor)
 };

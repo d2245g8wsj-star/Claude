@@ -55,12 +55,7 @@ juce_add_plugin(Crest
 target_sources(Crest PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
-    src/gui/Theme.cpp
-    src/gui/Knob.cpp
-    src/gui/MeterView.cpp
-    src/gui/CurveView.cpp
-    src/gui/SegmentedControl.cpp
-    src/gui/ToggleChip.cpp)
+    src/gui/Hardware.cpp)
 
 target_include_directories(Crest PRIVATE src)
 

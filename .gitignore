@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
+demo_session/
+vocalai_out/
+*.wav
+!tests/fixtures/*.wav
+.DS_Store
+.pytest_cache/

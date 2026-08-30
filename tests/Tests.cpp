@@ -335,12 +335,47 @@ void testTransparencyAndLatency()
         setParam (processor, crest::pid::mix,     100.0f);
         setParam (processor, crest::pid::word,    0.0f);
 
-        juce::AudioBuffer<float> buffer (2, settle + window + 512);
-        fillSine (buffer, sampleRate, frequency, level);
+        juce::AudioBuffer<float> reference (2, settle + window + 512);
+        fillSine (reference, sampleRate, frequency, level);
+
+        juce::AudioBuffer<float> buffer;
+        buffer.makeCopyOf (reference);
 
         runBlocks (processor, buffer, blockSize);
 
         const auto latency = processor.getLatencySamples();
+
+        // With oversampling off and every control neutral there is no filter
+        // anywhere in the chain, so the output has to be the input. If this
+        // fails, nothing measured below it means anything.
+        if (osIndex == 0)
+        {
+            float worst = 0.0f;
+            int   worstIndex = settle;
+
+            for (int n = settle; n < settle + window; ++n)
+            {
+                const auto difference = std::abs (buffer.getSample (0, n) - reference.getSample (0, n));
+
+                if (difference > worst)
+                {
+                    worst = difference;
+                    worstIndex = n;
+                }
+            }
+
+            check (worst < 1.0e-5f,
+                   "OS off is not a passthrough: worst " + juce::String (worst, 9)
+                       + " at sample " + juce::String (worstIndex)
+                       + " (in " + juce::String (reference.getSample (0, worstIndex), 9)
+                       + ", out " + juce::String (buffer.getSample (0, worstIndex), 9) + ")");
+
+            std::cout << "  OS off passthrough: worst " << juce::String (worst, 9)
+                      << " at " << worstIndex
+                      << " (in " << juce::String (reference.getSample (0, worstIndex), 9)
+                      << ", out " << juce::String (buffer.getSample (0, worstIndex), 9) << ")"
+                      << std::endl;
+        }
         const auto fit     = fitSine (buffer, 0, settle, window, frequency, sampleRate);
 
         const auto gainErrorDb = juce::Decibels::gainToDecibels (fit.amplitude / (double) level);

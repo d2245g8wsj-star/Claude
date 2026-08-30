@@ -77,6 +77,12 @@ public:
     std::atomic<float> displayThresholdPos { 1.0f };
     std::atomic<float> displayThresholdNeg { 1.0f };
 
+    /** Observability hooks. Two stages decide for themselves whether to run,
+        and both are inaudible when they get it right and hard to find when
+        they get it wrong, so they report what they actually did. */
+    std::atomic<bool>  dcBlockerRunning     { false };
+    std::atomic<float> appliedOversamplingGain { 1.0f };
+
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

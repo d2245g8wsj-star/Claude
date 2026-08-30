@@ -324,13 +324,20 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     // Only the asymmetric paths can produce an offset. With bias and colour at
     // zero the shaper is an odd function, so the high pass would cost phase
     // rotation in return for removing DC that does not exist.
-    const auto needsDcBlocker = std::abs (biasParam->get()) > 0.0f || colourAmount > 0.0f;
+    // Compared against a threshold rather than exactly zero: a bias of a
+    // hundredth of a percent produces an offset far below the noise floor of
+    // any word length this plugin can output, which is not worth a high pass
+    // and the phase rotation that comes with it.
+    const auto needsDcBlocker = std::abs (biasParam->get()) > 0.01f || colourAmount > 0.0001f;
 
     if (needsDcBlocker && ! dcBlockerActive)
         for (auto& d : dcBlockers)
             d.reset();
 
     dcBlockerActive = needsDcBlocker;
+    dcBlockerRunning.store (needsDcBlocker, std::memory_order_relaxed);
+    appliedOversamplingGain.store (oversamplingGain[static_cast<size_t> (osIndex)],
+                                   std::memory_order_relaxed);
 
     for (auto& q : quantizers)
         q.setParameters (static_cast<WordLength> (wordParam->getIndex()),

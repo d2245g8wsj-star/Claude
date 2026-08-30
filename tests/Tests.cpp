@@ -370,6 +370,15 @@ void testTransparencyAndLatency()
                        + " (in " + juce::String (reference.getSample (0, worstIndex), 9)
                        + ", out " + juce::String (buffer.getSample (0, worstIndex), 9) + ")");
 
+            std::cout << "  state: bias " << processor.apvts.getRawParameterValue (crest::pid::bias)->load()
+                      << ", colour " << processor.apvts.getRawParameterValue (crest::pid::colour)->load()
+                      << ", input " << processor.apvts.getRawParameterValue (crest::pid::input)->load()
+                      << ", ceiling " << processor.apvts.getRawParameterValue (crest::pid::ceiling)->load()
+                      << ", mix " << processor.apvts.getRawParameterValue (crest::pid::mix)->load()
+                      << ", dc blocker " << (processor.dcBlockerRunning.load() ? "ON" : "off")
+                      << ", os gain " << juce::String (processor.appliedOversamplingGain.load(), 9)
+                      << std::endl;
+
             std::cout << "  OS off passthrough: worst " << juce::String (worst, 9)
                       << " at " << worstIndex
                       << " (in " << juce::String (reference.getSample (0, worstIndex), 9)

@@ -377,7 +377,8 @@ src/PluginProcessor.*   parameters, gain staging, oversampling, the audio chain
 src/dsp/ClipEnvelope.h  how long the clipper has been working, which drives Adapt
 src/dsp/HarmonicStage.h the band limited harmonic generator
 src/dsp/LowSplit.h      the sidechain low pass
-src/gui/Hardware.*      the panel: brushed metal, machined knobs, lamps, ladders, scope
+src/gui/Panel.*         the panel: filmstrip knobs, LED meters, scope, plate switches
+resources/gui/          the rendered plate and filmstrips, compiled in as binary data
 src/PluginEditor.*      layout, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render

@@ -52,10 +52,27 @@ juce_add_plugin(Crest
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD     FALSE)
 
+# ---------------------------------------------------------------------------
+# Panel art. The plate and the knob filmstrips are rendered in Blender and
+# dropped in here; the frame count is read from the image at runtime so a
+# higher resolution render replaces the file without touching code.
+# ---------------------------------------------------------------------------
+juce_add_binary_data(CrestAssets SOURCES
+    resources/gui/plate.png
+    resources/gui/knob_large.png
+    resources/gui/character_selector_5.png
+    resources/gui/series_selector_4.png
+    resources/gui/led_off.png
+    resources/gui/led_green.png
+    resources/gui/led_amber.png
+    resources/gui/led_red.png)
+
+set_target_properties(CrestAssets PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+
 target_sources(Crest PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
-    src/gui/Hardware.cpp)
+    src/gui/Panel.cpp)
 
 target_include_directories(Crest PRIVATE src)
 
@@ -68,6 +85,7 @@ target_compile_definitions(Crest PUBLIC
     JUCE_STRICT_REFCOUNTEDPOINTER=1)
 
 target_link_libraries(Crest PRIVATE
+    CrestAssets
     juce::juce_audio_utils
     juce::juce_dsp
     PUBLIC

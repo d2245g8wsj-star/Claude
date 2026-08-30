@@ -1,15 +1,15 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "gui/Hardware.h"
+#include "gui/Panel.h"
 
 namespace crest
 {
 
-/** Design size. A 3:1 panel, laid out once and scaled as a whole, so the
-    proportions of a piece of rack hardware survive any window size. */
-inline constexpr int designWidth  = 1644;
-inline constexpr int designHeight = 460;
+/** The plate is authored at 2600 x 728 for an editor of 1300 x 364, so every
+    coordinate below is in plate points and the whole thing is scaled as one. */
+inline constexpr int designWidth  = 1300;
+inline constexpr int designHeight = 364;
 
 class CrestEditor final : public juce::AudioProcessorEditor,
                           private juce::Timer
@@ -24,16 +24,10 @@ public:
 private:
     void timerCallback() override;
 
-    /** Reveal holds the answer on screen for a few seconds, then draws again. */
-    int revealSecondsLeft { 0 };
-
-    /** Everything at design scale; the editor only scales this. */
-    class Panel final : public juce::Component
+    class Face final : public juce::Component
     {
     public:
-        explicit Panel (CrestProcessor&);
-
-        std::function<void()> onReveal;
+        explicit Face (CrestProcessor&);
 
         void paint (juce::Graphics&) override;
         void resized() override;
@@ -41,32 +35,34 @@ private:
         void setStatusText (const juce::String&);
         void setBlindText (const juce::String&);
 
-        hw::LampButton  matchLamp, blindLamp;
-        hw::PushButton  revealButton;
+        std::function<void()> onReveal;
+
+        panel::Switch matchSwitch, blindSwitch;
+        panel::Push   revealButton;
 
     private:
         CrestProcessor& processor;
 
-        juce::Image faceplate, headerPlate, railPlate;
+        juce::Image plate;
+        juce::Image ledOff, ledGreen, ledAmber, ledRed;
 
-        hw::LadderMeter inputMeter, outputMeter;
-        hw::ScopeWindow scope;
-        hw::ClipMeter   clipMeter;
+        panel::Filmstrip knobStrip, characterStrip;
 
-        hw::Knob inputKnob, ceilingKnob, outputKnob;
-        hw::Knob kneeKnob, adaptKnob, biasKnob;
-        hw::Knob colourKnob, harmonicsKnob, seriesKnob, sidechainKnob, mixKnob;
+        panel::Knob inputKnob, kneeKnob, adaptKnob, biasKnob;
+        panel::Knob colourKnob, harmonicsKnob, seriesKnob, sidechainKnob, mixKnob;
+        panel::Knob ceilingKnob, outputKnob, characterSwitch;
 
-        hw::RotarySwitch characterSwitch;
-        hw::LampBank     osBank, wordBank, ditherBank;
-        hw::LampButton   autoLamp, tpSafeLamp, deltaLamp, linkLamp, bypassLamp;
+        panel::LedMeter inputMeter, outputMeter;
+        panel::Scope    scope;
+
+        panel::Bank   osBank, wordBank, ditherBank;
+        panel::Switch autoSwitch, tpSafeSwitch, deltaSwitch, linkSwitch, bypassSwitch;
 
         juce::String statusText, blindText;
 
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Panel)
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
     };
 
-    /** Only exists to keep the tooltips in the same material as the panel. */
     class Tooltips final : public juce::LookAndFeel_V4
     {
     public:
@@ -77,7 +73,9 @@ private:
     CrestProcessor&     processor;
     Tooltips            lookAndFeel;
     juce::TooltipWindow tooltips { this, 650 };
-    Panel               panel;
+    Face                face;
+
+    int revealSecondsLeft { 0 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CrestEditor)
 };

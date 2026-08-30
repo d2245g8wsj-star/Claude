@@ -58,12 +58,13 @@ CrestEditor::Panel::Panel (CrestProcessor& p)
     : processor (p),
       inputMeter  (p.meters, false, "IN"),
       outputMeter (p.meters, true,  "OUT"),
-      scope       (p.apvts, p.meters),
+      scope       (p.apvts, p.meters, p.displayKnee),
       clipMeter   (p.apvts, p.meters, p.sidechainRunning),
       inputKnob     (p.apvts, pid::input,     "Input"),
       ceilingKnob   (p.apvts, pid::ceiling,   "Ceiling"),
       outputKnob    (p.apvts, pid::output,    "Output"),
       kneeKnob      (p.apvts, pid::knee,      "Knee"),
+      adaptKnob     (p.apvts, pid::adapt,     "Adapt"),
       biasKnob      (p.apvts, pid::bias,      "Bias", true),
       colourKnob    (p.apvts, pid::colour,    "Colour"),
       sidechainKnob (p.apvts, pid::sidechain, "SC LPF"),
@@ -81,12 +82,13 @@ CrestEditor::Panel::Panel (CrestProcessor& p)
     inputKnob  .setDiameter (100.0f);
     ceilingKnob.setDiameter (100.0f);
 
-    for (auto* knob : { &kneeKnob, &biasKnob, &colourKnob, &sidechainKnob, &mixKnob, &outputKnob })
+    for (auto* knob : { &kneeKnob, &adaptKnob, &biasKnob, &colourKnob, &sidechainKnob,
+                        &mixKnob, &outputKnob })
         knob->setDiameter (62.0f);
 
     for (auto* child : std::initializer_list<juce::Component*> {
              &inputMeter, &outputMeter, &scope, &clipMeter,
-             &inputKnob, &ceilingKnob, &outputKnob, &kneeKnob, &biasKnob,
+             &inputKnob, &ceilingKnob, &outputKnob, &kneeKnob, &adaptKnob, &biasKnob,
              &colourKnob, &sidechainKnob, &mixKnob, &characterSwitch,
              &osBank, &wordBank, &ditherBank,
              &autoLamp, &tpSafeLamp, &deltaLamp, &linkLamp, &bypassLamp })
@@ -114,22 +116,23 @@ void CrestEditor::Panel::resized()
                                           hw::panelDeep, 0x9f30);
 
     inputMeter .setBounds (  20,  88,  72, 268);
-    outputMeter.setBounds (1288,  88,  72, 268);
+    outputMeter.setBounds (1376,  88,  72, 268);
 
     inputKnob      .setBounds ( 100, 104, 132, 178);
     characterSwitch.setBounds ( 240,  88, 172, 208);
     kneeKnob       .setBounds ( 418, 124,  88, 138);
-    biasKnob       .setBounds ( 506, 124,  88, 138);
+    adaptKnob      .setBounds ( 506, 124,  88, 138);
+    biasKnob       .setBounds ( 594, 124,  88, 138);
 
-    scope    .setBounds (602,  88, 178, 178);
-    clipMeter.setBounds (602, 276, 178,  46);
+    scope    .setBounds (690,  88, 178, 178);
+    clipMeter.setBounds (690, 276, 178,  46);
 
-    colourKnob   .setBounds ( 788, 124,  88, 138);
-    sidechainKnob.setBounds ( 876, 124,  88, 138);
-    mixKnob      .setBounds ( 964, 124,  88, 138);
+    colourKnob   .setBounds ( 876, 124,  88, 138);
+    sidechainKnob.setBounds ( 964, 124,  88, 138);
+    mixKnob      .setBounds (1052, 124,  88, 138);
 
-    ceilingKnob.setBounds (1060, 104, 132, 178);
-    outputKnob .setBounds (1192, 124,  88, 138);
+    ceilingKnob.setBounds (1148, 104, 132, 178);
+    outputKnob .setBounds (1280, 124,  88, 138);
 
     osBank    .setBounds ( 20, 382, 236, 42);
     wordBank  .setBounds (272, 382, 188, 42);
@@ -141,7 +144,7 @@ void CrestEditor::Panel::resized()
         hw::LampButton* lamps[] { &autoLamp, &tpSafeLamp, &deltaLamp, &linkLamp, &bypassLamp };
 
         for (int i = 0; i < 5; ++i)
-            lamps[i]->setBounds (668 + i * (width + gap), y, width, 28);
+            lamps[i]->setBounds (700 + i * (width + gap), y, width, 28);
     }
 }
 
@@ -188,16 +191,16 @@ void CrestEditor::Panel::paint (juce::Graphics& g)
     g.drawHorizontalLine ((int) railTop + 1, 0.0f, bounds.getRight());
 
     // ----------------------------------------------------------- sections
-    for (auto x : { 96.0f, 236.0f, 598.0f, 784.0f, 1056.0f, 1284.0f })
+    for (auto x : { 96.0f, 236.0f, 686.0f, 872.0f, 1144.0f, 1372.0f })
         drawDivider (g, x, headerBottom + 12.0f, railTop - 12.0f);
 
     struct Caption { const char* text; float from; float to; };
 
     for (auto caption : { Caption { "INPUT",    96.0f,  236.0f },
-                          Caption { "CLIP",     236.0f,  598.0f },
-                          Caption { "MONITOR",  598.0f,  784.0f },
-                          Caption { "COLOUR",   784.0f, 1056.0f },
-                          Caption { "OUTPUT",  1056.0f, 1284.0f } })
+                          Caption { "CLIP",     236.0f,  686.0f },
+                          Caption { "MONITOR",  686.0f,  872.0f },
+                          Caption { "COLOUR",   872.0f, 1144.0f },
+                          Caption { "OUTPUT",  1144.0f, 1372.0f } })
     {
         const auto y = railTop - 30.0f;
         const auto area = juce::Rectangle<float> (caption.from, y, caption.to - caption.from, 14.0f);
@@ -224,9 +227,9 @@ void CrestEditor::Panel::paint (juce::Graphics& g)
 
     // -------------------------------------------------------------- screws
     for (auto corner : { juce::Point<float> {   16.0f,  35.0f },
-                         juce::Point<float> { 1364.0f,  35.0f },
+                         juce::Point<float> { 1452.0f,  35.0f },
                          juce::Point<float> {   16.0f, 424.0f },
-                         juce::Point<float> { 1364.0f, 424.0f } })
+                         juce::Point<float> { 1452.0f, 424.0f } })
     {
         hw::drawScrew (g, corner, 7.5f, corner.x < 100.0f ? 0.6f : -0.4f);
     }

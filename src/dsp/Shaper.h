@@ -21,11 +21,15 @@ namespace crest
 
     What differs between them is how the corner is rounded, and therefore how
     the harmonic series above it is weighted.
+
+    There is deliberately no "hard clip" character, because every one of these
+    already is one: at a knee of zero the transition region has no width and
+    all four collapse to the same square corner. A separate entry for it would
+    be a fifth name for a setting the knee control already reaches.
 */
 enum class Mode
 {
-    slice = 0,  ///< true hard clip: instant corner, widest harmonic spread
-    glass,      ///< sine knee: short corner, bright and glassy
+    glass = 0,  ///< sine knee: short corner, bright and glassy
     edge,       ///< cubic knee: reaches the ceiling at a finite level
     silk,       ///< tanh knee: smooth, asymptotic, compressor-like
     tube,       ///< arctan knee: the slowest corner, low-order harmonics
@@ -38,7 +42,6 @@ inline const char* modeName (Mode m) noexcept
 {
     switch (m)
     {
-        case Mode::slice: return "SLICE";
         case Mode::glass: return "GLASS";
         case Mode::edge:  return "EDGE";
         case Mode::silk:  return "SILK";
@@ -56,9 +59,6 @@ inline float kneeFunction (Mode m, float u) noexcept
 
     switch (m)
     {
-        case Mode::slice:
-            return std::min (u, 1.0f);
-
         case Mode::glass:
             // sin(u) clamped at its own maximum: unity slope at zero, corner at pi/2.
             return u >= halfPi ? 1.0f : std::sin (u);
@@ -121,7 +121,7 @@ struct Shaper
         return negative ? -y : y;
     }
 
-    Mode  mode         { Mode::slice };
+    Mode  mode         { Mode::glass };
     float thresholdPos { 1.0f };
     float thresholdNeg { 1.0f };
 };

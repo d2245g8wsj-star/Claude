@@ -19,6 +19,10 @@ decide whether that sounds like loudness or like damage are *where* the ceiling
 sits and *how* the transfer curve turns the corner. Crest gives you both, and
 shows you the curve you are actually using.
 
+Then it moves that corner as the material changes: square on transients, where
+a rounded corner smears the attack and a square one cannot be heard; rounded on
+sustained material, where the opposite is true.
+
 Around that sits the part most clippers leave out: the stage a converter would
 have added anyway. A little level dependent softening on the way in, and a real
 quantiser with dither on the way out.
@@ -57,18 +61,62 @@ shaper cannot produce a value above 1.0 by construction, at any setting.
 
 | Control | What it does |
 | --- | --- |
-| **SLICE** | True hard clip. Instant corner, widest harmonic spread. |
 | **GLASS** | Sine knee. Short corner, bright. |
 | **EDGE** | Cubic knee. Reaches the ceiling at a finite level, so it still clips flat. |
 | **SILK** | Tanh knee. Smooth and asymptotic, closer to compression. |
 | **TUBE** | Arctan knee. The slowest corner, weighted towards low order harmonics. |
-| **Knee** | 0 % is a hard corner for every character. At 100 % the knee opens down to a quarter of the ceiling. |
+| **Knee** | The corner for *sustained* material. 0 % is a square corner for every character — there is no separate "hard clip" mode because at zero knee all four already are one. At 100 % the knee opens down to a quarter of the ceiling. |
+| **Adapt** | How much harder a *transient* is clipped than the knee setting. See below. |
 | **Bias** | Moves the positive and negative thresholds apart. This is the even harmonic control. |
 | **Colour** | The analogue input stage: level dependent treble softening and a small asymmetric non‑linearity. At 100 % the softening tops out around −1.5 dB at 20 kHz. |
 | **SC LPF** | Off, or 20 Hz … 800 Hz. Hands the low frequency part of the clipping back, so the bass keeps its shape while everything above the cutoff still clips. See below. |
 
 Below the knee threshold the gain is exactly 1.0 — not approximately. Every
 character keeps that guarantee, and the offline checks assert it.
+
+### Adapt
+
+Whether clipping distortion is audible depends far more on how long it lasts
+than on how much was taken off. Three samples off the top of a snare are
+inaudible even with a perfectly square corner — and a *rounded* corner there
+smears the attack, which is the one thing a transient cannot afford. Fifty
+milliseconds off a held bass note is the opposite: the square corner is
+obvious, and a rounded one sounds like weight.
+
+Every clipper on the market applies the same static curve to both.
+
+Crest measures how much of the recent past it has spent clipping and moves the
+knee accordingly:
+
+* **Knee** sets the corner for sustained material, where a corner can be heard.
+* **Adapt** pulls transients back towards a square one, where it cannot.
+
+The measurement is deliberately not the length of a single overshoot. A
+sustained low note only crosses the threshold briefly on each cycle, so by that
+measure every bass peak would look like a transient. What separates the two is
+repetition over a span of time — the bass clips on every cycle for half a
+second, the snare clips once and is gone. A slow envelope on the "is it
+clipping" flag tells them apart:
+
+| | Envelope |
+| --- | --- |
+| Lone 3 ms burst | 0.030 |
+| Bass note clipping every cycle | 0.221 |
+
+Measured through the plugin at 48 kHz, EDGE, knee 60 %, driven 8 dB in,
+comparing Adapt at 0 % against 100 %:
+
+| | Change |
+| --- | --- |
+| Sustained tone | bit identical |
+| Lone 3 ms transient | −25.2 dB |
+
+That is the whole feature in two numbers: the character dialled in survives
+untouched on sustained material, and the adaptation spends its entire effect
+on transients.
+
+The scope shows both curves — the bright trace is what the audio thread is
+applying right now, the ghost behind it is the curve as dialled in.
 
 ### SC LPF
 
@@ -255,6 +303,7 @@ src/dsp/ColorStage.h    the analogue input stage and the DC blocker
 src/dsp/Quantizer.h     word length, dither, noise shaping
 src/dsp/Meters.h        lock free metering between the audio thread and the editor
 src/PluginProcessor.*   parameters, gain staging, oversampling, the audio chain
+src/dsp/ClipEnvelope.h  how long the clipper has been working, which drives Adapt
 src/dsp/LowSplit.h      the sidechain low pass
 src/gui/Hardware.*      the panel: brushed metal, machined knobs, lamps, ladders, scope
 src/PluginEditor.*      layout, scaled as a whole from one design size

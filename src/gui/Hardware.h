@@ -202,7 +202,8 @@ class ScopeWindow final : public juce::Component,
                           private juce::Timer
 {
 public:
-    ScopeWindow (juce::AudioProcessorValueTreeState&, MeterSource&);
+    ScopeWindow (juce::AudioProcessorValueTreeState&, MeterSource&,
+                 const std::atomic<float>& liveKnee);
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -215,11 +216,13 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
     MeterSource&                        meters;
 
-    Shaper     shaper;
-    juce::Path curvePath;
+    const std::atomic<float>& adaptedKnee;
+
+    Shaper     shaper, baseShaper;
+    juce::Path curvePath, basePath;
     juce::Rectangle<float> plot;
 
-    float lastKnee { -1.0f }, lastBias { -1.0f };
+    float lastKnee { -1.0f }, lastBias { -1.0f }, lastLive { -1.0f };
     int   lastMode { -1 };
     float drive    { 0.0f };
 

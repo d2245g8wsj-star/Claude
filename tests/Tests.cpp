@@ -13,6 +13,7 @@
 #include "PluginProcessor.h"
 #include "dsp/Shaper.h"
 #include "dsp/Quantizer.h"
+#include "dsp/ClipEnvelope.h"
 
 #include <cmath>
 #include <iostream>
@@ -421,6 +422,206 @@ void testTransparencyAndLatency()
     }
 }
 
+void testAdaptiveClipping()
+{
+    section ("Adaptive clipping");
+
+    constexpr double sampleRate = 48000.0;
+    constexpr int    blockSize  = 256;
+    constexpr int    window     = 8192;
+    constexpr int    settle     = 8192;
+
+    // ---------------------------------------------------------------------
+    // The envelope has to tell a lone transient from clipping that keeps
+    // coming back, on material where the individual overshoots are the same
+    // length. That is the whole premise.
+    // ---------------------------------------------------------------------
+    {
+        constexpr double osRate = 192000.0;
+
+        crest::ClipEnvelope envelope;
+        envelope.prepare (osRate);
+
+        for (int n = 0; n < (int) (0.003 * osRate); ++n)
+            envelope.process (true);
+
+        const auto transient = envelope.value();
+
+        envelope.reset();
+
+        // A bass note: over the threshold for 2 ms of every 20 ms cycle.
+        for (int cycle = 0; cycle < 30; ++cycle)
+        {
+            for (int n = 0; n < (int) (0.002 * osRate); ++n) envelope.process (true);
+            for (int n = 0; n < (int) (0.018 * osRate); ++n) envelope.process (false);
+        }
+
+        const auto sustained = envelope.value();
+
+        std::cout << "  envelope: lone 3 ms burst " << juce::String (transient, 3)
+                  << ", bass note clipping every cycle " << juce::String (sustained, 3) << std::endl;
+
+        check (transient < 0.06f,
+               "a lone transient reads as sustained clipping (" + juce::String (transient, 3) + ")");
+
+        check (sustained > transient * 4.0f,
+               "the envelope cannot separate a transient from sustained clipping ("
+                   + juce::String (transient, 3) + " vs " + juce::String (sustained, 3) + ")");
+    }
+
+    auto configure = [&] (crest::CrestProcessor& processor, float adapt, float drive, float ceiling)
+    {
+        processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
+        processor.prepareToPlay (sampleRate, blockSize);
+
+        setParam (processor, crest::pid::os,        2.0f);
+        setParam (processor, crest::pid::mode,      1.0f);     // EDGE
+        setParam (processor, crest::pid::knee,      60.0f);    // the corner for sustained material
+        setParam (processor, crest::pid::bias,      0.0f);
+        setParam (processor, crest::pid::colour,    0.0f);
+        setParam (processor, crest::pid::mix,       100.0f);
+        setParam (processor, crest::pid::word,      0.0f);
+        setParam (processor, crest::pid::sidechain, 15.0f);
+        setParam (processor, crest::pid::input,     drive);
+        setParam (processor, crest::pid::ceiling,   ceiling);
+        setParam (processor, crest::pid::output,    0.0f);
+        setParam (processor, crest::pid::adapt,     adapt);
+    };
+
+    // ---------------------------------------------------------------------
+    // Whatever the adaptation does, the shaper is still the last word: the
+    // ceiling holds at every setting.
+    // ---------------------------------------------------------------------
+    for (float adapt : { 0.0f, 50.0f, 100.0f })
+    {
+        crest::CrestProcessor processor;
+        configure (processor, adapt, 24.0f, -3.0f);
+
+        juce::AudioBuffer<float> buffer (2, 16384);
+        fillSine (buffer, sampleRate, 220.0, 0.9f);
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto peakDb = juce::Decibels::gainToDecibels (
+            buffer.getMagnitude (2048, buffer.getNumSamples() - 2048));
+
+        check (peakDb <= -3.0f + 0.1f,
+               "adapt " + juce::String (adapt, 0) + " %: ceiling exceeded at "
+                   + juce::String (peakDb, 3) + " dB");
+    }
+
+    // ---------------------------------------------------------------------
+    // A signal that never reaches the ceiling never triggers the envelope, so
+    // the adaptation cannot colour anything below the knee.
+    // ---------------------------------------------------------------------
+    {
+        constexpr double frequency = sampleRate * 37.0 / (double) window;
+
+        crest::CrestProcessor processor;
+        configure (processor, 100.0f, 0.0f, 0.0f);
+
+        juce::AudioBuffer<float> reference (2, settle + window + 512);
+        fillSine (reference, sampleRate, frequency, 0.25f);
+
+        juce::AudioBuffer<float> buffer;
+        buffer.makeCopyOf (reference);
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto latency = processor.getLatencySamples();
+
+        float worst = 0.0f;
+
+        for (int n = settle; n < settle + window; ++n)
+            worst = std::max (worst, std::abs (buffer.getSample (0, n)
+                                               - reference.getSample (0, n - latency)));
+
+        check (worst < 1.0e-4f,
+               "adaptation coloured a signal below the ceiling by " + juce::String (worst, 9));
+    }
+
+    // ---------------------------------------------------------------------
+    // The claim itself, stated as the thing that can be measured: the
+    // adaptation leaves sustained material with the character that was dialled
+    // in, and reserves its effect for transients.
+    // ---------------------------------------------------------------------
+    constexpr double toneFrequency = sampleRate * 37.0 / (double) window;
+
+    auto renderSustained = [&] (float adapt)
+    {
+        crest::CrestProcessor processor;
+        configure (processor, adapt, 8.0f, -0.3f);
+
+        juce::AudioBuffer<float> buffer (2, settle + window + 512);
+        fillSine (buffer, sampleRate, toneFrequency, 0.5f);
+
+        runBlocks (processor, buffer, blockSize);
+
+        return buffer;
+    };
+
+    auto renderTransient = [&] (float adapt)
+    {
+        crest::CrestProcessor processor;
+        configure (processor, adapt, 8.0f, -0.3f);
+
+        juce::AudioBuffer<float> buffer (2, 8192);
+        buffer.clear();
+
+        // 3 ms of tone well above the ceiling, once, after a long silence.
+        const auto length = (int) (0.003 * sampleRate);
+
+        for (int ch = 0; ch < 2; ++ch)
+            for (int n = 0; n < length; ++n)
+                buffer.setSample (ch, 4096 + n, 0.5f * (float) std::sin (
+                    juce::MathConstants<double>::twoPi * 1000.0 * (double) n / sampleRate));
+
+        runBlocks (processor, buffer, blockSize);
+
+        return buffer;
+    };
+
+    auto largestDifference = [] (const juce::AudioBuffer<float>& a,
+                                 const juce::AudioBuffer<float>& b, int from, int to)
+    {
+        float worst = 0.0f, peak = 1.0e-9f;
+
+        for (int n = from; n < to; ++n)
+        {
+            worst = std::max (worst, std::abs (a.getSample (0, n) - b.getSample (0, n)));
+            peak  = std::max (peak,  std::abs (a.getSample (0, n)));
+        }
+
+        return juce::Decibels::gainToDecibels (worst / peak, -160.0f);
+    };
+
+    const auto sustainedStatic   = renderSustained (0.0f);
+    const auto sustainedAdaptive = renderSustained (100.0f);
+    const auto transientStatic   = renderTransient (0.0f);
+    const auto transientAdaptive = renderTransient (100.0f);
+
+    const auto sustainedChange = largestDifference (sustainedStatic, sustainedAdaptive,
+                                                    settle, settle + window);
+    const auto transientChange = largestDifference (transientStatic, transientAdaptive,
+                                                    4000, 4600);
+
+    std::cout << "  adapt 0 vs 100: sustained material changes by "
+              << juce::String (sustainedChange, 1) << " dB, a lone transient by "
+              << juce::String (transientChange, 1) << " dB" << std::endl;
+
+    check (transientChange > sustainedChange + 12.0f,
+           "the adaptation does not separate transients from sustained material ("
+               + juce::String (transientChange, 1) + " vs "
+               + juce::String (sustainedChange, 1) + " dB)");
+
+    check (sustainedChange < -20.0f,
+           "the adaptation changed sustained material by " + juce::String (sustainedChange, 1)
+               + " dB, which is the character the user dialled in");
+
+    check (transientChange > -30.0f,
+           "the adaptation barely touched a transient (" + juce::String (transientChange, 1) + " dB)");
+}
+
 void testSidechain()
 {
     section ("Sidechain low pass");
@@ -438,8 +639,9 @@ void testSidechain()
         processor.prepareToPlay (sampleRate, blockSize);
 
         setParam (processor, crest::pid::os,        2.0f);
-        setParam (processor, crest::pid::mode,      0.0f);    // hard clip, the worst case
-        setParam (processor, crest::pid::knee,      0.0f);
+        setParam (processor, crest::pid::mode,      0.0f);
+        setParam (processor, crest::pid::knee,      0.0f);    // square corner: the worst case
+        setParam (processor, crest::pid::adapt,     0.0f);
         setParam (processor, crest::pid::bias,      0.0f);
         setParam (processor, crest::pid::colour,    0.0f);
         setParam (processor, crest::pid::mix,       100.0f);
@@ -761,6 +963,7 @@ int main()
     testQuantizer();
     testCeilingIsHonoured();
     testTransparencyAndLatency();
+    testAdaptiveClipping();
     testSidechain();
     testBypassAndDelta();
     testStabilityAcrossConfigurations();

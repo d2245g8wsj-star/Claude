@@ -7,6 +7,7 @@
 #include "dsp/ColorStage.h"
 #include "dsp/Quantizer.h"
 #include "dsp/LowSplit.h"
+#include "dsp/ClipEnvelope.h"
 #include "dsp/Meters.h"
 
 namespace crest
@@ -20,6 +21,7 @@ namespace pid
     inline constexpr const char* ceiling  = "ceiling";
     inline constexpr const char* mode     = "mode";
     inline constexpr const char* knee     = "knee";
+    inline constexpr const char* adapt    = "adapt";
     inline constexpr const char* bias     = "bias";
     inline constexpr const char* colour   = "colour";
     inline constexpr const char* sidechain = "sclpf";
@@ -88,6 +90,12 @@ public:
         they get it wrong, so they report what they actually did. */
     std::atomic<bool>  dcBlockerRunning     { false };
     std::atomic<bool>  sidechainRunning     { false };
+
+    /** What the adaptation is doing right now: 0 = treating the material as
+        transient, 1 = as sustained. The scope reads the knee so the curve on
+        screen is the curve being applied. */
+    std::atomic<float> displayDensity { 0.0f };
+    std::atomic<float> displayKnee    { 0.25f };
     std::atomic<float> appliedOversamplingGain { 1.0f };
 
 private:
@@ -111,6 +119,7 @@ private:
     juce::AudioParameterFloat*  ceilingParam  { nullptr };
     juce::AudioParameterChoice* modeParam     { nullptr };
     juce::AudioParameterFloat*  kneeParam     { nullptr };
+    juce::AudioParameterFloat*  adaptParam    { nullptr };
     juce::AudioParameterFloat*  biasParam     { nullptr };
     juce::AudioParameterFloat*  colourParam   { nullptr };
     juce::AudioParameterFloat*  sidechainParam { nullptr };
@@ -142,6 +151,7 @@ private:
     Shaper                   shaper;
     std::array<ColorStage, 2> colour;
     std::array<LowSplit, 2>   lowSplit;
+    std::array<ClipEnvelope, 2> clipEnvelope;
     std::array<DCBlocker, 2>  dcBlockers;
     std::array<Quantizer, 2>  quantizers;
 

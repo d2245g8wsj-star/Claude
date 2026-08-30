@@ -789,8 +789,9 @@ namespace
     constexpr int   curveSteps = 260;
 }
 
-ScopeWindow::ScopeWindow (juce::AudioProcessorValueTreeState& state, MeterSource& source)
-    : apvts (state), meters (source)
+ScopeWindow::ScopeWindow (juce::AudioProcessorValueTreeState& state, MeterSource& source,
+                          const std::atomic<float>& liveKnee)
+    : apvts (state), meters (source), adaptedKnee (liveKnee)
 {
     setInterceptsMouseClicks (false, false);
     startTimerHz (refreshHz);
@@ -815,6 +816,7 @@ void ScopeWindow::resized()
 void ScopeWindow::rebuild()
 {
     curvePath.clear();
+    basePath.clear();
 
     if (plot.isEmpty())
         return;
@@ -822,10 +824,12 @@ void ScopeWindow::rebuild()
     for (int i = 0; i <= curveSteps; ++i)
     {
         const auto x = juce::jmap ((float) i, 0.0f, (float) curveSteps, -plotRange, plotRange);
-        const auto p = toPixels (x, shaper.process (x));
 
-        if (i == 0) curvePath.startNewSubPath (p);
-        else        curvePath.lineTo (p);
+        const auto live = toPixels (x, shaper.process (x));
+        const auto base = toPixels (x, baseShaper.process (x));
+
+        if (i == 0) { curvePath.startNewSubPath (live); basePath.startNewSubPath (base); }
+        else        { curvePath.lineTo (live);          basePath.lineTo (base); }
     }
 }
 
@@ -835,15 +839,24 @@ void ScopeWindow::timerCallback()
     const auto knee = apvts.getRawParameterValue (pid::knee)->load();
     const auto bias = apvts.getRawParameterValue (pid::bias)->load();
 
+    // The bright trace is the curve the audio thread is applying right now, the
+    // ghost behind it is the curve as dialled in. When the adaptation pulls the
+    // knee towards a square corner on a transient, you watch it happen.
+    const auto live = adaptedKnee.load (std::memory_order_relaxed);
+
     if ((int) mode != lastMode
         || std::abs (knee - lastKnee) > 1.0e-4f
-        || std::abs (bias - lastBias) > 1.0e-4f)
+        || std::abs (bias - lastBias) > 1.0e-4f
+        || std::abs (live - lastLive) > 3.0e-3f)
     {
         lastMode = (int) mode;
         lastKnee = knee;
         lastBias = bias;
+        lastLive = live;
 
-        shaper.setParameters (static_cast<Mode> (lastMode), knee * 0.01f, bias * 0.01f);
+        shaper    .setParameters (static_cast<Mode> (lastMode), live,        bias * 0.01f);
+        baseShaper.setParameters (static_cast<Mode> (lastMode), knee * 0.01f, bias * 0.01f);
+
         rebuild();
         repaint();
     }
@@ -911,6 +924,10 @@ void ScopeWindow::paint (juce::Graphics& g)
         g.setColour (lampGreen.withAlpha (0.28f));
         g.fillPath (dashed);
     }
+
+    // The curve as dialled in, sitting behind the one actually in use.
+    g.setColour (lampGreen.withAlpha (0.35f));
+    g.strokePath (basePath, juce::PathStrokeType (1.2f, juce::PathStrokeType::curved));
 
     // The trace, with the bloom a phosphor tube has around a bright line
     g.setColour (lampAmber.withAlpha (0.18f));

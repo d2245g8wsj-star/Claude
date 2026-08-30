@@ -45,7 +45,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout CrestProcessor::createParame
     layout.add (std::make_unique<ChoiceP> (juce::ParameterID { pid::mode, 1 }, "Character", modeNames, 0));
 
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::knee, 1 }, "Knee",
-                                          juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 25.0f,
+                                          juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 40.0f,
+                                          Attr().withLabel ("%").withStringFromValueFunction (percentString)));
+
+    layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::adapt, 1 }, "Adapt",
+                                          juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 50.0f,
                                           Attr().withLabel ("%").withStringFromValueFunction (percentString)));
 
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::bias, 1 }, "Bias",
@@ -112,6 +116,7 @@ CrestProcessor::CrestProcessor()
     ceilingParam    = findParameter<juce::AudioParameterFloat>  (pid::ceiling);
     modeParam       = findParameter<juce::AudioParameterChoice> (pid::mode);
     kneeParam       = findParameter<juce::AudioParameterFloat>  (pid::knee);
+    adaptParam      = findParameter<juce::AudioParameterFloat>  (pid::adapt);
     biasParam       = findParameter<juce::AudioParameterFloat>  (pid::bias);
     colourParam     = findParameter<juce::AudioParameterFloat>  (pid::colour);
     sidechainParam  = findParameter<juce::AudioParameterFloat>  (pid::sidechain);
@@ -172,6 +177,7 @@ void CrestProcessor::prepareToPlay (double sampleRate, int maximumExpectedSample
 
     for (auto& c : colour)     c.prepare (sampleRate);
     for (auto& l : lowSplit)   l.prepare (sampleRate);
+    for (auto& e : clipEnvelope) e.prepare (sampleRate);
     for (auto& d : dcBlockers) d.prepare (sampleRate);
 
     for (size_t i = 0; i < quantizers.size(); ++i)
@@ -197,6 +203,7 @@ void CrestProcessor::releaseResources()
 
     for (auto& c : colour)     c.reset();
     for (auto& l : lowSplit)   l.reset();
+    for (auto& e : clipEnvelope) e.reset();
     for (auto& d : dcBlockers) d.reset();
     for (auto& q : quantizers) q.reset();
 
@@ -287,6 +294,9 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
         for (auto& l : lowSplit)
             l.prepare (osRate);
 
+        for (auto& e : clipEnvelope)
+            e.prepare (osRate);
+
         dryDelay.reset();
     }
 
@@ -335,9 +345,26 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     osCorrection.setTargetValue (oversamplingGain[static_cast<size_t> (osIndex)]);
     mixAmount .setTargetValue (mixParam->get() * 0.01f);
 
-    shaper.setParameters (static_cast<Mode> (modeParam->getIndex()),
-                          kneeParam->get() * 0.01f,
-                          biasParam->get() * 0.01f);
+    const auto mode      = static_cast<Mode> (modeParam->getIndex());
+    const auto biasAmount = biasParam->get() * 0.01f;
+    const auto baseKnee   = kneeParam->get() * 0.01f;
+    const auto adaptation = adaptParam->get() * 0.01f;
+    const auto adaptive   = adaptation > 1.0e-4f;
+
+    shaper.setParameters (mode, baseKnee, biasAmount);
+
+    // The envelope is driven against the *unadapted* threshold, so the
+    // adaptation cannot feed back into its own trigger.
+    const auto triggerLevel = juce::jmin (shaper.thresholdPos, shaper.thresholdNeg);
+
+    // Knee is the corner for sustained material, which is where a corner can
+    // actually be heard. Adapt pulls transients back towards a square one,
+    // because a few samples taken squarely off a peak are inaudible and keep
+    // the punch that a rounded corner would smear.
+    const auto adaptedKnee = [baseKnee, adaptation] (float density)
+    {
+        return baseKnee * (1.0f - adaptation * (1.0f - ClipEnvelope::shape (density)));
+    };
 
     displayThresholdPos.store (shaper.thresholdPos, std::memory_order_relaxed);
     displayThresholdNeg.store (shaper.thresholdNeg, std::memory_order_relaxed);
@@ -430,6 +457,13 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
             // channels independently pulls hard-panned peaks toward the centre.
             const auto peak = juce::jmax (std::abs (l), std::abs (r));
 
+            if (adaptive)
+            {
+                const auto density = clipEnvelope[0].process (peak > triggerLevel);
+
+                shaper.setParameters (mode, adaptedKnee (density), biasAmount);
+            }
+
             auto gain = 1.0f;
 
             if (peak > 1.0e-9f)
@@ -469,6 +503,15 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
             for (int n = 0; n < numOsSamples; ++n)
             {
                 const auto x = colour[static_cast<size_t> (ch)].process (samples[n]);
+
+                if (adaptive)
+                {
+                    const auto density = clipEnvelope[static_cast<size_t> (ch)]
+                                             .process (std::abs (x) > triggerLevel);
+
+                    shaper.setParameters (mode, adaptedKnee (density), biasAmount);
+                }
+
                 const auto y = shaper.process (x);
 
                 const auto magnitude = std::abs (x);
@@ -490,6 +533,13 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     }
 
     oversampler.processSamplesDown (block);
+
+    {
+        const auto density = adaptive ? clipEnvelope[0].value() : 0.0f;
+
+        displayDensity.store (density, std::memory_order_relaxed);
+        displayKnee.store (adaptive ? adaptedKnee (density) : baseKnee, std::memory_order_relaxed);
+    }
 
     meters.driveMagnitude.push (frameDrive);
     meters.reduction.push (frameReduction);

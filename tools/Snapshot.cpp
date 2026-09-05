@@ -48,8 +48,6 @@ int main (int argc, char* argv[])
     set (crest::pid::mode,    2.0f);
     set (crest::pid::harmonics, 30.0f);
     set (crest::pid::series,  -45.0f);
-    set (crest::pid::match,   1.0f);
-    set (crest::pid::blind,   1.0f);
 
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
 

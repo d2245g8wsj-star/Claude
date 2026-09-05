@@ -133,8 +133,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout CrestProcessor::createParame
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::tpSafe,   1 }, "TP Safe",   true));
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::delta,    1 }, "Delta",     false));
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::link,     1 }, "Link",      true));
-    layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::match,    1 }, "Loudness Match", false));
-    layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::blind,    1 }, "Blind",     false));
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::bypass,   1 }, "Bypass",    false));
 
     return layout;
@@ -165,8 +163,6 @@ CrestProcessor::CrestProcessor()
     tpSafeParam     = findParameter<juce::AudioParameterBool>   (pid::tpSafe);
     deltaParam      = findParameter<juce::AudioParameterBool>   (pid::delta);
     linkParam       = findParameter<juce::AudioParameterBool>   (pid::link);
-    matchParam      = findParameter<juce::AudioParameterBool>   (pid::match);
-    blindParam      = findParameter<juce::AudioParameterBool>   (pid::blind);
     bypassParameter = findParameter<juce::AudioParameterBool>   (pid::bypass);
 }
 
@@ -223,14 +219,12 @@ void CrestProcessor::prepareToPlay (double sampleRate, int maximumExpectedSample
         quantizers[i].setSeed (static_cast<uint32_t> (i * 7919u + 13u));
 
     dryBuffer    .setSize (static_cast<int> (numChannels), preparedBlockSize, false, true, true);
-    monitorBuffer.setSize (static_cast<int> (numChannels), preparedBlockSize, false, true, true);
 
     waveform.prepare (juce::jmax (16, juce::roundToInt (sampleRate * 0.0046)));
 
     processedLoudness  .prepare (sampleRate, static_cast<int> (numChannels));
-    unprocessedLoudness.prepare (sampleRate, static_cast<int> (numChannels));
 
-    for (auto* s : { &preGain, &postGain, &makeupGain, &trimGain, &osCorrection, &matchGain })
+    for (auto* s : { &preGain, &postGain, &makeupGain, &trimGain, &osCorrection })
         s->reset (sampleRate, 0.02);
 
     mixAmount.reset (sampleRate, 0.02);
@@ -254,7 +248,6 @@ void CrestProcessor::releaseResources()
     for (auto& q : quantizers) q.reset();
 
     processedLoudness.reset();
-    unprocessedLoudness.reset();
     waveform.reset();
 
     meters.clear();
@@ -360,33 +353,10 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
         meters.inputPeak[ch].push (buffer.getMagnitude (ch, 0, numSamples));
 
     // -------------------------------------------------------- what to monitor
-    const auto blindOn = blindParam->get();
-    const auto matchOn = matchParam->get();
-
-    if (blindOn != wasBlind)
-    {
-        if (blindOn)
-            reshuffleBlind();
-        else
-            blindInverted.store (false, std::memory_order_relaxed);
-
-        wasBlind = blindOn;
-    }
-
-    // Under a blind comparison the bypass switch still selects one of the two
-    // sides, it just no longer says which.
-    const auto monitorUnprocessed = bypassParameter->get()
-                                        != (blindOn && blindInverted.load (std::memory_order_relaxed));
-
-    // Matching and blind comparison both need a live measurement of the side
-    // that is not being heard, so the processing keeps running. A plain bypass
-    // with neither engaged still short circuits.
-    const auto needsBothPaths = matchOn || blindOn;
-
     // ------------------------------------------------------------------ bypass
     // Still runs through the delay line, so switching bypass does not shift the
     // signal in time relative to the rest of the session.
-    if (monitorUnprocessed && ! needsBothPaths)
+    if (bypassParameter->get())
     {
         for (int n = 0; n < numSamples; ++n)
         {
@@ -403,8 +373,8 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
         meters.reduction.push (0.0f);
 
-        unprocessedLoudness.process (buffer.getArrayOfReadPointers(), numChannels, numSamples);
-        publishLoudness (monitorUnprocessed);
+        processedLoudness.process (buffer.getArrayOfReadPointers(), numChannels, numSamples);
+        publishLoudness();
         return;
     }
 
@@ -504,7 +474,6 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
     // --------------------------------------------------------------- dry copy
     dryBuffer    .setSize (numChannels, numSamples, false, false, true);
-    monitorBuffer.setSize (numChannels, numSamples, false, false, true);
 
     for (int ch = 0; ch < numChannels; ++ch)
         dryBuffer.copyFrom (ch, 0, buffer, ch, 0, numSamples);
@@ -703,10 +672,6 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
             dryDelay.pushSample (ch, dryBuffer.getSample (ch, n));
             const auto dry = dryDelay.popSample (ch);
 
-            // Kept time aligned with the processed path, so switching between
-            // them compares two sounds rather than two positions.
-            monitorBuffer.setSample (ch, n, dry);
-
             auto out = deltaOn ? (wet - dry)
                                : (dry + (wet - dry) * mix);
 
@@ -716,49 +681,18 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
         }
     }
 
-    // ---------------------------------------------------------- comparison
-    processedLoudness  .process (buffer       .getArrayOfReadPointers(), numChannels, numSamples);
-    unprocessedLoudness.process (monitorBuffer.getArrayOfReadPointers(), numChannels, numSamples);
-
-    {
-        const auto processed   = processedLoudness.shortTerm();
-        const auto unprocessed = unprocessedLoudness.shortTerm();
-
-        // Only trust the match once both sides have something to measure.
-        const auto difference = (matchOn && processed > -60.0f && unprocessed > -60.0f)
-                                    ? juce::jlimit (-12.0f, 12.0f, processed - unprocessed)
-                                    : 0.0f;
-
-        displayMatchDb.store (difference, std::memory_order_relaxed);
-        matchGain.setTargetValue (juce::Decibels::decibelsToGain (difference));
-    }
-
-    if (monitorUnprocessed)
-    {
-        for (int n = 0; n < numSamples; ++n)
-        {
-            const auto gain = matchGain.getNextValue();
-
-            for (int ch = 0; ch < numChannels; ++ch)
-                buffer.setSample (ch, n, monitorBuffer.getSample (ch, n) * gain);
-        }
-    }
-    else
-    {
-        matchGain.skip (numSamples);
-    }
-
-    publishLoudness (monitorUnprocessed);
+    // ------------------------------------------------------------- loudness
+    processedLoudness.process (buffer.getArrayOfReadPointers(), numChannels, numSamples);
+    publishLoudness();
 
     for (int ch = 0; ch < numChannels; ++ch)
         meters.outputPeak[ch].push (buffer.getMagnitude (ch, 0, numSamples));
 }
 
-void CrestProcessor::publishLoudness (bool monitoringUnprocessed)
+void CrestProcessor::publishLoudness()
 {
-    // The readouts follow what is actually being heard, which is the only
-    // number that means anything while a comparison is running.
-    const auto& source = monitoringUnprocessed ? unprocessedLoudness : processedLoudness;
+    // The readouts follow what is actually leaving the plugin.
+    const auto& source = processedLoudness;
 
     displayMomentary .store (source.momentary(),  std::memory_order_relaxed);
     displayShortTerm .store (source.shortTerm(),  std::memory_order_relaxed);

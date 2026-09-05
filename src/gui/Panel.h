@@ -17,6 +17,18 @@ inline const juce::Colour recess { 0xff181510 };
 
 juce::Font plateFont (float height, bool bold = true);
 
+/** A group enclosure milled into the plate.
+
+    Without one the controls sit on a texture rather than in a panel, which is
+    the single biggest reason a laid-out set of knobs reads as loose parts
+    instead of an instrument. Drawn behind the controls, so they sit in it.
+*/
+void drawGroupWell (juce::Graphics&, juce::Rectangle<float>);
+
+/** Engraved lettering, for the labels the plate art does not carry. */
+void drawPlateLabel (juce::Graphics&, const juce::String&, juce::Rectangle<float>,
+                     float height = 9.5f);
+
 /** Loads a vertical filmstrip once and hands out frames.
 
     The frame count comes from the image rather than a constant, so replacing a
@@ -72,6 +84,9 @@ public:
               const juce::Image& amberLed, const juce::Image& red);
 
     void paint (juce::Graphics&) override;
+
+    /** The held peak, so a readout can show the figure the bar is drawing. */
+    float getHoldDb() const noexcept { return hold; }
 
 private:
     void timerCallback() override;
@@ -192,6 +207,25 @@ private:
     bool held { false }, lit { false }, drawFace { true };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Push)
+};
+
+/** A recessed plate carrying one figure, with its name engraved above it.
+
+    A control surface that only shows a value while you are touching it reads
+    as a mockup. These stay on.
+*/
+class Readout final : public juce::Component
+{
+public:
+    explicit Readout (const juce::String& caption);
+
+    void setValue (const juce::String&);
+    void paint (juce::Graphics&) override;
+
+private:
+    juce::String captionText, valueText { "--" };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Readout)
 };
 
 /** A row of segments for the short choice parameters. */

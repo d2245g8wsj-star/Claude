@@ -51,9 +51,12 @@ CrestEditor::Face::Face (CrestProcessor& p)
       deltaSwitch (p.apvts, pid::delta,    "DELTA"),
       linkSwitch  (p.apvts, pid::link,     "LINK"),
       bypassSwitch(p.apvts, pid::bypass,   "BYPASS"),
-      matchSwitch (p.apvts, pid::match,    "MATCH"),
-      blindSwitch (p.apvts, pid::blind,    "BLIND"),
-      revealButton ("REVEAL", [this] { if (onReveal != nullptr) onReveal(); })
+      inputPeak  ("IN"),
+      outputPeak ("OUT"),
+      clipAmount ("CLIP dB"),
+      momentary  ("MOMENTARY"),
+      shortTerm  ("SHORT TERM"),
+      integrated ("INTEGRATED")
 {
     plate    = juce::ImageCache::getFromMemory (BinaryData::plate_png,     BinaryData::plate_pngSize);
     ledOff   = juce::ImageCache::getFromMemory (BinaryData::led_off_png,   BinaryData::led_off_pngSize);
@@ -83,7 +86,8 @@ CrestEditor::Face::Face (CrestProcessor& p)
              &characterSwitch,
              &osBank, &wordBank, &ditherBank,
              &autoSwitch, &tpSafeSwitch, &deltaSwitch, &linkSwitch, &bypassSwitch,
-             &matchSwitch, &blindSwitch, &revealButton })
+             &inputPeak, &outputPeak,
+             &clipAmount, &momentary, &shortTerm, &integrated })
     {
         addAndMakeVisible (child);
     }
@@ -98,13 +102,21 @@ void CrestEditor::Face::setStatusText (const juce::String& text)
     repaint (0, 436, getWidth(), 22);
 }
 
-void CrestEditor::Face::setBlindText (const juce::String& text)
+void CrestEditor::Face::updateReadouts (float clipDb)
 {
-    if (blindText == text)
-        return;
+    auto figure = [] (float value, float floorDb)
+    {
+        return value <= floorDb ? juce::String ("-inf") : juce::String (value, 1);
+    };
 
-    blindText = text;
-    repaint (330, 330, 360, 24);
+    inputPeak .setValue (figure (inputMeter .getHoldDb(), -60.0f));
+    outputPeak.setValue (figure (outputMeter.getHoldDb(), -60.0f));
+
+    clipAmount.setValue (clipDb < 0.02f ? juce::String ("0.0") : juce::String (clipDb, 1));
+
+    momentary .setValue (figure (processor.displayMomentary .load(), -99.0f));
+    shortTerm .setValue (figure (processor.displayShortTerm .load(), -99.0f));
+    integrated.setValue (figure (processor.displayIntegrated.load(), -99.0f));
 }
 
 void CrestEditor::Face::resized()
@@ -136,11 +148,21 @@ void CrestEditor::Face::resized()
     inputMeter .setBounds (  26, 90, 32, 270);
     outputMeter.setBounds (1342, 90, 32, 270);
 
-    // The comparison controls have no place in the art yet, so they take the
-    // clear band between the scope and the switch row.
-    matchSwitch .setBounds (700, 330, 80, 24);
-    blindSwitch .setBounds (786, 330, 80, 24);
-    revealButton.setBounds (872, 330, 88, 24);
+    // The meters read in dBFS right underneath themselves, which is where
+    // anyone looks for the figure.
+    inputPeak .setBounds (  12, 366, 60, 32);
+    outputPeak.setBounds (1328, 366, 60, 32);
+
+    // And a row of figures under the display, so the panel says what it is
+    // doing without having to be touched.
+    {
+        constexpr int y = 314, width = 156, gap = 8;
+
+        panel::Readout* cells[] { &clipAmount, &momentary, &shortTerm, &integrated };
+
+        for (int i = 0; i < 4; ++i)
+            cells[i]->setBounds (330 + i * (width + gap), y, width, 34);
+    }
 
     osBank    .setBounds (110, 405, 220, 24);
     wordBank  .setBounds (360, 405, 160, 24);
@@ -161,13 +183,22 @@ void CrestEditor::Face::paint (juce::Graphics& g)
     else
         g.fillAll (panel::cream);
 
-    if (blindText.isNotEmpty())
+    // ---- group enclosures, drawn behind the controls
+    // Tops on one line, each well then as deep as its own contents. Ragged
+    // tops were most of why the four groups read as loose parts.
+    for (auto well : { juce::Rectangle<float> {   66.0f, 78.0f, 108.0f, 127.0f },
+                       juce::Rectangle<float> {  170.0f, 78.0f, 140.0f, 281.0f },
+                       juce::Rectangle<float> {  998.0f, 78.0f, 140.0f, 281.0f },
+                       juce::Rectangle<float> { 1188.0f, 78.0f, 104.0f, 241.0f } })
     {
-        g.setColour (panel::amber);
-        g.setFont (panel::plateFont (9.5f));
-        g.drawText (blindText, juce::Rectangle<int> (330, 330, 360, 24),
-                    juce::Justification::centredRight, false);
+        panel::drawGroupWell (g, well);
     }
+
+    // The art prints CEILING and OUTPUT only 26 points above their centres, so
+    // a knob of the diameter it also specifies covers them. Drawn clear here
+    // until the plate is re-cut.
+    panel::drawPlateLabel (g, "CEILING", { 1188.0f, 162.0f, 104.0f, 13.0f });
+    panel::drawPlateLabel (g, "OUTPUT",  { 1188.0f, 292.0f, 104.0f, 13.0f });
 
     // The plate prints a sample rate and a latency of its own; cover it with a
     // clean piece of the same surface and write the live figures instead.
@@ -222,8 +253,6 @@ CrestEditor::CrestEditor (CrestProcessor& p)
     setLookAndFeel (&lookAndFeel);
     addAndMakeVisible (face);
 
-    face.onReveal = [this] { revealSecondsLeft = 12; };   // three seconds at four hertz
-
     setResizable (true, true);
 
     if (auto* sizeConstrainer = getConstrainer())
@@ -263,56 +292,24 @@ void CrestEditor::resized()
 
 void CrestEditor::timerCallback()
 {
-    auto lufs = [] (float value)
-    {
-        return value <= -99.0f ? juce::String ("--.-") : juce::String (value, 1);
-    };
-
-    juce::String status;
-    status << "M " << lufs (processor.displayMomentary.load())
-           << "    S " << lufs (processor.displayShortTerm.load())
-           << "    I " << lufs (processor.displayIntegrated.load()) << " LUFS";
-
-    const auto match = processor.displayMatchDb.load();
-
-    if (std::abs (match) > 0.05f)
-        status << "    MATCH " << juce::String (match, 1) << " dB";
-
     const auto rate    = processor.getSampleRate();
     const auto latency = processor.getLatencySamples();
 
-    status << "    " << juce::String (rate / 1000.0, 1) << " kHz"
-           << "    LATENCY " << latency << " smp";
+    // The loudness family has its own plates now, so the footer keeps to the
+    // things that have nowhere else to live.
+    juce::String status;
+    status << juce::String (rate / 1000.0, 1) << " kHz    .    LATENCY " << latency << " smp";
+
+    if (rate > 0.0)
+        status << " / " << juce::String (1000.0 * latency / rate, 2) << " ms";
+
+    status << "    .    CREST v" << JucePlugin_VersionString;
 
     face.setStatusText (status);
 
-    const auto blind = processor.apvts.getRawParameterValue (pid::blind)->load() > 0.5f;
+    const auto removed = juce::jlimit (0.0f, 0.999f, processor.meters.reduction.take());
 
-    if (! blind)
-    {
-        revealSecondsLeft = 0;
-        face.revealButton.setLit (false);
-        face.setBlindText ({});
-        return;
-    }
-
-    const auto onB = processor.apvts.getRawParameterValue (pid::bypass)->load() > 0.5f;
-
-    if (revealSecondsLeft > 0)
-    {
-        face.revealButton.setLit (true);
-        face.setBlindText (processor.blindInverted.load() ? "B IS PROCESSED" : "A IS PROCESSED");
-
-        if (--revealSecondsLeft == 0)
-        {
-            processor.reshuffleBlind();
-            face.revealButton.setLit (false);
-        }
-    }
-    else
-    {
-        face.setBlindText (juce::String ("LISTENING TO ") + (onB ? "B" : "A"));
-    }
+    face.updateReadouts (-juce::Decibels::gainToDecibels (1.0f - removed, -60.0f));
 }
 
 } // namespace crest

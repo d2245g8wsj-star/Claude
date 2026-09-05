@@ -33,12 +33,10 @@ private:
         void resized() override;
 
         void setStatusText (const juce::String&);
-        void setBlindText (const juce::String&);
 
-        std::function<void()> onReveal;
+        /** The figures on the always-on plates, refreshed by the editor timer. */
+        void updateReadouts (float clipDb);
 
-        panel::Switch matchSwitch, blindSwitch;
-        panel::Push   revealButton;
 
     private:
         CrestProcessor& processor;
@@ -59,7 +57,10 @@ private:
         panel::Bank   osBank, wordBank, ditherBank;
         panel::Switch autoSwitch, tpSafeSwitch, deltaSwitch, linkSwitch, bypassSwitch;
 
-        juce::String statusText, blindText;
+        panel::Readout inputPeak, outputPeak;
+        panel::Readout clipAmount, momentary, shortTerm, integrated;
+
+        juce::String statusText;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
     };
@@ -75,8 +76,6 @@ private:
     Tooltips            lookAndFeel;
     juce::TooltipWindow tooltips { this, 650 };
     Face                face;
-
-    int revealSecondsLeft { 0 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CrestEditor)
 };

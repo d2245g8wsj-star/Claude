@@ -14,6 +14,41 @@ juce::Font plateFont (float height, bool bold)
     return juce::Font (juce::FontOptions (height, bold ? juce::Font::bold : juce::Font::plain));
 }
 
+void drawGroupWell (juce::Graphics& g, juce::Rectangle<float> area)
+{
+    constexpr float corner = 7.0f;
+
+    // Shallow, because the plate is a light surface: a deep well would read as
+    // a hole rather than something milled into it.
+    g.setColour (ink.withAlpha (0.055f));
+    g.fillRoundedRectangle (area, corner);
+
+    juce::ColourGradient shade (ink.withAlpha (0.13f), 0.0f, area.getY(),
+                                juce::Colours::transparentBlack, 0.0f, area.getY() + 18.0f, false);
+    g.setGradientFill (shade);
+    g.fillRoundedRectangle (area, corner);
+
+    // The lit lower lip goes down first and the dark edge sits on top of it.
+    // That order is what makes the eye read a cut instead of a drawn outline.
+    g.setColour (juce::Colours::white.withAlpha (0.45f));
+    g.drawRoundedRectangle (area.reduced (0.5f).translated (0.0f, 1.2f), corner, 1.0f);
+
+    g.setColour (ink.withAlpha (0.34f));
+    g.drawRoundedRectangle (area.reduced (0.5f), corner, 1.0f);
+}
+
+void drawPlateLabel (juce::Graphics& g, const juce::String& text, juce::Rectangle<float> area,
+                     float height)
+{
+    g.setFont (plateFont (height));
+
+    g.setColour (juce::Colours::white.withAlpha (0.55f));
+    g.drawText (text, area.translated (0.0f, 1.0f), juce::Justification::centred, false);
+
+    g.setColour (ink.withAlpha (0.88f));
+    g.drawText (text, area, juce::Justification::centred, false);
+}
+
 // ---------------------------------------------------------------------------
 
 Filmstrip::Filmstrip (const void* data, int size)
@@ -303,6 +338,47 @@ void Scope::paint (juce::Graphics& g)
             g.fillEllipse (juce::Rectangle<float> (3.6f, 3.6f).withCentre (point));
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+
+Readout::Readout (const juce::String& caption) : captionText (caption)
+{
+    setInterceptsMouseClicks (false, false);
+}
+
+void Readout::setValue (const juce::String& text)
+{
+    if (valueText == text)
+        return;
+
+    valueText = text;
+    repaint();
+}
+
+void Readout::paint (juce::Graphics& g)
+{
+    auto bounds = getLocalBounds().toFloat();
+
+    drawPlateLabel (g, captionText, bounds.removeFromTop (12.0f), 8.0f);
+
+    // A dark window, so the figure reads as lit rather than printed.
+    g.setColour (recess);
+    g.fillRoundedRectangle (bounds, 3.0f);
+
+    juce::ColourGradient inner (juce::Colours::black.withAlpha (0.5f), 0.0f, bounds.getY(),
+                                juce::Colours::transparentBlack, 0.0f, bounds.getY() + 7.0f, false);
+    g.setGradientFill (inner);
+    g.fillRoundedRectangle (bounds, 3.0f);
+
+    g.setColour (juce::Colours::white.withAlpha (0.35f));
+    g.drawRoundedRectangle (bounds.reduced (0.5f).translated (0.0f, 1.0f), 3.0f, 1.0f);
+    g.setColour (ink.withAlpha (0.55f));
+    g.drawRoundedRectangle (bounds.reduced (0.5f), 3.0f, 1.0f);
+
+    g.setColour (amber.brighter (0.25f));
+    g.setFont (plateFont (13.0f));
+    g.drawText (valueText, bounds, juce::Justification::centred, false);
 }
 
 // ---------------------------------------------------------------------------

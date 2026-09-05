@@ -9,7 +9,10 @@ namespace
     /** Centres a square control on a point from the art, drawn larger than the
         control's nominal diameter because each filmstrip frame carries its own
         shadow and highlight outside the knob body. */
-    juce::Rectangle<int> place (float centreX, float centreY, float diameter, float scale = 1.35f)
+    /** The art places its labels assuming the filmstrip frame is drawn at exactly
+        the diameter in controls.json, so that is what happens here. Anything
+        larger runs the frame into the label above it. */
+    juce::Rectangle<int> place (float centreX, float centreY, float diameter, float scale = 1.0f)
     {
         const auto side = diameter * scale;
 
@@ -21,22 +24,24 @@ namespace
 
 CrestEditor::Face::Face (CrestProcessor& p)
     : processor (p),
-      knobStrip      (BinaryData::knob_large_png,           BinaryData::knob_large_pngSize),
-      characterStrip (BinaryData::character_selector_5_png, BinaryData::character_selector_5_pngSize),
-      inputKnob     (p.apvts, pid::input,     knobStrip),
-      kneeKnob      (p.apvts, pid::knee,      knobStrip),
-      adaptKnob     (p.apvts, pid::adapt,     knobStrip),
-      biasKnob      (p.apvts, pid::bias,      knobStrip),
-      colourKnob    (p.apvts, pid::colour,    knobStrip),
-      harmonicsKnob (p.apvts, pid::harmonics, knobStrip),
-      seriesKnob    (p.apvts, pid::series,    knobStrip),
-      sidechainKnob (p.apvts, pid::sidechain, knobStrip),
-      mixKnob       (p.apvts, pid::mix,       knobStrip),
-      ceilingKnob   (p.apvts, pid::ceiling,   knobStrip),
-      outputKnob    (p.apvts, pid::output,    knobStrip),
+      largeStrip     (BinaryData::knob_large_png,           BinaryData::knob_large_pngSize),
+      smallStrip     (BinaryData::knob_small_png,           BinaryData::knob_small_pngSize),
+      characterStrip (BinaryData::character_selector_4_png, BinaryData::character_selector_4_pngSize),
+      inputKnob     (p.apvts, pid::input,     largeStrip),
+      kneeKnob      (p.apvts, pid::knee,      smallStrip),
+      adaptKnob     (p.apvts, pid::adapt,     smallStrip),
+      biasKnob      (p.apvts, pid::bias,      smallStrip),
+      colourKnob    (p.apvts, pid::colour,    smallStrip),
+      harmonicsKnob (p.apvts, pid::harmonics, smallStrip),
+      seriesKnob    (p.apvts, pid::series,    smallStrip),
+      sidechainKnob (p.apvts, pid::sidechain, smallStrip),
+      mixKnob       (p.apvts, pid::mix,       smallStrip),
+      ceilingKnob   (p.apvts, pid::ceiling,   largeStrip),
+      outputKnob    (p.apvts, pid::output,    largeStrip),
       characterSwitch (p.apvts, pid::mode,    characterStrip),
       inputMeter  (p.meters, false, ledOff, ledGreen, ledAmber, ledRed),
       outputMeter (p.meters, true,  ledOff, ledGreen, ledAmber, ledRed),
+      waveform    (p.waveform),
       scope       (p.apvts, p.meters, p.displayKnee),
       osBank      (p.apvts, pid::os,       "OVERSAMPLING"),
       wordBank    (p.apvts, pid::word,     "WORD"),
@@ -56,20 +61,23 @@ CrestEditor::Face::Face (CrestProcessor& p)
     ledAmber = juce::ImageCache::getFromMemory (BinaryData::led_amber_png, BinaryData::led_amber_pngSize);
     ledRed   = juce::ImageCache::getFromMemory (BinaryData::led_red_png,   BinaryData::led_red_pngSize);
 
-    // The plate prints five detents but the plugin has four characters: at a
-    // knee of zero every character already is a square corner, so a separate
-    // SLICE position would be a fifth name for a setting the knee reaches. The
-    // four are mapped onto the four upper detents and the SLICE detent at half
-    // past seven is simply never selected.
-    characterSwitch.setFrameMap ({ 1, 2, 3, 4 });
+    // Four frames, four characters, in the same order the plate prints them:
+    // GLASS at -135, EDGE at -45, SILK at +45, TUBE at +135.
+    characterSwitch.setFrameMap ({ 0, 1, 2, 3 });
 
-    // The faces of these three are printed on the plate.
-    matchSwitch .setDrawFace (false);
-    blindSwitch .setDrawFace (false);
-    revealButton.setDrawFace (false);
+    // The wells and the headings of these are printed on the plate.
+    osBank    .setWellsAreBaked (true);
+    wordBank  .setWellsAreBaked (true);
+    ditherBank.setWellsAreBaked (true);
+
+    // As are the shapes and the resting legends of the five toggles. The legend
+    // is still drawn when one is engaged, in cream over the amber, because the
+    // printed one underneath is dark ink and would disappear.
+    for (auto* toggle : { &autoSwitch, &tpSafeSwitch, &deltaSwitch, &linkSwitch, &bypassSwitch })
+        toggle->setDrawFace (false);
 
     for (auto* child : std::initializer_list<juce::Component*> {
-             &inputMeter, &outputMeter, &scope,
+             &inputMeter, &outputMeter, &waveform, &scope,
              &inputKnob, &kneeKnob, &adaptKnob, &biasKnob, &colourKnob, &harmonicsKnob,
              &seriesKnob, &sidechainKnob, &mixKnob, &ceilingKnob, &outputKnob,
              &characterSwitch,
@@ -87,7 +95,7 @@ void CrestEditor::Face::setStatusText (const juce::String& text)
         return;
 
     statusText = text;
-    repaint (0, 316, getWidth(), 20);
+    repaint (0, 436, getWidth(), 22);
 }
 
 void CrestEditor::Face::setBlindText (const juce::String& text)
@@ -96,50 +104,53 @@ void CrestEditor::Face::setBlindText (const juce::String& text)
         return;
 
     blindText = text;
-    repaint (560, 222, 180, 18);
+    repaint (330, 330, 360, 24);
 }
 
 void CrestEditor::Face::resized()
 {
-    // Centres and diameters come straight from the art's controls.json.
-    inputKnob      .setBounds (place ( 130.0f, 150.0f, 75.0f));
-    characterSwitch.setBounds (place ( 257.0f, 152.5f, 60.0f));
-    kneeKnob       .setBounds (place ( 363.0f, 150.0f, 52.0f));
-    adaptKnob      .setBounds (place ( 433.0f, 150.0f, 52.0f));
-    biasKnob       .setBounds (place ( 503.5f, 150.0f, 52.0f));
-    colourKnob     .setBounds (place ( 726.5f, 150.0f, 52.0f));
-    harmonicsKnob  .setBounds (place ( 796.0f, 150.0f, 52.0f));
-    seriesKnob     .setBounds (place ( 866.5f, 150.0f, 52.0f));
-    sidechainKnob  .setBounds (place ( 935.0f, 150.0f, 52.0f));
-    mixKnob        .setBounds (place (1010.0f, 150.0f, 52.0f));
-    ceilingKnob    .setBounds (place (1098.5f, 150.0f, 75.0f));
-    outputKnob     .setBounds (place (1185.5f, 150.0f, 75.0f));
+    // Straight out of the art's controls.json, grouped by signal flow.
+    inputKnob      .setBounds (place ( 120.0f, 150.0f, 78.0f));
 
-    scope.setBounds (570, 100, 110, 115);
+    characterSwitch.setBounds (place ( 232.0f, 130.0f, 66.0f));
+    kneeKnob       .setBounds (place ( 200.0f, 235.0f, 50.0f));
+    adaptKnob      .setBounds (place ( 264.0f, 235.0f, 50.0f));
+    biasKnob       .setBounds (place ( 232.0f, 320.0f, 50.0f));
 
-    inputMeter .setBounds (  24, 75, 28, 210);
-    outputMeter.setBounds (1248, 75, 28, 210);
+    colourKnob     .setBounds (place (1035.0f, 130.0f, 50.0f));
+    harmonicsKnob  .setBounds (place (1099.0f, 130.0f, 50.0f));
+    seriesKnob     .setBounds (place (1067.0f, 235.0f, 66.0f));
+    sidechainKnob  .setBounds (place (1035.0f, 320.0f, 50.0f));
+    mixKnob        .setBounds (place (1099.0f, 320.0f, 50.0f));
 
-    // Sitting exactly on the shapes printed underneath them.
-    matchSwitch .setBounds (570, 238, 34, 16);
-    blindSwitch .setBounds (606, 238, 34, 16);
-    revealButton.setBounds (643, 238, 34, 16);
+    ceilingKnob    .setBounds (place (1240.0f, 120.0f, 78.0f));
+    outputKnob     .setBounds (place (1240.0f, 250.0f, 78.0f));
 
-    // Nothing on the plate covers the switched parameters, so they get the
-    // empty band below the knobs, drawn in the plate's own colours.
-    osBank    .setBounds ( 96, 272, 200, 32);
-    wordBank  .setBounds (312, 272, 160, 32);
-    ditherBank.setBounds (488, 272, 128, 32);
+    waveform.setBounds (330,  90, 650, 210);
+    scope   .setBounds (850, 170, 120, 120);
 
-    {
-        constexpr int y = 287, width = 92, gap = 8;
+    // The transfer inset is a window of its own inside the same recess, so the
+    // scrolling trace stops at its edge rather than running behind it.
+    waveform.setExcluded (scope.getBounds().translated (-330, -90).expanded (2));
 
-        panel::Switch* switches[] { &autoSwitch, &tpSafeSwitch, &deltaSwitch,
-                                    &linkSwitch, &bypassSwitch };
+    inputMeter .setBounds (  26, 90, 32, 270);
+    outputMeter.setBounds (1342, 90, 32, 270);
 
-        for (int i = 0; i < 5; ++i)
-            switches[i]->setBounds (700 + i * (width + gap), y, width, 17);
-    }
+    // The comparison controls have no place in the art yet, so they take the
+    // clear band between the scope and the switch row.
+    matchSwitch .setBounds (700, 330, 80, 24);
+    blindSwitch .setBounds (786, 330, 80, 24);
+    revealButton.setBounds (872, 330, 88, 24);
+
+    osBank    .setBounds (110, 405, 220, 24);
+    wordBank  .setBounds (360, 405, 160, 24);
+    ditherBank.setBounds (548, 405, 130, 24);
+
+    autoSwitch  .setBounds ( 760, 405,  92, 24);
+    tpSafeSwitch.setBounds ( 868, 405, 104, 24);
+    deltaSwitch .setBounds ( 988, 405,  92, 24);
+    linkSwitch  .setBounds (1096, 405,  84, 24);
+    bypassSwitch.setBounds (1196, 405, 104, 24);
 }
 
 void CrestEditor::Face::paint (juce::Graphics& g)
@@ -150,36 +161,31 @@ void CrestEditor::Face::paint (juce::Graphics& g)
     else
         g.fillAll (panel::cream);
 
-    // "LISTENING TO A" is printed on the plate, and it is only true while a
-    // blind comparison is running. Patch over it with a clean piece of the same
-    // brushed surface from lower down, then write whatever is actually the case.
+    if (blindText.isNotEmpty())
+    {
+        g.setColour (panel::amber);
+        g.setFont (panel::plateFont (9.5f));
+        g.drawText (blindText, juce::Rectangle<int> (330, 330, 360, 24),
+                    juce::Justification::centredRight, false);
+    }
+
+    // The plate prints a sample rate and a latency of its own; cover it with a
+    // clean piece of the same surface and write the live figures instead.
     if (plate.isValid())
     {
         const auto scaleX = (float) plate.getWidth()  / (float) getWidth();
         const auto scaleY = (float) plate.getHeight() / (float) getHeight();
 
-        const juce::Rectangle<int> target { 556, 222, 188, 17 };
-
         g.drawImage (plate,
-                     target.getX(), target.getY(), target.getWidth(), target.getHeight(),
-                     juce::roundToInt ((float) target.getX() * scaleX),
-                     juce::roundToInt (268.0f * scaleY),
-                     juce::roundToInt ((float) target.getWidth()  * scaleX),
-                     juce::roundToInt ((float) target.getHeight() * scaleY),
+                     300, 436, 800, 22,
+                     juce::roundToInt (300.0f * scaleX), juce::roundToInt (368.0f * scaleY),
+                     juce::roundToInt (800.0f * scaleX), juce::roundToInt ( 22.0f * scaleY),
                      false);
-    }
-
-    if (blindText.isNotEmpty())
-    {
-        g.setColour (panel::amber);
-        g.setFont (panel::plateFont (9.0f));
-        g.drawText (blindText, juce::Rectangle<int> (556, 222, 188, 17),
-                    juce::Justification::centred, false);
     }
 
     g.setColour (panel::ink.withAlpha (0.68f));
     g.setFont (panel::plateFont (9.0f, false));
-    g.drawText (statusText, juce::Rectangle<int> (0, 318, getWidth(), 16),
+    g.drawText (statusText, juce::Rectangle<int> (0, 438, getWidth(), 18),
                 juce::Justification::centred, false);
 }
 

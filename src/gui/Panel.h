@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../dsp/Shaper.h"
 #include "../dsp/Meters.h"
+#include "../dsp/WaveformTap.h"
 
 namespace crest::panel
 {
@@ -117,6 +118,33 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Scope)
 };
 
+/** The scrolling picture of what the clipper is doing.
+
+    Two envelopes, drawn one over the other: what went into the shaper and what
+    came out. The gap between them is the material that was removed, so the
+    clipping is shown rather than described. Scrolls right to left.
+*/
+class Waveform final : public juce::Component,
+                       private juce::Timer
+{
+public:
+    explicit Waveform (const WaveformTap&);
+
+    void paint (juce::Graphics&) override;
+
+    /** A region inside this one that belongs to something else. */
+    void setExcluded (juce::Rectangle<int> area) { excluded = area; repaint(); }
+
+private:
+    void timerCallback() override;
+
+    const WaveformTap& tap;
+    juce::Rectangle<int> excluded;
+    int lastSeen { 0 };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Waveform)
+};
+
 /** A switch in the plate's own idiom: cream face, amber when engaged. */
 class Switch final : public juce::Component,
                      public juce::SettableTooltipClient
@@ -125,8 +153,10 @@ public:
     Switch (juce::AudioProcessorValueTreeState&, const juce::String& parameterID,
             const juce::String& caption);
 
-    /** For the three whose shapes are already printed on the plate. */
+    /** For the ones whose shape and legend are already printed on the plate:
+        only the engaged state is drawn. */
     void setDrawFace (bool shouldDraw) { drawFace = shouldDraw; repaint(); }
+    void setDrawLegend (bool shouldDraw) { drawLegendText = shouldDraw; repaint(); }
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
@@ -136,7 +166,7 @@ public:
 private:
     juce::RangedAudioParameter& parameter;
     juce::String captionText;
-    bool on { false }, hover { false }, drawFace { true };
+    bool on { false }, hover { false }, drawFace { true }, drawLegendText { true };
 
     juce::ParameterAttachment attachment;
 
@@ -175,6 +205,10 @@ public:
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
 
+    /** The wells and the heading are printed on the plate, so only the value
+        text and the engaged segment are drawn. */
+    void setWellsAreBaked (bool baked) { bakedWells = baked; repaint(); }
+
 private:
     juce::Rectangle<float> strip() const;
     juce::Rectangle<float> cell (int) const;
@@ -183,6 +217,7 @@ private:
     juce::StringArray           choices;
     juce::String                captionText;
     int                         index { 0 };
+    bool                        bakedWells { false };
 
     juce::ParameterAttachment attachment;
 

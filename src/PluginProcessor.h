@@ -10,6 +10,7 @@
 #include "dsp/ClipEnvelope.h"
 #include "dsp/HarmonicStage.h"
 #include "dsp/Loudness.h"
+#include "dsp/WaveformTap.h"
 #include "dsp/Meters.h"
 
 namespace crest
@@ -90,6 +91,7 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
     MeterSource                        meters;
+    WaveformTap                        waveform;
 
     /** Snapshot of the shaper as the audio thread currently has it, for the
         curve view. Written from the audio thread, read by the editor; both
@@ -191,7 +193,7 @@ private:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear>         mixAmount { 1.0f };
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> trimGain { 1.0f };
 
-    juce::AudioBuffer<float> dryBuffer, monitorBuffer;
+    juce::AudioBuffer<float> dryBuffer, monitorBuffer, waveformInput;
 
     LoudnessMeter processedLoudness, unprocessedLoudness;
 

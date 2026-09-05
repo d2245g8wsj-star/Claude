@@ -1,0 +1,291 @@
+{
+  "plate_px": [
+    2800,
+    940
+  ],
+  "editor_pt": [
+    1400,
+    470
+  ],
+  "controls": {
+    "input": {
+      "x": 120,
+      "y": 150,
+      "d": 78,
+      "type": "knob",
+      "min": -12,
+      "max": 24,
+      "unit": "dB",
+      "x_pt": 120,
+      "y_pt": 150,
+      "d_pt": 78
+    },
+    "character": {
+      "x": 232,
+      "y": 130,
+      "d": 66,
+      "type": "selector",
+      "positions": [
+        "GLASS",
+        "EDGE",
+        "SILK",
+        "TUBE"
+      ],
+      "detent_angles_deg": [
+        -135,
+        -45,
+        45,
+        135
+      ],
+      "x_pt": 232,
+      "y_pt": 130,
+      "d_pt": 66
+    },
+    "knee": {
+      "x": 200,
+      "y": 235,
+      "d": 50,
+      "type": "knob",
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "x_pt": 200,
+      "y_pt": 235,
+      "d_pt": 50
+    },
+    "adapt": {
+      "x": 264,
+      "y": 235,
+      "d": 50,
+      "type": "knob",
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "x_pt": 264,
+      "y_pt": 235,
+      "d_pt": 50
+    },
+    "bias": {
+      "x": 232,
+      "y": 320,
+      "d": 50,
+      "type": "knob",
+      "min": -50,
+      "max": 50,
+      "unit": "%",
+      "x_pt": 232,
+      "y_pt": 320,
+      "d_pt": 50
+    },
+    "colour": {
+      "x": 1035,
+      "y": 130,
+      "d": 50,
+      "type": "knob",
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "x_pt": 1035,
+      "y_pt": 130,
+      "d_pt": 50
+    },
+    "harmonics": {
+      "x": 1099,
+      "y": 130,
+      "d": 50,
+      "type": "knob",
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "x_pt": 1099,
+      "y_pt": 130,
+      "d_pt": 50
+    },
+    "series": {
+      "x": 1067,
+      "y": 235,
+      "d": 66,
+      "type": "selector",
+      "positions": [
+        "EVEN",
+        "ODD",
+        "EVEN45",
+        "ALL"
+      ],
+      "detent_angles_deg": [
+        -135,
+        -45,
+        45,
+        135
+      ],
+      "x_pt": 1067,
+      "y_pt": 235,
+      "d_pt": 66
+    },
+    "sclpf": {
+      "x": 1035,
+      "y": 320,
+      "d": 50,
+      "type": "knob",
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "x_pt": 1035,
+      "y_pt": 320,
+      "d_pt": 50
+    },
+    "mix": {
+      "x": 1099,
+      "y": 320,
+      "d": 50,
+      "type": "knob",
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "x_pt": 1099,
+      "y_pt": 320,
+      "d_pt": 50
+    },
+    "ceiling": {
+      "x": 1240,
+      "y": 120,
+      "d": 78,
+      "type": "knob",
+      "min": -24,
+      "max": 0,
+      "unit": "dB",
+      "x_pt": 1240,
+      "y_pt": 120,
+      "d_pt": 78
+    },
+    "output": {
+      "x": 1240,
+      "y": 250,
+      "d": 78,
+      "type": "knob",
+      "min": -24,
+      "max": 12,
+      "unit": "dB",
+      "x_pt": 1240,
+      "y_pt": 250,
+      "d_pt": 78
+    }
+  },
+  "switches": {
+    "oversampling": {
+      "x": 110,
+      "y": 405,
+      "w": 220,
+      "h": 24,
+      "segments": 5,
+      "labels": [
+        "OFF",
+        "2x",
+        "4x",
+        "8x",
+        "16x"
+      ]
+    },
+    "word": {
+      "x": 360,
+      "y": 405,
+      "w": 160,
+      "h": 24,
+      "segments": 4,
+      "labels": [
+        "OFF",
+        "24",
+        "20",
+        "16"
+      ]
+    },
+    "dither": {
+      "x": 548,
+      "y": 405,
+      "w": 130,
+      "h": 24,
+      "segments": 3,
+      "labels": [
+        "OFF",
+        "TPDF",
+        "SHAPED"
+      ]
+    },
+    "auto": {
+      "x": 760,
+      "y": 405,
+      "w": 92,
+      "h": 24,
+      "segments": 1,
+      "labels": [
+        "AUTO"
+      ]
+    },
+    "tpsafe": {
+      "x": 868,
+      "y": 405,
+      "w": 104,
+      "h": 24,
+      "segments": 1,
+      "labels": [
+        "TP SAFE"
+      ]
+    },
+    "delta": {
+      "x": 988,
+      "y": 405,
+      "w": 92,
+      "h": 24,
+      "segments": 1,
+      "labels": [
+        "DELTA"
+      ]
+    },
+    "link": {
+      "x": 1096,
+      "y": 405,
+      "w": 84,
+      "h": 24,
+      "segments": 1,
+      "labels": [
+        "LINK"
+      ]
+    },
+    "bypass": {
+      "x": 1196,
+      "y": 405,
+      "w": 104,
+      "h": 24,
+      "segments": 1,
+      "labels": [
+        "BYPASS"
+      ]
+    }
+  },
+  "scope_window_pt": {
+    "x": 330,
+    "y": 90,
+    "w": 650,
+    "h": 210
+  },
+  "scope_inset_pt": {
+    "x": 850,
+    "y": 170,
+    "w": 120,
+    "h": 120
+  },
+  "meters_pt": {
+    "in": {
+      "x": 26,
+      "y": 90,
+      "w": 32,
+      "h": 270
+    },
+    "out": {
+      "x": 1342,
+      "y": 90,
+      "w": 32,
+      "h": 270
+    }
+  }
+}

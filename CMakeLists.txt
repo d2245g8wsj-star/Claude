@@ -60,8 +60,8 @@ juce_add_plugin(Crest
 juce_add_binary_data(CrestAssets SOURCES
     resources/gui/plate.png
     resources/gui/knob_large.png
-    resources/gui/character_selector_5.png
-    resources/gui/series_selector_4.png
+    resources/gui/knob_small.png
+    resources/gui/character_selector_4.png
     resources/gui/led_off.png
     resources/gui/led_green.png
     resources/gui/led_amber.png

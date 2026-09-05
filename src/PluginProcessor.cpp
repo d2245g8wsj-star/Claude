@@ -210,6 +210,8 @@ void CrestProcessor::prepareToPlay (double sampleRate, int maximumExpectedSample
     dryBuffer    .setSize (static_cast<int> (numChannels), preparedBlockSize, false, true, true);
     monitorBuffer.setSize (static_cast<int> (numChannels), preparedBlockSize, false, true, true);
 
+    waveform.prepare (juce::jmax (16, juce::roundToInt (sampleRate * 0.0046)));
+
     processedLoudness  .prepare (sampleRate, static_cast<int> (numChannels));
     unprocessedLoudness.prepare (sampleRate, static_cast<int> (numChannels));
 
@@ -238,6 +240,7 @@ void CrestProcessor::releaseResources()
 
     processedLoudness.reset();
     unprocessedLoudness.reset();
+    waveform.reset();
 
     meters.clear();
 }
@@ -500,6 +503,25 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
             buffer.getWritePointer (ch)[n] *= g;
     }
 
+    // What the shaper is about to see, kept for the scrolling display. Taken
+    // here rather than after it so the two envelopes the display draws are the
+    // same signal before and after, in the same units.
+    waveformInput.setSize (1, numSamples, false, false, true);
+
+    {
+        auto* destination = waveformInput.getWritePointer (0);
+
+        for (int n = 0; n < numSamples; ++n)
+        {
+            auto sum = 0.0f;
+
+            for (int ch = 0; ch < numChannels; ++ch)
+                sum += buffer.getReadPointer (ch)[n];
+
+            destination[n] = sum / (float) numChannels;
+        }
+    }
+
     // ------------------------------------------------------- clip, oversampled
     juce::dsp::AudioBlock<float> block (buffer.getArrayOfWritePointers(),
                                         static_cast<size_t> (numChannels),
@@ -614,6 +636,20 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
         displayDensity.store (density, std::memory_order_relaxed);
         displayKnee.store (adaptive ? adaptedKnee (density) : baseKnee, std::memory_order_relaxed);
+    }
+
+    {
+        const auto* source = waveformInput.getReadPointer (0);
+
+        for (int n = 0; n < numSamples; ++n)
+        {
+            auto sum = 0.0f;
+
+            for (int ch = 0; ch < numChannels; ++ch)
+                sum += buffer.getReadPointer (ch)[n];
+
+            waveform.push (source[n], sum / (float) numChannels);
+        }
     }
 
     meters.driveMagnitude.push (frameDrive);

@@ -307,6 +307,94 @@ void Scope::paint (juce::Graphics& g)
 
 // ---------------------------------------------------------------------------
 
+Waveform::Waveform (const WaveformTap& source) : tap (source)
+{
+    setInterceptsMouseClicks (false, false);
+    startTimerHz (refreshHz);
+}
+
+void Waveform::timerCallback()
+{
+    const auto now = tap.getWriteIndex();
+
+    if (now != lastSeen)
+    {
+        lastSeen = now;
+        repaint();
+    }
+}
+
+void Waveform::paint (juce::Graphics& g)
+{
+    if (! excluded.isEmpty())
+        g.excludeClipRegion (excluded);
+
+    const auto bounds = getLocalBounds().toFloat();
+    const auto centre = bounds.getCentreY();
+
+    // 1.0 is the ceiling, and a little headroom above it is left visible so
+    // material that was about to be clipped is still on screen.
+    constexpr float range = 1.35f;
+    const auto scale = bounds.getHeight() * 0.5f / range;
+
+    auto toY = [centre, scale] (float value) { return centre - value * scale; };
+
+    const auto columns = juce::jmin ((int) bounds.getWidth(), WaveformTap::capacity - 1);
+    const auto newest  = tap.getWriteIndex();
+
+    juce::Path input, output;
+    bool started = false;
+
+    for (int i = 0; i < columns; ++i)
+    {
+        const auto column = tap.getColumn (newest - columns + i);
+        const auto x = bounds.getRight() - (float) (columns - i);
+
+        if (! started)
+        {
+            input .startNewSubPath (x, toY (column.inputMax));
+            output.startNewSubPath (x, toY (column.outputMax));
+            started = true;
+        }
+        else
+        {
+            input .lineTo (x, toY (column.inputMax));
+            output.lineTo (x, toY (column.outputMax));
+        }
+    }
+
+    for (int i = columns - 1; i >= 0; --i)
+    {
+        const auto column = tap.getColumn (newest - columns + i);
+        const auto x = bounds.getRight() - (float) (columns - i);
+
+        input .lineTo (x, toY (column.inputMin));
+        output.lineTo (x, toY (column.outputMin));
+    }
+
+    input.closeSubPath();
+    output.closeSubPath();
+
+    // The ceiling, so the eye has something to measure the tops against.
+    g.setColour (ink.withAlpha (0.22f));
+
+    for (auto level : { 1.0f, -1.0f })
+        g.drawHorizontalLine (juce::roundToInt (toY (level)), bounds.getX(), bounds.getRight());
+
+    // What the clipper was given, and then what it let through. The part of the
+    // pale shape still showing above the solid one is what it took away.
+    g.setColour (amber.withAlpha (0.30f));
+    g.fillPath (input);
+
+    g.setColour (amber.withAlpha (0.85f));
+    g.fillPath (output);
+
+    g.setColour (ink.withAlpha (0.30f));
+    g.drawHorizontalLine (juce::roundToInt (centre), bounds.getX(), bounds.getRight());
+}
+
+// ---------------------------------------------------------------------------
+
 namespace
 {
     void drawFace (juce::Graphics& g, juce::Rectangle<float> area, bool on, bool hover, bool pressed)
@@ -372,7 +460,9 @@ void Switch::paint (juce::Graphics& g)
         if (on)
         {
             panel::drawFace (g, area, true, false, false);
-            drawLegend (g, captionText, area, true);
+
+            if (drawLegendText)
+                drawLegend (g, captionText, area, true);
         }
         else if (hover)
         {
@@ -438,7 +528,8 @@ Bank::Bank (juce::AudioProcessorValueTreeState& state, const juce::String& param
 
 juce::Rectangle<float> Bank::strip() const
 {
-    return getLocalBounds().toFloat().withTrimmedTop (13.0f);
+    return bakedWells ? getLocalBounds().toFloat()
+                      : getLocalBounds().toFloat().withTrimmedTop (13.0f);
 }
 
 juce::Rectangle<float> Bank::cell (int i) const
@@ -463,16 +554,23 @@ void Bank::mouseDown (const juce::MouseEvent& event)
 
 void Bank::paint (juce::Graphics& g)
 {
-    g.setColour (ink.withAlpha (0.7f));
-    g.setFont (plateFont (8.5f));
-    g.drawText (captionText, getLocalBounds().toFloat().withHeight (12.0f),
-                juce::Justification::centredLeft, false);
+    if (! bakedWells)
+    {
+        g.setColour (ink.withAlpha (0.7f));
+        g.setFont (plateFont (8.5f));
+        g.drawText (captionText, getLocalBounds().toFloat().withHeight (12.0f),
+                    juce::Justification::centredLeft, false);
+    }
 
     for (int i = 0; i < choices.size(); ++i)
     {
         const auto area = cell (i).reduced (1.0f, 0.0f);
 
-        panel::drawFace (g, area, i == index, false, false);
+        // Where the wells are printed on the plate only the engaged one is
+        // filled; the rest of the art is already there.
+        if (! bakedWells || i == index)
+            panel::drawFace (g, area, i == index, false, false);
+
         drawLegend (g, choices[i], area, i == index, 9.0f);
     }
 }

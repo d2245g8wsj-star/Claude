@@ -30,9 +30,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout CrestProcessor::createParame
 
     Layout layout;
 
-    layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::input, 1 }, "Input",
-                                          juce::NormalisableRange<float> (-12.0f, 30.0f, 0.01f), 0.0f,
-                                          Attr().withLabel ("dB").withStringFromValueFunction (dbString)));
+    {
+        // Thirty dB of drive on one turn left the part that matters - the first
+        // few dB past the ceiling - as a sliver of the travel. Narrower, and
+        // skewed so that region gets the middle of the knob.
+        juce::NormalisableRange<float> driveRange (-12.0f, 18.0f, 0.01f);
+        driveRange.setSkewForCentre (3.0f);
+
+        layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::input, 1 }, "Input",
+                                              driveRange, 0.0f,
+                                              Attr().withLabel ("dB").withStringFromValueFunction (dbString)));
+    }
 
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::ceiling, 1 }, "Ceiling",
                                           juce::NormalisableRange<float> (-24.0f, 0.0f, 0.01f), -0.30f,
@@ -45,11 +53,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout CrestProcessor::createParame
     layout.add (std::make_unique<ChoiceP> (juce::ParameterID { pid::mode, 1 }, "Character", modeNames, 0));
 
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::knee, 1 }, "Knee",
-                                          juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 40.0f,
-                                          Attr().withLabel ("%").withStringFromValueFunction (percentString)));
+                                          juce::NormalisableRange<float> (0.0f, 24.0f, 0.1f), 6.0f,
+                                          Attr().withLabel ("dB").withStringFromValueFunction (
+                                              [] (float value, int) -> juce::String
+                                              {
+                                                  if (value < 0.05f)
+                                                      return "HARD";
+
+                                                  return juce::String (value, 1) + " dB";
+                                              })));
 
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::adapt, 1 }, "Adapt",
-                                          juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 50.0f,
+                                          juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 25.0f,
                                           Attr().withLabel ("%").withStringFromValueFunction (percentString)));
 
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::bias, 1 }, "Bias",
@@ -412,7 +427,7 @@ void CrestProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
     const auto mode      = static_cast<Mode> (modeParam->getIndex());
     const auto biasAmount = biasParam->get() * 0.01f;
-    const auto baseKnee   = kneeParam->get() * 0.01f;
+    const auto baseKnee   = kneeParam->get();          // dB below the ceiling
     const auto adaptation = adaptParam->get() * 0.01f;
     const auto adaptive   = adaptation > 1.0e-4f;
 

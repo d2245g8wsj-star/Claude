@@ -52,7 +52,7 @@ shaper cannot produce a value above 1.0 by construction, at any setting.
 
 | Control | Range | What it does |
 | --- | --- | --- |
-| **Input** | −12 … +30 dB | How hard the signal is driven into the ceiling. This is the amount of clipping. |
+| **Input** | −12 … +18 dB | How hard the signal is driven into the ceiling. This is the amount of clipping. Skewed so the first few dB past the ceiling get the middle of the travel. |
 | **Ceiling** | −24 … 0 dBFS | The level the output is not allowed to cross. |
 | **Output** | −24 … +12 dB | Final trim, after the mix. |
 | **Mix** | 0 … 100 % | Parallel clipping. The dry path is delay matched, so this nulls properly. |
@@ -65,7 +65,7 @@ shaper cannot produce a value above 1.0 by construction, at any setting.
 | **EDGE** | Cubic knee. Reaches the ceiling at a finite level, so it still clips flat. |
 | **SILK** | Tanh knee. Smooth and asymptotic, closer to compression. |
 | **TUBE** | Arctan knee. The slowest corner, weighted towards low order harmonics. |
-| **Knee** | The corner for *sustained* material. 0 % is a square corner for every character — there is no separate "hard clip" mode because at zero knee all four already are one. At 100 % the knee opens down to a quarter of the ceiling. |
+| **Knee** | How far below the ceiling the corner starts, **in dB**, 0 to 24. At 0 it is a square corner for every character — there is no separate "hard clip" mode because at zero knee all four already are one. This is the corner for *sustained* material. |
 | **Adapt** | How much harder a *transient* is clipped than the knee setting. See below. |
 | **Bias** | Moves the positive and negative thresholds apart. This is the even harmonic control. |
 | **Harmonics** | How much harmonic content is generated from the material the clipper is working on. Silent while nothing is clipping. |
@@ -75,6 +75,37 @@ shaper cannot produce a value above 1.0 by construction, at any setting.
 
 Below the knee threshold the gain is exactly 1.0 — not approximately. Every
 character keeps that guarantee, and the offline checks assert it.
+
+### Knee
+
+The knee is set in dB below the ceiling, and that is not cosmetic. Amplitude is
+not how anyone hears level: a knee of "40 %" measured on amplitude opens the
+soft region by only 3.4 dB, and the first half of that control's travel is worth
+4 dB while the second half is worth 10.
+
+What a knee does is also not what it is usually claimed to do. A wider knee
+starts shaping earlier, so at low drive it produces measurably *more* harmonic
+content, not less. What it removes is the cliff. A square corner does nothing at
+all until the signal crosses the ceiling and then a great deal immediately,
+which is what "it goes hard straight away" means.
+
+Measured at 48 kHz, THD+N of a 217 Hz tone against drive and knee:
+
+| Drive | HARD | 6 dB | 12 dB | 18 dB |
+| --- | --- | --- | --- | --- |
+| 1 dB | −140.8 | −73.4 | −44.0 | −39.4 |
+| 3 dB | −141.4 | −47.5 | −36.6 | −34.2 |
+| 6 dB | −38.9 | −29.3 | −27.2 | −26.7 |
+| 12 dB | −12.4 | −12.8 | −13.3 | −13.6 |
+
+Read down the HARD column: nothing, nothing, then 100 dB of distortion arrives
+between 3 and 6 dB of drive. Read down the 12 dB column: a steady ramp. The
+steepest rise per 3 dB of extra drive is **102.5 dB** with a square corner and
+**13.9 dB** at a 12 dB knee — seven times shallower. That is the whole point of
+the control, and the checks assert it.
+
+Past about 12 dB of drive the knee stops mattering; everything is squashed
+whatever the corner looks like.
 
 ### Adapt
 

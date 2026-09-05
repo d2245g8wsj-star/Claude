@@ -240,15 +240,15 @@ void Scope::timerCallback()
     if ((int) mode != lastMode
         || std::abs (knee - lastKnee) > 1.0e-4f
         || std::abs (bias - lastBias) > 1.0e-4f
-        || std::abs (live - lastLive) > 3.0e-3f)
+        || std::abs (live - lastLive) > 0.05f)
     {
         lastMode = (int) mode;
         lastKnee = knee;
         lastBias = bias;
         lastLive = live;
 
-        shaper    .setParameters (static_cast<Mode> (lastMode), live,         bias * 0.01f);
-        baseShaper.setParameters (static_cast<Mode> (lastMode), knee * 0.01f, bias * 0.01f);
+        shaper    .setParameters (static_cast<Mode> (lastMode), live, bias * 0.01f);
+        baseShaper.setParameters (static_cast<Mode> (lastMode), knee, bias * 0.01f);
 
         rebuild();
         repaint();

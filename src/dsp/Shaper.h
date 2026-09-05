@@ -88,15 +88,25 @@ inline float kneeFunction (Mode m, float u) noexcept
 */
 struct Shaper
 {
-    /** @param mode_  clip character
-        @param knee   0 = hard corner, 1 = the knee opens down to a quarter of the ceiling
-        @param bias   -1 ... +1, moves the two thresholds in opposite directions
+    /** @param mode_   clip character
+        @param kneeDb  how far below the ceiling the knee starts, in dB.
+                       0 is a square corner.
+        @param bias    -1 ... +1, moves the two thresholds in opposite directions
+
+        The knee is set in dB rather than as a fraction of the ceiling, and the
+        difference is not cosmetic. Amplitude is not how anyone hears level: a
+        knee of "40 percent" measured on amplitude opens the soft region by only
+        3.4 dB, and the first half of that control's travel is worth 4 dB while
+        the second half is worth 10. In dB every degree of rotation buys the
+        same thing, and a 12 dB knee - a genuinely gentle clipper - is an
+        ordinary setting instead of an extreme one.
     */
-    void setParameters (Mode mode_, float knee, float bias) noexcept
+    void setParameters (Mode mode_, float kneeDb, float bias) noexcept
     {
         mode = mode_;
 
-        const auto t = 1.0f - std::clamp (knee, 0.0f, 1.0f) * 0.8f;
+        const auto t = std::clamp (std::pow (10.0f, -std::max (0.0f, kneeDb) / 20.0f),
+                                   0.05f, 1.0f);
         const auto b = std::clamp (bias, -1.0f, 1.0f) * 0.45f;
 
         thresholdPos = std::clamp (t * (1.0f + b), 0.0f, 1.0f);

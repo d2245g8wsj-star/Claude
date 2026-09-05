@@ -52,12 +52,12 @@ void testShaperInvariants()
         const auto mode = static_cast<crest::Mode> (modeIndex);
         const auto name = juce::String (crest::modeName (mode));
 
-        for (float knee : { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f })
+        for (float kneeDb : { 0.0f, 3.0f, 6.0f, 12.0f, 24.0f })
         {
             for (float bias : { -1.0f, -0.4f, 0.0f, 0.4f, 1.0f })
             {
                 crest::Shaper shaper;
-                shaper.setParameters (mode, knee, bias);
+                shaper.setParameters (mode, kneeDb, bias);
 
                 const auto linearRegion = std::min (shaper.thresholdPos, shaper.thresholdNeg);
 
@@ -105,7 +105,7 @@ void testShaperInvariants()
     for (int modeIndex = 0; modeIndex < crest::numModes; ++modeIndex)
     {
         crest::Shaper shaper;
-        shaper.setParameters (static_cast<crest::Mode> (modeIndex), 0.6f, 0.0f);
+        shaper.setParameters (static_cast<crest::Mode> (modeIndex), 8.0f, 0.0f);
 
         bool symmetric = true;
 
@@ -121,7 +121,7 @@ void testShaperInvariants()
 
     // Bias has to actually break that symmetry, otherwise the control is a lie.
     crest::Shaper biased;
-    biased.setParameters (crest::Mode::silk, 0.6f, 0.8f);
+    biased.setParameters (crest::Mode::silk, 8.0f, 0.8f);
     check (std::abs (biased.process (1.0f) + biased.process (-1.0f)) > 1.0e-3f,
            "bias does not produce an asymmetric curve");
 
@@ -713,6 +713,119 @@ void testLoudnessAndComparison()
     }
 }
 
+void testKneeInDecibels()
+{
+    section ("Knee");
+
+    constexpr double sampleRate = 48000.0;
+    constexpr int    blockSize  = 256;
+    constexpr int    window     = 8192;
+    constexpr int    settle     = 8192;
+
+    constexpr double frequency = sampleRate * 37.0 / (double) window;
+
+    auto distortionAt = [&] (float kneeDb, float drive)
+    {
+        crest::CrestProcessor processor;
+        processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
+        processor.prepareToPlay (sampleRate, blockSize);
+
+        setParam (processor, crest::pid::os,        2.0f);
+        setParam (processor, crest::pid::mode,      0.0f);
+        setParam (processor, crest::pid::adapt,     0.0f);
+        setParam (processor, crest::pid::bias,      0.0f);
+        setParam (processor, crest::pid::colour,    0.0f);
+        setParam (processor, crest::pid::harmonics, 0.0f);
+        setParam (processor, crest::pid::sidechain, 15.0f);
+        setParam (processor, crest::pid::mix,       100.0f);
+        setParam (processor, crest::pid::word,      0.0f);
+        setParam (processor, crest::pid::ceiling,   -0.3f);
+        setParam (processor, crest::pid::output,    0.0f);
+        setParam (processor, crest::pid::knee,      kneeDb);
+        setParam (processor, crest::pid::input,     drive);
+
+        juce::AudioBuffer<float> buffer (2, settle + window + 512);
+        fillSine (buffer, sampleRate, frequency, 0.5f);
+
+        runBlocks (processor, buffer, blockSize);
+
+        const auto fit = fitSine (buffer, 0, settle, window, frequency, sampleRate);
+
+        return juce::Decibels::gainToDecibels (fit.residualRms / (fit.amplitude * 0.7071), -160.0);
+    };
+
+    const float knees[]  { 0.0f, 6.0f, 12.0f, 18.0f };
+    const float drives[] { 1.0f, 3.0f, 6.0f, 12.0f };
+
+    std::cout << "  THD+N against drive and knee, in dB:\n"
+              << "        knee   HARD     6 dB    12 dB    18 dB" << std::endl;
+
+    double table[4][4] { };
+
+    for (int d = 0; d < 4; ++d)
+    {
+        std::cout << "  drive " << juce::String (drives[d], 0).paddedLeft (' ', 2) << " dB  ";
+
+        for (int k = 0; k < 4; ++k)
+        {
+            table[d][k] = distortionAt (knees[k], drives[d]);
+            std::cout << juce::String (table[d][k], 1).paddedLeft (' ', 8);
+        }
+
+        std::cout << std::endl;
+    }
+
+    // What a knee actually does is not "less distortion" - a wider knee starts
+    // shaping earlier, so at low drive it produces measurably more. What it
+    // removes is the *cliff*. A square corner does nothing at all until the
+    // signal crosses the ceiling and then a great deal immediately, which is
+    // exactly the "it goes hard straight away" a tester hears. Opening the knee
+    // turns that step into a ramp, and that is the property worth asserting.
+    double steepest[4] { };
+
+    for (int k = 0; k < 4; ++k)
+        for (int d = 1; d < 4; ++d)
+            steepest[k] = std::max (steepest[k], table[d][k] - table[d - 1][k]);
+
+    std::cout << "  steepest rise in distortion per 3 dB of extra drive:\n        ";
+
+    for (int k = 0; k < 4; ++k)
+        std::cout << juce::String (steepest[k], 1).paddedLeft (' ', 8);
+
+    std::cout << " dB" << std::endl;
+
+    check (steepest[0] > 60.0,
+           "a square corner was expected to bite abruptly, but its worst step was only "
+               + juce::String (steepest[0], 1) + " dB");
+
+    check (steepest[2] * 5.0 < steepest[0],
+           "a 12 dB knee did not flatten the onset: worst step " + juce::String (steepest[2], 1)
+               + " dB against " + juce::String (steepest[0], 1) + " for a square corner");
+
+    for (int k = 0; k < 4; ++k)
+    {
+        for (int d = 1; d < 4; ++d)
+        {
+            // Below about -100 dB nothing is being clipped at all and the
+            // figure is measurement floor, not distortion, so there is no
+            // ordering to assert.
+            if (table[d - 1][k] < -100.0)
+                continue;
+
+            check (table[d][k] > table[d - 1][k] - 0.5,
+                   "at knee " + juce::String (knees[k], 0)
+                       + " dB more drive produced less distortion, which cannot be right ("
+                       + juce::String (table[d - 1][k], 1) + " then " + juce::String (table[d][k], 1) + ")");
+        }
+    }
+
+    // Past a certain point the knee stops mattering: twelve dB in, everything
+    // is squashed whatever the corner looks like.
+    check (std::abs (table[3][0] - table[3][3]) < 3.0,
+           "the knee still changes the result at 12 dB of drive by "
+               + juce::String (std::abs (table[3][0] - table[3][3]), 1) + " dB");
+}
+
 void testAdaptiveClipping()
 {
     section ("Adaptive clipping");
@@ -767,7 +880,7 @@ void testAdaptiveClipping()
 
         setParam (processor, crest::pid::os,        2.0f);
         setParam (processor, crest::pid::mode,      1.0f);     // EDGE
-        setParam (processor, crest::pid::knee,      60.0f);    // the corner for sustained material
+        setParam (processor, crest::pid::knee,      12.0f);    // dB of corner for sustained material
         setParam (processor, crest::pid::bias,      0.0f);
         setParam (processor, crest::pid::colour,    0.0f);
         setParam (processor, crest::pid::harmonics, 0.0f);
@@ -1257,6 +1370,7 @@ int main()
     testCeilingIsHonoured();
     testTransparencyAndLatency();
     testLoudnessAndComparison();
+    testKneeInDecibels();
     testAdaptiveClipping();
     testHarmonics();
     testSidechain();

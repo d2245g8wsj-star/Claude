@@ -119,7 +119,7 @@ public:
     std::atomic<float> displayIntegrated { -100.0f };
     std::atomic<float> displayMatchDb    { 0.0f };
 
-    std::atomic<float> displayKnee    { 0.25f };
+    std::atomic<float> displayKnee    { 6.0f };   ///< dB below the ceiling
     std::atomic<float> appliedOversamplingGain { 1.0f };
 
 private:

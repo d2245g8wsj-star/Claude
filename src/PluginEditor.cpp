@@ -91,6 +91,9 @@ CrestEditor::Face::Face (CrestProcessor& p)
     {
         addAndMakeVisible (child);
     }
+
+    // Last, so the pane is over the trace rather than under it.
+    addAndMakeVisible (glass);
 }
 
 void CrestEditor::Face::setStatusText (const juce::String& text)
@@ -139,7 +142,12 @@ void CrestEditor::Face::resized()
     outputKnob     .setBounds (place (1240.0f, 250.0f, 78.0f));
 
     waveform.setBounds (330,  90, 650, 210);
-    scope   .setBounds (850, 170, 120, 120);
+
+    // Lower left. The waveform writes its newest column at the right edge and
+    // scrolls left, so an inset on the right covers material exactly as it
+    // arrives; on the left it covers material you have already watched.
+    scope   .setBounds (342, 170, 120, 120);
+    glass   .setBounds (330,  90, 650, 210);
 
     // The transfer inset is a window of its own inside the same recess, so the
     // scrolling trace stops at its edge rather than running behind it.
@@ -183,10 +191,26 @@ void CrestEditor::Face::paint (juce::Graphics& g)
     else
         g.fillAll (panel::cream);
 
+    // ---- the light on the panel, drawn over the bake and under everything
+    // The render is lit flat, and a photograph of hardware never is. One light
+    // above the panel and corners that fall away from it is most of the
+    // difference between a surface and a scan of one.
+    {
+        const auto centreX = (float) getWidth() * 0.5f;
+
+        g.setGradientFill ({ juce::Colours::white.withAlpha (0.075f), centreX, -140.0f,
+                             juce::Colours::transparentBlack,         centreX,  520.0f, true });
+        g.fillAll();
+
+        g.setGradientFill ({ juce::Colours::transparentBlack, centreX, (float) getHeight() * 0.5f,
+                             panel::ink.withAlpha (0.14f),    0.0f,    (float) getHeight(), true });
+        g.fillAll();
+    }
+
     // ---- group enclosures, drawn behind the controls
     // Tops on one line, each well then as deep as its own contents. Ragged
     // tops were most of why the four groups read as loose parts.
-    for (auto well : { juce::Rectangle<float> {   66.0f, 78.0f, 108.0f, 127.0f },
+    for (auto well : { juce::Rectangle<float> {   72.0f, 78.0f,  96.0f, 127.0f },
                        juce::Rectangle<float> {  170.0f, 78.0f, 140.0f, 281.0f },
                        juce::Rectangle<float> {  998.0f, 78.0f, 140.0f, 281.0f },
                        juce::Rectangle<float> { 1188.0f, 78.0f, 104.0f, 241.0f } })
@@ -199,6 +223,19 @@ void CrestEditor::Face::paint (juce::Graphics& g)
     // until the plate is re-cut.
     panel::drawPlateLabel (g, "CEILING", { 1188.0f, 162.0f, 104.0f, 13.0f });
     panel::drawPlateLabel (g, "OUTPUT",  { 1188.0f, 292.0f, 104.0f, 13.0f });
+
+    // ---- the transfer window, now that the plate no longer prints one
+    panel::drawDisplayInset (g, scope.getBounds().toFloat());
+
+    g.setColour (panel::amber);
+    g.setFont (panel::plateFont (9.0f));
+    g.drawText ("TRANSFER", juce::Rectangle<int> (342, 154, 120, 13),
+                juce::Justification::centred, false);
+
+    // ---- the subtitle, right aligned where the plate used to print its own
+    panel::drawTrackedLabel (g, juce::CharPointer_UTF8 ("MASTERING GRADE HARMONIC CONVERTER  \xc2\xb7  CLIPPER"),
+                             { 780.0f, 26.0f, 486.0f, 16.0f }, 8.5f, 1.6f,
+                             juce::Justification::right);
 
     // The plate prints a sample rate and a latency of its own; cover it with a
     // clean piece of the same surface and write the live figures instead.

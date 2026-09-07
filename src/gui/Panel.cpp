@@ -14,27 +14,78 @@ juce::Font plateFont (float height, bool bold)
     return juce::Font (juce::FontOptions (height, bold ? juce::Font::bold : juce::Font::plain));
 }
 
-void drawGroupWell (juce::Graphics& g, juce::Rectangle<float> area)
+void drawGroupWell (juce::Graphics& g, juce::Rectangle<float> area, float corner)
 {
-    constexpr float corner = 7.0f;
-
-    // Shallow, because the plate is a light surface: a deep well would read as
-    // a hole rather than something milled into it.
-    g.setColour (ink.withAlpha (0.055f));
-    g.fillRoundedRectangle (area, corner);
-
-    juce::ColourGradient shade (ink.withAlpha (0.13f), 0.0f, area.getY(),
-                                juce::Colours::transparentBlack, 0.0f, area.getY() + 18.0f, false);
-    g.setGradientFill (shade);
-    g.fillRoundedRectangle (area, corner);
+    juce::Path well;
+    well.addRoundedRectangle (area, corner);
 
     // The lit lower lip goes down first and the dark edge sits on top of it.
     // That order is what makes the eye read a cut instead of a drawn outline.
-    g.setColour (juce::Colours::white.withAlpha (0.45f));
-    g.drawRoundedRectangle (area.reduced (0.5f).translated (0.0f, 1.2f), corner, 1.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.50f));
+    g.strokePath (well, juce::PathStrokeType (1.4f),
+                  juce::AffineTransform::translation (0.0f, 1.4f));
 
-    g.setColour (ink.withAlpha (0.34f));
-    g.drawRoundedRectangle (area.reduced (0.5f), corner, 1.0f);
+    // The floor. Shallow, because the plate is a light surface and a deep well
+    // would read as a hole rather than something milled into it, but shaded
+    // from the top down: the light comes from above the panel, so the wall it
+    // cannot reach is the one nearest the viewer.
+    g.setGradientFill ({ ink.withAlpha (0.085f), area.getX(), area.getY(),
+                         ink.withAlpha (0.025f), area.getX(), area.getBottom(), false });
+    g.fillPath (well);
+
+    {
+        juce::Graphics::ScopedSaveState clipped (g);
+        g.reduceClipRegion (well);
+
+        // The walls. A thick stroke clipped to the floor only shows on the
+        // inside, so three of them at falling weight give a graduated wall
+        // instead of a line.
+        for (const auto& pass : { std::pair<float, float> { 10.0f, 0.035f },
+                                  std::pair<float, float> {  5.0f, 0.050f },
+                                  std::pair<float, float> {  2.0f, 0.075f } })
+        {
+            g.setColour (ink.withAlpha (pass.second));
+            g.strokePath (well, juce::PathStrokeType (pass.first));
+        }
+
+        // And the chamfer, on all four walls: dark where the wall is turned
+        // away from the light, lit where it is turned into it. Three sides of
+        // a cut and a line on the fourth is the tell that it was drawn.
+        g.setGradientFill ({ ink.withAlpha (0.10f), area.getX(), area.getY(),
+                             juce::Colours::transparentBlack, area.getX(), area.getY() + 7.0f, false });
+        g.fillRect (area);
+
+        g.setGradientFill ({ ink.withAlpha (0.06f), area.getX(), area.getY(),
+                             juce::Colours::transparentBlack, area.getX() + 6.0f, area.getY(), false });
+        g.fillRect (area);
+
+        g.setGradientFill ({ juce::Colours::white.withAlpha (0.34f), area.getX(), area.getBottom(),
+                             juce::Colours::transparentBlack, area.getX(), area.getBottom() - 5.0f, false });
+        g.fillRect (area);
+
+        g.setGradientFill ({ juce::Colours::white.withAlpha (0.16f), area.getRight(), area.getY(),
+                             juce::Colours::transparentBlack, area.getRight() - 5.0f, area.getY(), false });
+        g.fillRect (area);
+
+        // Occlusion pools in the corners, where two walls shade each other.
+        for (auto corner_ : { area.getTopLeft(), area.getTopRight(),
+                              area.getBottomLeft(), area.getBottomRight() })
+        {
+            g.setGradientFill ({ ink.withAlpha (0.07f), corner_.x, corner_.y,
+                                 juce::Colours::transparentBlack,
+                                 corner_.x + (corner_.x > area.getCentreX() ? -16.0f : 16.0f),
+                                 corner_.y, true });
+            g.fillRect (area);
+        }
+    }
+
+    // The land next to the cut catches the light on its far edge.
+    g.setColour (juce::Colours::white.withAlpha (0.22f));
+    g.strokePath (well, juce::PathStrokeType (1.0f),
+                  juce::AffineTransform::translation (0.0f, -1.0f));
+
+    g.setColour (ink.withAlpha (0.32f));
+    g.strokePath (well, juce::PathStrokeType (1.0f));
 }
 
 void drawPlateLabel (juce::Graphics& g, const juce::String& text, juce::Rectangle<float> area,
@@ -47,6 +98,95 @@ void drawPlateLabel (juce::Graphics& g, const juce::String& text, juce::Rectangl
 
     g.setColour (ink.withAlpha (0.88f));
     g.drawText (text, area, juce::Justification::centred, false);
+}
+
+void drawTrackedLabel (juce::Graphics& g, const juce::String& text, juce::Rectangle<float> area,
+                       float height, float tracking, juce::Justification justification)
+{
+    const auto font = plateFont (height);
+    g.setFont (font);
+
+    const auto count = text.length();
+
+    juce::Array<float> widths;
+    auto total = count > 1 ? tracking * (float) (count - 1) : 0.0f;
+
+    for (int i = 0; i < count; ++i)
+    {
+        const auto width = juce::GlyphArrangement::getStringWidth (font, text.substring (i, i + 1));
+        widths.add (width);
+        total += width;
+    }
+
+    auto x = area.getX();
+
+    if (justification.testFlags (juce::Justification::right))
+        x = area.getRight() - total;
+    else if (justification.testFlags (juce::Justification::horizontallyCentred))
+        x = area.getCentreX() - total * 0.5f;
+
+    for (int i = 0; i < count; ++i)
+    {
+        const auto glyph = text.substring (i, i + 1);
+        const juce::Rectangle<float> cell (x, area.getY(), widths[i], area.getHeight());
+
+        g.setColour (juce::Colours::white.withAlpha (0.55f));
+        g.drawText (glyph, cell.translated (0.0f, 1.0f), juce::Justification::centredLeft, false);
+
+        g.setColour (ink.withAlpha (0.88f));
+        g.drawText (glyph, cell, juce::Justification::centredLeft, false);
+
+        x += widths[i] + tracking;
+    }
+}
+
+void drawDisplayInset (juce::Graphics& g, juce::Rectangle<float> area)
+{
+    constexpr float corner = 3.0f;
+    constexpr float pitch  = 30.0f;   // the pitch the plate printed this grid at
+
+    juce::Path pane;
+    pane.addRoundedRectangle (area, corner);
+
+    g.setColour (field);
+    g.fillPath (pane);
+
+    {
+        juce::Graphics::ScopedSaveState clipped (g);
+        g.reduceClipRegion (pane);
+
+        g.setColour (ink.withAlpha (0.16f));
+
+        for (auto x = area.getCentreX(); x < area.getRight(); x += pitch)
+        {
+            g.drawVerticalLine (juce::roundToInt (x), area.getY(), area.getBottom());
+            g.drawVerticalLine (juce::roundToInt (area.getCentreX() * 2.0f - x),
+                                area.getY(), area.getBottom());
+        }
+
+        for (auto y = area.getCentreY(); y < area.getBottom(); y += pitch)
+        {
+            g.drawHorizontalLine (juce::roundToInt (y), area.getX(), area.getRight());
+            g.drawHorizontalLine (juce::roundToInt (area.getCentreY() * 2.0f - y),
+                                  area.getX(), area.getRight());
+        }
+
+        // The pane sits below the surface of the window it is cut into.
+        for (const auto& pass : { std::pair<float, float> { 9.0f, 0.06f },
+                                  std::pair<float, float> { 4.0f, 0.10f },
+                                  std::pair<float, float> { 2.0f, 0.16f } })
+        {
+            g.setColour (ink.withAlpha (pass.second));
+            g.strokePath (pane, juce::PathStrokeType (pass.first));
+        }
+    }
+
+    g.setColour (juce::Colours::white.withAlpha (0.40f));
+    g.strokePath (pane, juce::PathStrokeType (1.0f),
+                  juce::AffineTransform::translation (0.0f, 1.2f));
+
+    g.setColour (ink.withAlpha (0.58f));
+    g.strokePath (pane, juce::PathStrokeType (1.0f));
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +359,50 @@ void LedMeter::paint (juce::Graphics& g)
 
 // ---------------------------------------------------------------------------
 
+Glass::Glass()
+{
+    setInterceptsMouseClicks (false, false);
+}
+
+void Glass::paint (juce::Graphics& g)
+{
+    const auto bounds = getLocalBounds().toFloat();
+
+    // The shade the top edge of the aperture casts onto whatever is behind it.
+    g.setGradientFill ({ ink.withAlpha (0.16f), bounds.getX(), bounds.getY(),
+                         juce::Colours::transparentBlack, bounds.getX(), bounds.getY() + 16.0f,
+                         false });
+    g.fillRect (bounds);
+
+    // One specular band, running the way the light does. Kept faint: glass over
+    // a pale surface reflects very little, and anything stronger reads as fog.
+    {
+        juce::Path band;
+        band.startNewSubPath (bounds.getX(), bounds.getBottom());
+        band.lineTo (bounds.getX() + bounds.getWidth() * 0.42f, bounds.getY());
+        band.lineTo (bounds.getX() + bounds.getWidth() * 0.62f, bounds.getY());
+        band.lineTo (bounds.getX() + bounds.getWidth() * 0.20f, bounds.getBottom());
+        band.closeSubPath();
+
+        juce::ColourGradient sheen (juce::Colours::transparentBlack,
+                                    bounds.getX(), bounds.getBottom(),
+                                    juce::Colours::transparentBlack,
+                                    bounds.getRight() * 0.6f, bounds.getY(), false);
+        sheen.addColour (0.5, juce::Colours::white.withAlpha (0.07f));
+
+        g.setGradientFill (sheen);
+        g.fillPath (band);
+    }
+
+    // The line of light the bottom inner edge catches.
+    g.setGradientFill ({ juce::Colours::white.withAlpha (0.22f), bounds.getX(), bounds.getBottom(),
+                         juce::Colours::transparentBlack, bounds.getX(), bounds.getBottom() - 6.0f,
+                         false });
+    g.fillRect (bounds);
+}
+
+// ---------------------------------------------------------------------------
+
 namespace
 {
     constexpr float plotRange  = 1.5f;
@@ -362,19 +546,37 @@ void Readout::paint (juce::Graphics& g)
 
     drawPlateLabel (g, captionText, bounds.removeFromTop (12.0f), 8.0f);
 
-    // A dark window, so the figure reads as lit rather than printed.
-    g.setColour (recess);
-    g.fillRoundedRectangle (bounds, 3.0f);
-
-    juce::ColourGradient inner (juce::Colours::black.withAlpha (0.5f), 0.0f, bounds.getY(),
-                                juce::Colours::transparentBlack, 0.0f, bounds.getY() + 7.0f, false);
-    g.setGradientFill (inner);
-    g.fillRoundedRectangle (bounds, 3.0f);
+    // A dark window, so the figure reads as lit rather than printed. Cut the
+    // same way as the group wells, so the panel reads as one piece of milling.
+    juce::Path window;
+    window.addRoundedRectangle (bounds, 3.0f);
 
     g.setColour (juce::Colours::white.withAlpha (0.35f));
-    g.drawRoundedRectangle (bounds.reduced (0.5f).translated (0.0f, 1.0f), 3.0f, 1.0f);
+    g.strokePath (window, juce::PathStrokeType (1.2f),
+                  juce::AffineTransform::translation (0.0f, 1.2f));
+
+    g.setColour (recess);
+    g.fillPath (window);
+
+    {
+        juce::Graphics::ScopedSaveState clipped (g);
+        g.reduceClipRegion (window);
+
+        for (const auto& pass : { std::pair<float, float> { 8.0f, 0.30f },
+                                  std::pair<float, float> { 3.0f, 0.35f } })
+        {
+            g.setColour (juce::Colours::black.withAlpha (pass.second));
+            g.strokePath (window, juce::PathStrokeType (pass.first));
+        }
+
+        g.setGradientFill ({ juce::Colours::black.withAlpha (0.55f), bounds.getX(), bounds.getY(),
+                             juce::Colours::transparentBlack, bounds.getX(), bounds.getY() + 8.0f,
+                             false });
+        g.fillRect (bounds);
+    }
+
     g.setColour (ink.withAlpha (0.55f));
-    g.drawRoundedRectangle (bounds.reduced (0.5f), 3.0f, 1.0f);
+    g.strokePath (window, juce::PathStrokeType (1.0f));
 
     g.setColour (amber.brighter (0.25f));
     g.setFont (plateFont (13.0f));

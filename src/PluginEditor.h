@@ -53,6 +53,7 @@ private:
         panel::LedMeter  inputMeter, outputMeter;
         panel::Waveform  waveform;
         panel::Scope     scope;
+        panel::Glass     glass;
 
         panel::Bank   osBank, wordBank, ditherBank;
         panel::Switch autoSwitch, tpSafeSwitch, deltaSwitch, linkSwitch, bypassSwitch;

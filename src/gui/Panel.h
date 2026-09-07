@@ -15,6 +15,10 @@ inline const juce::Colour cream  { 0xffe4dcc8 };
 inline const juce::Colour amber  { 0xffc77b3c };
 inline const juce::Colour recess { 0xff181510 };
 
+/** The display window's own surface, sampled from the plate render so anything
+    drawn into that window sits on the same colour the art printed. */
+inline const juce::Colour field  { 0xfffaf7f0 };
+
 juce::Font plateFont (float height, bool bold = true);
 
 /** A group enclosure milled into the plate.
@@ -22,12 +26,33 @@ juce::Font plateFont (float height, bool bold = true);
     Without one the controls sit on a texture rather than in a panel, which is
     the single biggest reason a laid-out set of knobs reads as loose parts
     instead of an instrument. Drawn behind the controls, so they sit in it.
+
+    Drawn as a cut rather than an outline: a floor shaded from the top down,
+    walls that fall away from the edge, a dark chamfer where the light does not
+    reach and a lit one where it does.
 */
-void drawGroupWell (juce::Graphics&, juce::Rectangle<float>);
+void drawGroupWell (juce::Graphics&, juce::Rectangle<float>, float corner = 7.0f);
 
 /** Engraved lettering, for the labels the plate art does not carry. */
 void drawPlateLabel (juce::Graphics&, const juce::String&, juce::Rectangle<float>,
                      float height = 9.5f);
+
+/** The same, letterspaced.
+
+    The plate's own lettering is tracked out, so anything drawn next to it has
+    to be as well or it reads as a different panel.
+*/
+void drawTrackedLabel (juce::Graphics&, const juce::String&, juce::Rectangle<float>,
+                       float height, float tracking,
+                       juce::Justification = juce::Justification::centred);
+
+/** The transfer window inside the display.
+
+    The plate used to print this at the right hand end of the display, which is
+    where the waveform's newest column lands, so it covered material exactly as
+    it arrived. It is drawn here instead, wherever the editor puts it.
+*/
+void drawDisplayInset (juce::Graphics&, juce::Rectangle<float>);
 
 /** Loads a vertical filmstrip once and hands out frames.
 
@@ -158,6 +183,24 @@ private:
     int lastSeen { 0 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Waveform)
+};
+
+/** What is over the display.
+
+    A pane of glass, drawn on top of everything in the window: a specular band
+    across it, the shade the top edge casts, and the line of light the bottom
+    inner edge catches. Nothing is behind glass on a flat bake, and it is most
+    of what separates a photograph of an instrument from a drawing of one.
+*/
+class Glass final : public juce::Component
+{
+public:
+    Glass();
+
+    void paint (juce::Graphics&) override;
+
+private:
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Glass)
 };
 
 /** A switch in the plate's own idiom: cream face, amber when engaged. */

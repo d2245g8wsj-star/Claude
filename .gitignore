@@ -10,3 +10,4 @@ vocalai_out/
 !tests/fixtures/*.wav
 .DS_Store
 .pytest_cache/
+native/build/

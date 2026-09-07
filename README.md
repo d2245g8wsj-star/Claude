@@ -272,6 +272,22 @@ Worth knowing before you trust it with a record:
   and reports its evidence, which makes it debuggable and predictable, but it
   has not been fitted to a corpus of real multitracks.
 
+## Native core (C++)
+
+A C++17 port of the engine lives in [`native/`](native/), intended as the DSP
+core of an ARA 2 plug-in. It has no dependencies beyond the standard library,
+and its tests check it against reference vectors generated from this Python
+implementation rather than only against itself — pitch tracking agrees to 4e-12
+cents, pitch marks land on the same sample, and rendered audio differs by
+-72 dB with identical output pitch.
+
+```bash
+cd native && ./run_tests.sh
+./build/vocalai_cli tune lead.wav lead_tuned.wav --style natural
+```
+
+The plug-in layer that wraps it is not built yet; see `native/README.md`.
+
 ## Layout
 
 ```
@@ -284,6 +300,8 @@ vocalai/
   model.py     the editable note model
   pipeline.py  track-level API
   cli.py       command line
+
+native/        the C++ port of the engine (see native/README.md)
 ```
 
 ## Licence

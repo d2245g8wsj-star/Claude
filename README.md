@@ -286,7 +286,15 @@ cd native && ./run_tests.sh
 ./build/vocalai_cli tune lead.wav lead_tuned.wav --style natural
 ```
 
-The plug-in layer that wraps it is not built yet; see `native/README.md`.
+An ARA 2 plug-in on top of that core lives in [`native/ara/`](native/ara/),
+validated by an in-process ARA host — model graph, analysis, note export and
+playback rendering — whose render matches the validated CLI to -137 dB. There
+is no `.vst3` or `.component` wrapper yet, and none of it has been built on
+macOS. See `native/ara/README.md`.
+
+```bash
+cd native/ara && ./run_tests.sh
+```
 
 ## Layout
 
@@ -302,6 +310,7 @@ vocalai/
   cli.py       command line
 
 native/        the C++ port of the engine (see native/README.md)
+native/ara/    the ARA 2 plug-in built on it
 ```
 
 ## Licence

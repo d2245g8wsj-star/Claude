@@ -11,3 +11,4 @@ vocalai_out/
 .DS_Store
 .pytest_cache/
 native/build/
+native/ara/build/

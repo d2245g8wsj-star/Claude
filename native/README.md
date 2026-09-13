@@ -68,5 +68,7 @@ vectorises poorly — which should be worth another 1.5–2x.
 
 ## Status
 
-This is the engine only. The ARA 2 / JUCE plug-in layer that wraps it is not
-built yet, and nothing here has been compiled or run on macOS.
+This is the engine. The ARA 2 plug-in built on top of it lives in
+[`ara/`](ara/) and is validated against an in-process ARA host; there is no
+companion API wrapper (`.vst3` / `.component`) yet, and nothing here has been
+compiled or run on macOS.

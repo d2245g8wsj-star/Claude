@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ipodsync"
+version = "0.1.0"
+description = "Muziek beheren op een iPod nano 3G / classic vanaf de Mac: eigen bestanden, YouTube en Spotify-playlists"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "LGPL-2.1-or-later" }
+dependencies = [
+    "mutagen>=1.47",
+    "yt-dlp>=2024.1.0",
+    "spotipy>=2.23",
+    "Pillow>=10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "imageio-ffmpeg>=0.5"]
+
+[project.scripts]
+ipod-sync = "ipodsync.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,86 @@
+name: Ember
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "plugins/ember/**"
+      - ".github/workflows/ember.yml"
+  pull_request:
+    paths:
+      - "plugins/ember/**"
+      - ".github/workflows/ember.yml"
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: Linux build and offline checks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libx11-dev libxext-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libfreetype-dev libfontconfig1-dev libasound2-dev
+
+      - name: Configure
+        working-directory: plugins/ember
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DEMBER_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/ember
+        run: cmake --build build --parallel
+
+      - name: Offline checks
+        working-directory: plugins/ember
+        run: ./build/ember_tests_artefacts/Release/ember_tests
+
+  macos:
+    name: macOS universal build
+    runs-on: macos-14
+    needs: checks
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        working-directory: plugins/ember
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
+            -DEMBER_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/ember
+        run: cmake --build build --parallel 3
+
+      - name: Offline checks
+        working-directory: plugins/ember
+        run: ./build/ember_tests_artefacts/Release/ember_tests
+
+      - name: Sign ad-hoc and package
+        working-directory: plugins/ember
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/Ember"
+          mkdir -p "$staging"
+
+          for bundle in VST3/Ember.vst3 AU/Ember.component Standalone/Ember.app; do
+            codesign --force --deep --sign - --timestamp=none "build/Ember_artefacts/Release/$bundle"
+            cp -R "build/Ember_artefacts/Release/$bundle" "$staging/"
+          done
+
+          cp README.md "$staging/"
+          ditto -c -k --sequesterRsrc --keepParent "$staging" "$RUNNER_TEMP/Ember-macOS.zip"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ember-macOS-universal
+          path: ${{ runner.temp }}/Ember-macOS.zip
+          if-no-files-found: error

@@ -10,11 +10,15 @@ on:
       - "**.md"
       - "docs/**"
       - "LICENSE"
+      - "plugins/**"
+      - ".github/workflows/ember.yml"
   pull_request:
     paths-ignore:
       - "**.md"
       - "docs/**"
       - "LICENSE"
+      - "plugins/**"
+      - ".github/workflows/ember.yml"
   workflow_dispatch:
 
 jobs:

@@ -12,24 +12,30 @@ namespace
     constexpr float styleTop     = 66.0f;
     constexpr float scopeTop     = 108.0f;
     constexpr float scopeBottom  = 440.0f;
-    constexpr float controlsTop  = 452.0f;
-    constexpr float controlsBottom = 646.0f;
+    constexpr float rowTop[]     = { 452.0f, 658.0f };
+    constexpr float rowHeight    = 196.0f;
 
     // Horizontal plan.
-    constexpr float margin     = 24.0f;
-    constexpr float sideX      = 920.0f;
-    constexpr float sideWidth  = 256.0f;
+    constexpr float margin    = 24.0f;
+    constexpr float sideX     = 920.0f;
+    constexpr float sideWidth = 256.0f;
 
-    struct Group { float x, width; const char* name; };
-    constexpr Group limiterGroup { 24.0f,  612.0f, "LIMITER" };
-    constexpr Group shapeGroup   { 648.0f, 256.0f, "SHAPE" };
-    constexpr Group outputGroup  { 916.0f, 260.0f, "OUTPUT" };
+    struct Group { float x, top, width; const char* name; };
+    constexpr Group limiterGroup    { 24.0f,  rowTop[0], 712.0f, "LIMITER" };
+    constexpr Group shapeGroup      { 748.0f, rowTop[0], 428.0f, "SHAPE" };
+    constexpr Group compressorGroup { 24.0f,  rowTop[1], 712.0f, "COMPRESSOR" };
+    constexpr Group outputGroup     { 748.0f, rowTop[1], 428.0f, "OUTPUT" };
 
-    juce::Rectangle<int> knobBounds (float x, float width, Size size)
+    juce::Rectangle<int> knobBounds (float x, float top, float width, Size size)
     {
-        const auto top    = controlsTop + (size == Size::large ? 22.0f : 30.0f);
+        const auto y      = top + (size == Size::large ? 24.0f : 32.0f);
         const auto height = size == Size::large ? 160.0f : 138.0f;
-        return juce::Rectangle<float> (x, top, width, height).toNearestInt();
+        return juce::Rectangle<float> (x, y, width, height).toNearestInt();
+    }
+
+    juce::Rectangle<int> box (float x, float y, float w, float h)
+    {
+        return juce::Rectangle<float> (x, y, w, h).toNearestInt();
     }
 }
 
@@ -38,25 +44,38 @@ namespace
 BreakwaterEditor::Face::Face (BreakwaterProcessor& p)
     : processor (p),
       engine       (p.apvts, pid::engine),
-      oversampling (p.apvts, pid::oversampling, { "1x", "2x", "4x", "8x", "16x" }),
+      oversampling (p.apvts, pid::oversampling, { "1x", "2x", "4x", "8x", "16x", "32x" }),
       style        (p.apvts, pid::style),
+      compMode     (p.apvts, pid::compMode, { "Stereo", "M/S" }),
       wordLength   (p.apvts, pid::wordLength, { "Off", "24", "20", "16" }),
       dither       (p.apvts, pid::dither, { "None", "TPDF", "Shape" }),
-      truePeak     (p.apvts, pid::truePeak, "True Peak"),
-      bypass       (p.apvts, pid::bypass,   "Bypass", panel::warning),
-      dcFilter     (p.apvts, pid::dcFilter, "DC Filter"),
-      match        (p.apvts, pid::match,    "Gain Match"),
-      delta        (p.apvts, pid::delta,    "Delta", panel::reduction),
-      gain           (p.apvts, pid::gain,           "Gain",      Size::large),
-      ceiling        (p.apvts, pid::ceiling,        "Ceiling",   Size::large),
-      lookahead      (p.apvts, pid::lookahead,      "Lookahead", Size::small),
-      attack         (p.apvts, pid::attack,         "Attack",    Size::small),
-      release        (p.apvts, pid::release,        "Release",   Size::small),
+      truePeak     (p.apvts, pid::truePeak,     "True Peak"),
+      bypass       (p.apvts, pid::bypass,       "Bypass", panel::warning),
+      adaptiveLink (p.apvts, pid::adaptiveLink, "Adaptive Link"),
+      compOn       (p.apvts, pid::compOn,       "Comp In"),
+      dcFilter     (p.apvts, pid::dcFilter,     "DC Filter"),
+      match        (p.apvts, pid::match,        "Gain Match"),
+      delta        (p.apvts, pid::delta,        "Delta", panel::reduction),
+      sidechain    (p.apvts, pid::sidechain,    "Ext Sidechain"),
+      gain           (p.apvts, pid::gain,           "Gain",       Size::large),
+      ceiling        (p.apvts, pid::ceiling,        "Ceiling",    Size::large),
+      lookahead      (p.apvts, pid::lookahead,      "Lookahead",  Size::small),
+      attack         (p.apvts, pid::attack,         "Attack",     Size::small),
+      release        (p.apvts, pid::release,        "Release",    Size::small),
+      window         (p.apvts, pid::window,         "Window",     Size::small),
       linkTransients (p.apvts, pid::linkTransients, "Link Trans", Size::small),
-      linkRelease    (p.apvts, pid::linkRelease,    "Link Rel",  Size::small),
+      linkRelease    (p.apvts, pid::linkRelease,    "Link Rel",   Size::small),
       transients     (p.apvts, pid::transients,     "Transients", Size::small, true),
-      detail         (p.apvts, pid::detail,         "Detail",    Size::small),
-      clip           (p.apvts, pid::clip,           "Clip",      Size::small),
+      lowPunch       (p.apvts, pid::lowPunch,       "Low Punch",  Size::small, true),
+      detail         (p.apvts, pid::detail,         "Detail",     Size::small),
+      balance        (p.apvts, pid::balance,        "Balance",    Size::small, true),
+      clip           (p.apvts, pid::clip,           "Clip",       Size::small),
+      compThreshold  (p.apvts, pid::compThreshold,  "Threshold",  Size::small),
+      compRatio      (p.apvts, pid::compRatio,      "Ratio",      Size::small),
+      compAttack     (p.apvts, pid::compAttack,     "Attack",     Size::small),
+      compRelease    (p.apvts, pid::compRelease,    "Release",    Size::small),
+      compHighPass   (p.apvts, pid::compHighPass,   "SC HPF",     Size::small),
+      target         (p.apvts, pid::target,         "Target",     Size::small),
       scope    (p.meters),
       meters   (p.meters),
       loudness (p.meters)
@@ -69,12 +88,21 @@ BreakwaterEditor::Face::Face (BreakwaterProcessor& p)
     engine.setDescriptions ({ "Lookahead limiting with a leveller and eight styles",
                               "No lookahead: transients keep their shape, like a circuit" });
 
+    window.setTooltip ("Holds the detector for a quarter of a note's period, so a fast limiter "
+                       "does not follow the cycles of a bass note. C0 is the longest.");
+    balance.setTooltip ("How the low end and the rest share the reduction: towards Lows the top stays "
+                        "bright, towards Highs the low end stays full");
+    adaptiveLink.setTooltip ("Links the channels more as they become more alike, measured by correlation");
+    sidechain.setTooltip ("Detect on the sidechain input instead of the programme. "
+                          "The true peak stage still watches the programme.");
+
     for (auto* c : std::initializer_list<juce::Component*> {
              &scope, &meters, &loudness,
-             &engine, &oversampling, &style, &wordLength, &dither,
-             &truePeak, &bypass, &dcFilter, &match, &delta,
-             &gain, &ceiling, &lookahead, &attack, &release, &linkTransients, &linkRelease,
-             &transients, &detail, &clip })
+             &engine, &oversampling, &style, &compMode, &wordLength, &dither,
+             &truePeak, &bypass, &adaptiveLink, &compOn, &dcFilter, &match, &delta, &sidechain,
+             &gain, &ceiling, &lookahead, &attack, &release, &window, &linkTransients, &linkRelease,
+             &transients, &lowPunch, &detail, &balance, &clip,
+             &compThreshold, &compRatio, &compAttack, &compRelease, &compHighPass, &target })
         addAndMakeVisible (c);
 
     refresh();
@@ -82,42 +110,70 @@ BreakwaterEditor::Face::Face (BreakwaterProcessor& p)
 
 void BreakwaterEditor::Face::resized()
 {
-    engine      .setBounds (juce::Rectangle<float> (330.0f, 16.0f, 190.0f, 28.0f).toNearestInt());
-    oversampling.setBounds (juce::Rectangle<float> (636.0f, 16.0f, 220.0f, 28.0f).toNearestInt());
-    truePeak    .setBounds (juce::Rectangle<float> (920.0f, 16.0f, 120.0f, 28.0f).toNearestInt());
-    bypass      .setBounds (juce::Rectangle<float> (1056.0f, 16.0f, 120.0f, 28.0f).toNearestInt());
+    engine      .setBounds (box (380.0f, 16.0f, 180.0f, 28.0f));
+    oversampling.setBounds (box (660.0f, 16.0f, 240.0f, 28.0f));
+    truePeak    .setBounds (box (920.0f, 16.0f, 120.0f, 28.0f));
+    bypass      .setBounds (box (1056.0f, 16.0f, 120.0f, 28.0f));
 
-    style.setBounds (juce::Rectangle<float> (margin + 64.0f, styleTop, 908.0f - margin - 64.0f, 32.0f).toNearestInt());
+    style.setBounds (box (margin + 64.0f, styleTop, 908.0f - margin - 64.0f, 32.0f));
 
-    scope   .setBounds (juce::Rectangle<float> (margin, scopeTop, 884.0f, scopeBottom - scopeTop).toNearestInt());
-    meters  .setBounds (juce::Rectangle<float> (sideX, styleTop, sideWidth, 196.0f).toNearestInt());
-    loudness.setBounds (juce::Rectangle<float> (sideX, 270.0f, sideWidth, scopeBottom - 270.0f).toNearestInt());
+    scope   .setBounds (box (margin, scopeTop, 884.0f, scopeBottom - scopeTop));
+    meters  .setBounds (box (sideX, styleTop, sideWidth, 170.0f));
+    loudness.setBounds (box (sideX, 244.0f, sideWidth, scopeBottom - 244.0f));
 
-    gain   .setBounds (knobBounds (limiterGroup.x + 8.0f,   100.0f, Size::large));
-    ceiling.setBounds (knobBounds (limiterGroup.x + 112.0f, 100.0f, Size::large));
-
-    float x = limiterGroup.x + 220.0f;
-    for (auto* k : { &lookahead, &attack, &release, &linkTransients, &linkRelease })
+    // Limiter.
     {
-        k->setBounds (knobBounds (x, 76.0f, Size::small));
-        x += 78.0f;
+        const auto x = limiterGroup.x, top = limiterGroup.top;
+        gain   .setBounds (knobBounds (x + 8.0f,   top, 100.0f, Size::large));
+        ceiling.setBounds (knobBounds (x + 112.0f, top, 100.0f, Size::large));
+
+        auto kx = x + 220.0f;
+        for (auto* k : { &lookahead, &attack, &release, &window, &linkTransients, &linkRelease })
+        {
+            k->setBounds (knobBounds (kx, top, 76.0f, Size::small));
+            kx += 80.0f;
+        }
+
+        adaptiveLink.setBounds (box (x + limiterGroup.width - 150.0f, top + 6.0f, 140.0f, 24.0f));
     }
 
-    x = shapeGroup.x + 8.0f;
-    for (auto* k : { &transients, &detail, &clip })
+    // Shape.
     {
-        k->setBounds (knobBounds (x, 76.0f, Size::small));
-        x += 82.0f;
+        auto kx = shapeGroup.x + 6.0f;
+        for (auto* k : { &transients, &lowPunch, &detail, &balance, &clip })
+        {
+            k->setBounds (knobBounds (kx, shapeGroup.top, 80.0f, Size::small));
+            kx += 84.0f;
+        }
     }
 
-    const auto toggleX = outputGroup.x + 12.0f;
-    dcFilter.setBounds (juce::Rectangle<float> (toggleX, controlsTop + 38.0f,  108.0f, 28.0f).toNearestInt());
-    match   .setBounds (juce::Rectangle<float> (toggleX, controlsTop + 82.0f,  108.0f, 28.0f).toNearestInt());
-    delta   .setBounds (juce::Rectangle<float> (toggleX, controlsTop + 126.0f, 108.0f, 28.0f).toNearestInt());
+    // Compressor.
+    {
+        const auto x = compressorGroup.x, top = compressorGroup.top;
+        compOn  .setBounds (box (x + 16.0f, top + 48.0f, 120.0f, 28.0f));
+        compMode.setBounds (box (x + 16.0f, top + 118.0f, 120.0f, 28.0f));
 
-    const auto selectX = outputGroup.x + 130.0f;
-    wordLength.setBounds (juce::Rectangle<float> (selectX, controlsTop + 52.0f,  outputGroup.width - 142.0f, 26.0f).toNearestInt());
-    dither    .setBounds (juce::Rectangle<float> (selectX, controlsTop + 116.0f, outputGroup.width - 142.0f, 26.0f).toNearestInt());
+        auto kx = x + 150.0f;
+        for (auto* k : { &compThreshold, &compRatio, &compAttack, &compRelease, &compHighPass })
+        {
+            k->setBounds (knobBounds (kx, top, 80.0f, Size::small));
+            kx += 80.0f;
+        }
+    }
+
+    // Output.
+    {
+        const auto x = outputGroup.x, top = outputGroup.top;
+        dcFilter .setBounds (box (x + 12.0f,  top + 36.0f, 116.0f, 28.0f));
+        match    .setBounds (box (x + 12.0f,  top + 72.0f, 116.0f, 28.0f));
+        delta    .setBounds (box (x + 136.0f, top + 36.0f, 116.0f, 28.0f));
+        sidechain.setBounds (box (x + 136.0f, top + 72.0f, 116.0f, 28.0f));
+
+        wordLength.setBounds (box (x + 12.0f,  top + 142.0f, 116.0f, 26.0f));
+        dither    .setBounds (box (x + 136.0f, top + 142.0f, 116.0f, 26.0f));
+
+        target.setBounds (knobBounds (x + 262.0f, top, 156.0f, Size::small));
+    }
 }
 
 juce::String BreakwaterEditor::Face::caption() const
@@ -126,33 +182,57 @@ juce::String BreakwaterEditor::Face::caption() const
         return "DELTA - listening to what the limiter removes";
 
     if (engine.getSelected() == static_cast<int> (Engine::analog))
-        return "ANALOG - no lookahead: transients pass with their shape, the final stage catches the rest";
+        return "ANALOG - no lookahead: transients pass with their shape, the true peak stage catches the rest";
 
     const auto& s = styles[(size_t) juce::jlimit (0, (int) styles.size() - 1, style.getSelected())];
     return juce::String (s.name).toUpperCase() + " - " + s.description;
 }
 
+juce::String BreakwaterEditor::Face::footer() const
+{
+    auto text = "CORRELATION " + juce::String (processor.meters.correlation.load(), 2)
+                + "     LINK " + juce::String (juce::roundToInt (processor.meters.link.load() * 100.0f)) + " %";
+
+    if (processor.apvts.getRawParameterValue (pid::sidechain)->load() > 0.5f)
+        text += "     SIDECHAIN";
+
+    return text;
+}
+
 void BreakwaterEditor::Face::refresh()
 {
     const auto ceilingDb = processor.apvts.getRawParameterValue (pid::ceiling)->load();
+    const auto targetIndex = juce::jlimit (0, (int) loudnessTargets.size() - 1,
+                                           juce::roundToInt (processor.apvts.getRawParameterValue (pid::target)->load()));
+    const auto& t = loudnessTargets[(size_t) targetIndex];
 
     meters.refresh();
-    scope.refresh (ceilingDb, meters.getReductionDb(), caption());
-    loudness.refresh (ceilingDb);
+    scope.refresh (ceilingDb, meters.getReductionDb(), caption(), footer());
+    loudness.refresh (ceilingDb, t.lufs, t.name);
 
-    // The analog engine has no lookahead and no styles: their controls stay
-    // in place, greyed, so the panel does not rearrange under the hand.
+    const auto compGr = processor.meters.compressorReduction.take();
+    compressorReductionDb = compGr > compressorReductionDb ? compGr : juce::jmax (compGr, compressorReductionDb - 0.5f);
+
+    // Controls that do nothing in the current mode stay in place, greyed, so
+    // the panel does not rearrange under the hand.
     const auto engineIndex = engine.getSelected();
+    const auto compressorIn = processor.apvts.getRawParameterValue (pid::compOn)->load() > 0.5f;
 
-    if (engineIndex != shownEngine)
+    if (engineIndex != shownEngine || compressorIn != shownCompressor)
     {
         shownEngine = engineIndex;
+        shownCompressor = compressorIn;
         const auto modern = engineIndex == static_cast<int> (Engine::modern);
 
         style.setEnabled (modern);
         lookahead.setEnabled (modern);
-        repaint();
+
+        for (auto* c : std::initializer_list<juce::Component*> { &compMode, &compThreshold, &compRatio,
+                                                                 &compAttack, &compRelease, &compHighPass })
+            c->setEnabled (compressorIn);
     }
+
+    repaint (box (compressorGroup.x + compressorGroup.width - 160.0f, compressorGroup.top + 30.0f, 150.0f, 150.0f));
 }
 
 void BreakwaterEditor::Face::paint (juce::Graphics& g)
@@ -168,44 +248,69 @@ void BreakwaterEditor::Face::paint (juce::Graphics& g)
     g.setColour (juce::Colours::white.withAlpha (0.05f));
     g.fillRect (0.0f, headerHeight, bounds.getWidth(), 1.0f);
 
-    // Wordmark: the name, and a peak meeting its ceiling.
-    juce::Path mark;
-    mark.startNewSubPath (margin, 42.0f);
-    mark.lineTo (margin + 11.0f, 18.0f);
-    mark.lineTo (margin + 22.0f, 42.0f);
+    // Wordmark: a swell running into a wall.
+    juce::Path wave;
+    wave.startNewSubPath (margin - 2.0f, 38.0f);
+    wave.cubicTo (margin + 4.0f, 22.0f, margin + 12.0f, 20.0f, margin + 18.0f, 30.0f);
+    wave.cubicTo (margin + 20.0f, 34.0f, margin + 15.0f, 36.0f, margin + 14.0f, 31.0f);
     g.setColour (panel::accent);
-    g.strokePath (mark, juce::PathStrokeType (3.0f, juce::PathStrokeType::mitered, juce::PathStrokeType::rounded));
-    g.fillRect (margin - 2.0f, 13.0f, 26.0f, 2.0f);
+    g.strokePath (wave, juce::PathStrokeType (2.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.fillRect (margin + 22.0f, 14.0f, 4.0f, 30.0f);
+    g.fillRect (margin - 4.0f, 42.0f, 30.0f, 2.0f);
 
-    panel::drawLabel (g, "BREAKWATER", { margin + 34.0f, 10.0f, 200.0f, 28.0f }, 26.0f, panel::text,
-                      juce::Justification::centredLeft, true, 7.0f);
-    panel::drawLabel (g, "MASTERING LIMITER  /  INDIEWAVE AUDIO", { margin + 35.0f, 36.0f, 260.0f, 12.0f }, 8.5f,
+    panel::drawLabel (g, "BREAKWATER", { margin + 38.0f, 10.0f, 300.0f, 28.0f }, 24.0f, panel::text,
+                      juce::Justification::centredLeft, true, 5.0f);
+    panel::drawLabel (g, "MASTERING LIMITER  /  INDIEWAVE AUDIO", { margin + 39.0f, 36.0f, 280.0f, 12.0f }, 8.5f,
                       panel::textDim, juce::Justification::centredLeft, true, 1.6f);
 
-    panel::drawLabel (g, "ENGINE", { 262.0f, 16.0f, 62.0f, 28.0f }, 9.0f, panel::textDim, juce::Justification::centredRight);
-    panel::drawLabel (g, "OVERSAMPLING", { 540.0f, 16.0f, 90.0f, 28.0f }, 9.0f, panel::textDim, juce::Justification::centredRight);
+    panel::drawLabel (g, "ENGINE", { 312.0f, 16.0f, 62.0f, 28.0f }, 9.0f, panel::textDim, juce::Justification::centredRight);
+    panel::drawLabel (g, "OVERSAMPLING", { 564.0f, 16.0f, 90.0f, 28.0f }, 9.0f, panel::textDim, juce::Justification::centredRight);
 
     panel::drawLabel (g, "STYLE", { margin, styleTop, 58.0f, 32.0f }, 9.5f,
                       shownEngine == static_cast<int> (Engine::modern) ? panel::textDim : panel::textFaint,
                       juce::Justification::centredLeft);
 
     // Control groups.
-    for (const auto& group : { limiterGroup, shapeGroup, outputGroup })
+    for (const auto& group : { limiterGroup, shapeGroup, compressorGroup, outputGroup })
     {
-        const juce::Rectangle<float> area (group.x, controlsTop, group.width, controlsBottom - controlsTop);
+        const juce::Rectangle<float> area (group.x, group.top, group.width, rowHeight - 6.0f);
         g.setColour (juce::Colours::black.withAlpha (0.18f));
         g.fillRoundedRectangle (area, 8.0f);
         g.setColour (juce::Colours::white.withAlpha (0.05f));
         g.drawRoundedRectangle (area.reduced (0.5f), 8.0f, 1.0f);
 
-        panel::drawLabel (g, group.name, area.withHeight (20.0f).translated (0.0f, 4.0f), 9.0f, panel::textFaint,
-                          juce::Justification::centred, true, 2.4f);
+        panel::drawLabel (g, group.name, { group.x + 14.0f, group.top + 8.0f, 200.0f, 16.0f }, 9.0f, panel::textFaint,
+                          juce::Justification::centredLeft, true, 2.4f);
     }
 
-    const auto selectX = outputGroup.x + 130.0f;
-    const auto selectWidth = outputGroup.width - 142.0f;
-    panel::drawLabel (g, "WORD LENGTH", { selectX, controlsTop + 36.0f, selectWidth, 14.0f }, 8.5f);
-    panel::drawLabel (g, "DITHER",      { selectX, controlsTop + 100.0f, selectWidth, 14.0f }, 8.5f);
+    // Compressor labels and its reduction.
+    {
+        const auto x = compressorGroup.x, top = compressorGroup.top;
+        panel::drawLabel (g, "MODE", { x + 16.0f, top + 100.0f, 120.0f, 14.0f }, 8.5f,
+                          shownCompressor ? panel::textDim : panel::textFaint);
+
+        const juce::Rectangle<float> grArea (x + compressorGroup.width - 136.0f, top + 40.0f, 120.0f, 130.0f);
+        panel::drawWell (g, grArea, 6.0f);
+        panel::drawLabel (g, "COMP GR", grArea.withHeight (24.0f).translated (0.0f, 8.0f), 9.0f);
+        panel::drawLabel (g, shownCompressor ? juce::String (-compressorReductionDb, 1) : juce::String ("--"),
+                          grArea.withTrimmedTop (34.0f).withHeight (40.0f), 28.0f,
+                          shownCompressor ? panel::reduction : panel::textFaint, juce::Justification::centred, true, 0.2f);
+        panel::drawLabel (g, "dB", grArea.withTrimmedTop (74.0f).withHeight (16.0f), 9.0f, panel::textFaint);
+
+        // A short bar under the number, 12 dB full scale.
+        const auto bar = juce::Rectangle<float> (grArea.getX() + 14.0f, grArea.getBottom() - 26.0f, grArea.getWidth() - 28.0f, 6.0f);
+        g.setColour (panel::well.brighter (0.15f));
+        g.fillRoundedRectangle (bar, 3.0f);
+        g.setColour (panel::reduction);
+        g.fillRoundedRectangle (bar.withWidth (bar.getWidth() * juce::jlimit (0.0f, 1.0f, compressorReductionDb / 12.0f)), 3.0f);
+    }
+
+    // Output labels.
+    {
+        const auto x = outputGroup.x, top = outputGroup.top;
+        panel::drawLabel (g, "WORD LENGTH", { x + 12.0f,  top + 124.0f, 116.0f, 14.0f }, 8.5f);
+        panel::drawLabel (g, "DITHER",      { x + 136.0f, top + 124.0f, 116.0f, 14.0f }, 8.5f);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -224,7 +329,7 @@ BreakwaterEditor::BreakwaterEditor (BreakwaterProcessor& p)
     if (auto* sizeLimits = getConstrainer())
         sizeLimits->setFixedAspectRatio ((double) designWidth / designHeight);
 
-    setSize (designWidth, designHeight);
+    setSize (designWidth * 4 / 5, designHeight * 4 / 5);
     startTimerHz (30);
 }
 

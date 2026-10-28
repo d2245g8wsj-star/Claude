@@ -22,7 +22,8 @@ public:
     void paint (juce::Graphics&) override;
 
     /** Pulls whatever the audio thread has written since the last call. */
-    void refresh (float ceilingDb, float reductionNowDb, const juce::String& caption);
+    void refresh (float ceilingDb, float reductionNowDb, const juce::String& caption,
+                  const juce::String& footer = {});
 
     static constexpr float rangeDb    = 30.0f;
     static constexpr int   numColumns = 1400;
@@ -39,7 +40,7 @@ private:
     float reductionDb { 0.0f };
     float reductionHold { 0.0f };
     int   holdFrames { 0 };
-    juce::String caption;
+    juce::String caption, footer;
 };
 
 /** Peak bars for input and output, a gain reduction bar, and their numbers. */
@@ -85,13 +86,15 @@ public:
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
-    void refresh (float ceilingDb);
+    /** @param targetLufs  the delivery target, or 0 for none */
+    void refresh (float ceilingDb, float targetLufs, const juce::String& targetName);
 
 private:
     MeterSource& source;
     float momentary { -100.0f }, shortTerm { -100.0f }, integrated { -100.0f };
-    float range { 0.0f }, truePeakDb { -100.0f }, matchDb { 0.0f };
-    float ceilingDb { -1.0f };
+    float range { 0.0f }, truePeakDb { -100.0f }, matchDb { 0.0f }, vu { -100.0f };
+    float ceilingDb { -1.0f }, targetLufs { 0.0f };
+    juce::String targetName;
 };
 
 } // namespace breakwater::display

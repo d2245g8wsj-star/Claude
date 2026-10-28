@@ -891,7 +891,17 @@ void testLowPunchAndBalance()
     };
 
     const Settings base { { breakwater::pid::ceiling, 0.0f }, { breakwater::pid::oversampling, 0.0f } };
-    const auto quiet = [src = drums()] (int i) { auto [l, r] = src (i); return std::pair { l * 0.25f, r * 0.25f }; };
+
+    // A kick on every beat with a short hat over it: the low band is the kick alone.
+    const auto quiet = [] (int n)
+    {
+        const auto t     = n / 48000.0;
+        const auto beat  = std::fmod (t, 0.5);
+        const auto twoPi = juce::MathConstants<double>::twoPi;
+        const auto kick  = 0.25 * std::exp (-beat * 12.0) * std::sin (twoPi * (50.0 + 120.0 * std::exp (-beat * 40.0)) * beat);
+        const auto hat   = 0.02 * std::sin (twoPi * 9000.0 * t) * std::exp (-std::fmod (t, 0.125) * 60.0);
+        return std::pair { (float) (kick + hat), (float) (kick - hat) };
+    };
 
     auto plain = render (base, quiet, 144000);
     auto up = base;   up[breakwater::pid::lowPunch] = 100.0f;

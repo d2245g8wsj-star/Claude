@@ -35,8 +35,11 @@ float Scope::yForDb (float db, juce::Rectangle<float> area) const noexcept
     return area.getY() + proportion * area.getHeight();
 }
 
-void Scope::refresh (float newCeilingDb, float reductionNowDb, const juce::String& newCaption)
+void Scope::refresh (float newCeilingDb, float reductionNowDb, const juce::String& newCaption,
+                     const juce::String& newFooter)
 {
+    footer = newFooter;
+
     const auto writeIndex = source.history.getWriteIndex();
 
     // After a long pause only the most recent screenful matters.
@@ -143,6 +146,9 @@ void Scope::paint (juce::Graphics& g)
     g.drawDashedLine ({ plot.getX(), ceilingY, plot.getRight(), ceilingY }, dashes, 2, 1.0f);
     panel::drawLabel (g, "CEILING " + juce::String (ceilingDb, 1), { plot.getX() + 6.0f, ceilingY + 2.0f, 140.0f, 12.0f },
                       9.0f, panel::textDim, juce::Justification::centredLeft, true, 0.8f);
+
+    panel::drawLabel (g, footer, { plot.getX() + 6.0f, plot.getBottom() - 16.0f, plot.getWidth() * 0.8f, 14.0f }, 9.5f,
+                      panel::textDim, juce::Justification::centredLeft, true, 0.6f);
 
     // Caption and the reduction readout.
     panel::drawLabel (g, caption, { plot.getX() + 6.0f, bounds.getY() + 6.0f, plot.getWidth() * 0.7f, 14.0f }, 10.5f,
@@ -293,12 +299,15 @@ void Meters::paint (juce::Graphics& g)
 
 Loudness::Loudness (MeterSource& s) : source (s)
 {
-    setTooltip ("Click to reset the integrated loudness, range and true peak");
+    setTooltip ("Click to reset the integrated loudness, range and true peak. VU is referenced to -18 dBFS.");
     setMouseCursor (juce::MouseCursor::PointingHandCursor);
 }
 
-void Loudness::refresh (float newCeilingDb)
+void Loudness::refresh (float newCeilingDb, float newTargetLufs, const juce::String& newTargetName)
 {
+    targetLufs = newTargetLufs;
+    targetName = newTargetName;
+    vu         = source.vu.load();
     momentary  = source.momentary.load();
     shortTerm  = source.shortTerm.load();
     integrated = source.integrated.load();
@@ -328,9 +337,24 @@ void Loudness::paint (juce::Graphics& g)
                       juce::Justification::centredLeft);
 
     auto big = area.removeFromTop (34.0f);
-    panel::drawLabel (g, lufs (integrated), big.removeFromLeft (big.getWidth() * 0.66f), 30.0f, panel::text,
+    panel::drawLabel (g, lufs (integrated), big.removeFromLeft (big.getWidth() * 0.42f), 30.0f, panel::text,
                       juce::Justification::centredLeft, true, 0.2f);
-    panel::drawLabel (g, "LUFS", big, 11.0f, panel::textDim, juce::Justification::bottomLeft);
+    panel::drawLabel (g, "LUFS", big.removeFromLeft (40.0f), 11.0f, panel::textDim, juce::Justification::bottomLeft);
+
+    // Against the delivery target: green within a unit, amber beyond.
+    if (targetLufs < -0.5f)
+    {
+        const auto known = integrated > -69.9f;
+        const auto difference = integrated - targetLufs;
+        const auto colour = ! known ? panel::textFaint
+                                    : (std::abs (difference) <= 1.0f ? panel::accent : panel::reduction);
+
+        panel::drawLabel (g, known ? formatDb (difference) + " LU" : juce::String ("--"),
+                          big.withTrimmedBottom (big.getHeight() * 0.45f), 13.0f, colour,
+                          juce::Justification::centredRight, true, 0.1f);
+        panel::drawLabel (g, "VS " + juce::String (targetLufs, 0), big.withTrimmedTop (big.getHeight() * 0.55f),
+                          8.5f, panel::textFaint, juce::Justification::centredRight);
+    }
 
     area.removeFromTop (6.0f);
 
@@ -349,6 +373,7 @@ void Loudness::paint (juce::Graphics& g)
     row ("RANGE",      juce::String (range, 1), "LU", panel::text);
     row ("TRUE PEAK",  truePeakDb <= -99.0f ? juce::String ("--") : juce::String (truePeakDb, 2), "dBTP",
          truePeakDb > ceilingDb + 0.05f ? panel::warning : panel::accent);
+    row ("VU",         vu <= -60.0f ? juce::String ("--") : formatDb (vu), "VU", panel::text);
     row ("MATCH",      formatDb (matchDb), "dB", panel::textDim);
 }
 

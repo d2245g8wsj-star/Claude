@@ -39,6 +39,12 @@ int main (int argc, char* argv[])
     set (breakwater::pid::transients, 35.0f);
     set (breakwater::pid::detail,     20.0f);
     set (breakwater::pid::clip,       25.0f);
+    set (breakwater::pid::lowPunch,   30.0f);
+    set (breakwater::pid::balance,    -20.0f);
+    set (breakwater::pid::window,     3.0f);
+    set (breakwater::pid::compOn,     1.0f);
+    set (breakwater::pid::compThreshold, -16.0f);
+    set (breakwater::pid::compHighPass, 90.0f);
 
     processor.prepareToPlay (48000.0, 512);
 

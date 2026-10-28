@@ -123,8 +123,11 @@ ChannelSettings HingeProcessor::StripParameters::read (bool bypassed) const
     s.outputStep  = output->get();
     s.engaged     = engage->get() && ! bypassed;
     s.thresholdDb = threshold->get();
-    s.lowDynDb    = lowDyn->get();
-    s.highDynDb   = highDyn->get();
+    // On the parameter's own 0.1 dB grid, in double: a float range snapped
+    // with fused multiply-adds lands a hair off zero, and DYN at zero must
+    // mean the side chain is ignored.
+    s.lowDynDb    = std::round (lowDyn->get()  * 10.0) / 10.0;
+    s.highDynDb   = std::round (highDyn->get() * 10.0) / 10.0;
     return s;
 }
 

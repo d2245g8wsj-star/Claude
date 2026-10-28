@@ -65,6 +65,13 @@ target_compile_definitions(Hinge PUBLIC
     JUCE_REPORT_APP_USAGE=0
     JUCE_STRICT_REFCOUNTEDPOINTER=1)
 
+# A shelf is one filter followed by the exact inverse of its mirror; at the
+# centre detent they cancel to the last bit only if no compiler fuses their
+# multiply-adds differently. Clang does by default on Apple silicon.
+if(NOT MSVC)
+    target_compile_options(Hinge PUBLIC -ffp-contract=off)
+endif()
+
 target_link_libraries(Hinge PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp

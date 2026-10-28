@@ -11,14 +11,14 @@ on:
       - "docs/**"
       - "LICENSE"
       - "plugins/**"
-      - ".github/workflows/ember.yml"
+      - ".github/workflows/swell.yml"
   pull_request:
     paths-ignore:
       - "**.md"
       - "docs/**"
       - "LICENSE"
       - "plugins/**"
-      - ".github/workflows/ember.yml"
+      - ".github/workflows/swell.yml"
   workflow_dispatch:
 
 jobs:

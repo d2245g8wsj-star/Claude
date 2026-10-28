@@ -6,7 +6,7 @@
 #include "dsp/HarmonicBand.h"
 #include "dsp/Meters.h"
 
-namespace ember
+namespace swell
 {
 
 inline constexpr int numChannelStrips = 2;
@@ -53,11 +53,11 @@ namespace range
     48 kHz, and the harmonics the curves generate need room above the band. */
 inline constexpr int oversamplingStages = 2;
 
-class EmberProcessor final : public juce::AudioProcessor
+class SwellProcessor final : public juce::AudioProcessor
 {
 public:
-    EmberProcessor();
-    ~EmberProcessor() override = default;
+    SwellProcessor();
+    ~SwellProcessor() override = default;
 
     void prepareToPlay (double sampleRate, int maximumExpectedSamplesPerBlock) override;
     void releaseResources() override {}
@@ -148,7 +148,7 @@ private:
 
     bool      pathsSnapped { false };
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EmberProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SwellProcessor)
 };
 
-} // namespace ember
+} // namespace swell

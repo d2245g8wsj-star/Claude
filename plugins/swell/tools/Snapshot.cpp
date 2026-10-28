@@ -2,7 +2,7 @@
     Renders the editor to a PNG without opening a window, so the layout can be
     looked at from a terminal or in CI.
 
-    Usage:  ember_shot <output.png> [width]
+    Usage:  swell_shot <output.png> [width]
 */
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -19,11 +19,11 @@ int main (int argc, char* argv[])
 
     const juce::File output (argc > 1 ? juce::String (argv[1])
                                       : juce::File::getCurrentWorkingDirectory()
-                                            .getChildFile ("ember.png").getFullPathName());
+                                            .getChildFile ("swell.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : ember::designWidth;
+    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : swell::designWidth;
 
-    ember::EmberProcessor processor;
+    swell::SwellProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
 
     auto set = [&processor] (const juce::String& id, float value)
@@ -33,20 +33,20 @@ int main (int argc, char* argv[])
     };
 
     // Settings that show the controls doing something, rather than all at zero.
-    using ember::pid::forStrip;
-    set (ember::pid::mode, (float) ember::StripMode::dualMono);
-    set (forStrip (0, ember::pid::input),   4.0f);
-    set (forStrip (0, ember::pid::loGain),  6.5f);
-    set (forStrip (0, ember::pid::loFreq),  80.0f);
-    set (forStrip (0, ember::pid::midGain), -3.0f);
-    set (forStrip (0, ember::pid::midFreq), 900.0f);
-    set (forStrip (0, ember::pid::hiGain),  8.0f);
-    set (forStrip (0, ember::pid::hiFreq),  14000.0f);
-    set (forStrip (1, ember::pid::loGain),  3.0f);
-    set (forStrip (1, ember::pid::midGain), 4.5f);
-    set (forStrip (1, ember::pid::midFreq), 2500.0f);
-    set (forStrip (1, ember::pid::hiIn),    0.0f);
-    set (forStrip (1, ember::pid::output),  -2.0f);
+    using swell::pid::forStrip;
+    set (swell::pid::mode, (float) swell::StripMode::dualMono);
+    set (forStrip (0, swell::pid::input),   4.0f);
+    set (forStrip (0, swell::pid::loGain),  6.5f);
+    set (forStrip (0, swell::pid::loFreq),  80.0f);
+    set (forStrip (0, swell::pid::midGain), -3.0f);
+    set (forStrip (0, swell::pid::midFreq), 900.0f);
+    set (forStrip (0, swell::pid::hiGain),  8.0f);
+    set (forStrip (0, swell::pid::hiFreq),  14000.0f);
+    set (forStrip (1, swell::pid::loGain),  3.0f);
+    set (forStrip (1, swell::pid::midGain), 4.5f);
+    set (forStrip (1, swell::pid::midFreq), 2500.0f);
+    set (forStrip (1, swell::pid::hiIn),    0.0f);
+    set (forStrip (1, swell::pid::output),  -2.0f);
 
     processor.prepareToPlay (48000.0, 512);
 
@@ -58,13 +58,13 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * ember::designHeight / ember::designWidth));
+    editor->setSize (width, juce::roundToInt ((double) width * swell::designHeight / swell::designWidth));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.
     struct Settle final : private juce::Timer
     {
-        Settle (ember::EmberProcessor& p, int ticksToWait) : processor (p), remaining (ticksToWait)
+        Settle (swell::SwellProcessor& p, int ticksToWait) : processor (p), remaining (ticksToWait)
         {
             startTimerHz (30);
         }
@@ -94,7 +94,7 @@ int main (int argc, char* argv[])
             }
         }
 
-        ember::EmberProcessor& processor;
+        swell::SwellProcessor& processor;
         int remaining;
         long long n { 0 };
     };

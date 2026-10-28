@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace ember
+namespace swell
 {
 
 /** One band of the harmonic equaliser.
@@ -268,4 +268,4 @@ private:
     float driveEnvelope { 0.0f };
 };
 
-} // namespace ember
+} // namespace swell

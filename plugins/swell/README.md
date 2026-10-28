@@ -1,10 +1,10 @@
-# EMBER — IndieWave Audio
+# SWELL — IndieWave Audio
 
 A two channel harmonic equaliser. Three bands per channel, each of which boosts
 or cuts by saturating the frequencies it covers rather than only changing their
 level, so a band driven harder turns its boost into harmonics.
 
-![The Ember editor](docs/ui.png)
+![The Swell editor](docs/ui.png)
 
 Built with JUCE 8. Ships as **VST3** and **Standalone** on Windows, macOS and
 Linux, plus **AU** on macOS.
@@ -63,7 +63,7 @@ out = x + k · sat(band(x) · drive) / drive
 * Everything runs at 4x: the HI band reaches 25 kHz, past Nyquist at 44.1 and
   48 kHz, and the harmonics need room above the band.
 
-Measured at 48 kHz (from `ember_tests`):
+Measured at 48 kHz (from `swell_tests`):
 
 | | |
 | --- | --- |
@@ -83,7 +83,7 @@ mid/side operation.
 
 It is **not** a measured model of that unit. No hardware was measured, so the
 shapes of the curves, the drive calibration and the exact Q are this project's
-own choices. The interface is an original design, and no name, logo or panel
+own choices. The interface is in the IndieWave house style shared with Crest, and no name, logo or panel
 artwork of any other product is used.
 
 ## Building
@@ -91,7 +91,7 @@ artwork of any other product is used.
 Requires CMake 3.22+ and a C++20 compiler.
 
 ```bash
-cd plugins/ember
+cd plugins/swell
 cmake -B build -DCMAKE_BUILD_TYPE=Release          # fetches JUCE 8.0.6
 cmake --build build --parallel
 ```
@@ -101,10 +101,10 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 ### Offline checks and snapshot
 
 ```bash
-cmake -B build -DEMBER_BUILD_TESTS=ON -DEMBER_BUILD_TOOLS=ON
-cmake --build build --target ember_tests ember_shot --parallel
-./build/ember_tests_artefacts/Release/ember_tests
-./build/ember_shot_artefacts/Release/ember_shot docs/ui.png 1400
+cmake -B build -DSWELL_BUILD_TESTS=ON -DSWELL_BUILD_TOOLS=ON
+cmake --build build --target swell_tests swell_shot --parallel
+./build/swell_tests_artefacts/Release/swell_tests
+./build/swell_shot_artefacts/Release/swell_shot docs/ui.png 1400
 ```
 
 The checks assert: unity slope and monotonic curves, a null against the input
@@ -120,7 +120,7 @@ src/dsp/Saturation.h    the three curves
 src/dsp/HarmonicBand.h  one band: filter, curve, smoothing, drive meter
 src/dsp/Meters.h        audio thread to editor
 src/PluginProcessor.*   parameters, routing, oversampling, the strips
-src/gui/Panel.*         knobs, lamps, mode buttons, meters, all drawn in code
+src/gui/Panel.*         the plate, wells, switches and meters, in the house style; knob and LED art shared with Crest
 src/PluginEditor.*      layout, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render

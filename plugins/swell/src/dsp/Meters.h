@@ -3,7 +3,7 @@
 #include <array>
 #include <atomic>
 
-namespace ember
+namespace swell
 {
 
 /** What the audio thread tells the editor, per channel. Each field is written
@@ -36,4 +36,4 @@ struct MeterSource
     }
 };
 
-} // namespace ember
+} // namespace swell

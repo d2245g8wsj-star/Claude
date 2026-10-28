@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-namespace ember
+namespace swell
 {
 
 namespace
@@ -47,7 +47,7 @@ namespace
     }
 }
 
-juce::AudioProcessorValueTreeState::ParameterLayout EmberProcessor::createParameterLayout()
+juce::AudioProcessorValueTreeState::ParameterLayout SwellProcessor::createParameterLayout()
 {
     using Layout = juce::AudioProcessorValueTreeState::ParameterLayout;
     using FloatP = juce::AudioParameterFloat;
@@ -103,11 +103,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout EmberProcessor::createParame
     return layout;
 }
 
-EmberProcessor::EmberProcessor()
+SwellProcessor::SwellProcessor()
     : juce::AudioProcessor (BusesProperties()
                                 .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                                 .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "EMBER", createParameterLayout())
+      apvts (*this, nullptr, "SWELL", createParameterLayout())
 {
     for (int strip = 0; strip < numChannelStrips; ++strip)
     {
@@ -132,7 +132,7 @@ EmberProcessor::EmberProcessor()
     bypassParameter = findParameter<juce::AudioParameterBool>   (pid::bypass);
 }
 
-bool EmberProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool SwellProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     const auto& out = layouts.getMainOutputChannelSet();
 
@@ -144,7 +144,7 @@ bool EmberProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 
 // ---------------------------------------------------------------------------
 
-void EmberProcessor::ChannelPath::prepare (double innerRate, double hostRate)
+void SwellProcessor::ChannelPath::prepare (double innerRate, double hostRate)
 {
     for (auto* band : { &lo, &mid, &hi })
         band->prepare (innerRate);
@@ -154,7 +154,7 @@ void EmberProcessor::ChannelPath::prepare (double innerRate, double hostRate)
     engaged   .reset (hostRate,  0.02);
 }
 
-void EmberProcessor::ChannelPath::setTargets (const StripParameters& p, bool engagedNow)
+void SwellProcessor::ChannelPath::setTargets (const StripParameters& p, bool engagedNow)
 {
     inputGain .setTargetValue (juce::Decibels::decibelsToGain (p.input ->get()));
     outputGain.setTargetValue (juce::Decibels::decibelsToGain (p.output->get()));
@@ -165,7 +165,7 @@ void EmberProcessor::ChannelPath::setTargets (const StripParameters& p, bool eng
     hi .setTargets (p.hiFreq ->get(), p.hiGain ->get(), p.hiIn ->get());
 }
 
-void EmberProcessor::ChannelPath::snapToTargets()
+void SwellProcessor::ChannelPath::snapToTargets()
 {
     inputGain .setCurrentAndTargetValue (inputGain .getTargetValue());
     outputGain.setCurrentAndTargetValue (outputGain.getTargetValue());
@@ -175,7 +175,7 @@ void EmberProcessor::ChannelPath::snapToTargets()
         band->snapToTargets();
 }
 
-void EmberProcessor::prepareToPlay (double sampleRate, int maximumExpectedSamplesPerBlock)
+void SwellProcessor::prepareToPlay (double sampleRate, int maximumExpectedSamplesPerBlock)
 {
     oversampler = std::make_unique<juce::dsp::Oversampling<float>> (
         2, oversamplingStages,
@@ -211,7 +211,7 @@ void EmberProcessor::prepareToPlay (double sampleRate, int maximumExpectedSample
     pathsSnapped = false;
 }
 
-void EmberProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void SwellProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
 
@@ -334,27 +334,27 @@ void EmberProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
 // ---------------------------------------------------------------------------
 
-void EmberProcessor::getStateInformation (juce::MemoryBlock& destData)
+void SwellProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     if (auto xml = apvts.copyState().createXml())
         copyXmlToBinary (*xml, destData);
 }
 
-void EmberProcessor::setStateInformation (const void* data, int sizeInBytes)
+void SwellProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (auto xml = getXmlFromBinary (data, sizeInBytes))
         if (xml->hasTagName (apvts.state.getType()))
             apvts.replaceState (juce::ValueTree::fromXml (*xml));
 }
 
-juce::AudioProcessorEditor* EmberProcessor::createEditor()
+juce::AudioProcessorEditor* SwellProcessor::createEditor()
 {
-    return new EmberEditor (*this);
+    return new SwellEditor (*this);
 }
 
-} // namespace ember
+} // namespace swell
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new ember::EmberProcessor();
+    return new swell::SwellProcessor();
 }

@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace ember
+namespace swell
 {
 
 /** The three saturation curves, one per band.
@@ -70,4 +70,4 @@ namespace saturation
     }
 }
 
-} // namespace ember
+} // namespace swell

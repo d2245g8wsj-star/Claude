@@ -3,6 +3,8 @@ name: Ember
 on:
   push:
     branches: ["**"]
+    # Path filters do not apply to tag pushes, so an ember-v* tag always builds.
+    tags: ["ember-v*"]
     paths:
       - "plugins/ember/**"
       - ".github/workflows/ember.yml"
@@ -42,6 +44,8 @@ jobs:
     name: macOS universal build
     runs-on: macos-14
     needs: checks
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -78,9 +82,26 @@ jobs:
           cp README.md "$staging/"
           ditto -c -k --sequesterRsrc --keepParent "$staging" "$RUNNER_TEMP/Ember-macOS.zip"
 
+      # Run artifacts count against the account's Actions storage quota; when
+      # that is full the build itself is still good, so it does not fail the run.
       - name: Upload
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: Ember-macOS-universal
           path: ${{ runner.temp }}/Ember-macOS.zip
           if-no-files-found: error
+
+      # Release assets do not count against that quota.
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/ember-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#ember-v}"
+          mv "$RUNNER_TEMP/Ember-macOS.zip" "$RUNNER_TEMP/Ember-$version-macOS.zip"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Ember $version" \
+            --notes "Universal (arm64 + x86_64) VST3, AU and standalone, signed ad-hoc. Before installing: xattr -dr com.apple.quarantine Ember.vst3 Ember.component Ember.app" \
+            "$RUNNER_TEMP/Ember-$version-macOS.zip" \
+            || gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP/Ember-$version-macOS.zip" --clobber

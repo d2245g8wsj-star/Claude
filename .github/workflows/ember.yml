@@ -92,16 +92,25 @@ jobs:
           path: ${{ runner.temp }}/Ember-macOS.zip
           if-no-files-found: error
 
-      # Release assets do not count against that quota.
+      # Release assets do not count against that quota. An ember-v* tag makes
+      # a versioned release; every other push replaces the rolling
+      # "ember-latest" pre-release, whose tag the workflow creates itself.
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/ember-v')
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="${GITHUB_REF_NAME#ember-v}"
-          mv "$RUNNER_TEMP/Ember-macOS.zip" "$RUNNER_TEMP/Ember-$version-macOS.zip"
-          gh release create "$GITHUB_REF_NAME" \
-            --title "Ember $version" \
-            --notes "Universal (arm64 + x86_64) VST3, AU and standalone, signed ad-hoc. Before installing: xattr -dr com.apple.quarantine Ember.vst3 Ember.component Ember.app" \
-            "$RUNNER_TEMP/Ember-$version-macOS.zip" \
-            || gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP/Ember-$version-macOS.zip" --clobber
+          set -euo pipefail
+          notes="Universal (arm64 + x86_64) VST3, AU and standalone, signed ad-hoc, built from ${GITHUB_SHA::7}. Before installing: xattr -dr com.apple.quarantine Ember.vst3 Ember.component Ember.app"
+
+          if [[ "$GITHUB_REF" == refs/tags/ember-v* ]]; then
+            version="${GITHUB_REF_NAME#ember-v}"
+            asset="$RUNNER_TEMP/Ember-$version-macOS.zip"
+            mv "$RUNNER_TEMP/Ember-macOS.zip" "$asset"
+            gh release create "$GITHUB_REF_NAME" --title "Ember $version" --notes "$notes" "$asset" \
+              || gh release upload "$GITHUB_REF_NAME" "$asset" --clobber
+          else
+            gh release delete ember-latest --yes --cleanup-tag || true
+            gh release create ember-latest --prerelease --target "$GITHUB_SHA" \
+              --title "Ember (latest build)" --notes "$notes" "$RUNNER_TEMP/Ember-macOS.zip"
+          fi

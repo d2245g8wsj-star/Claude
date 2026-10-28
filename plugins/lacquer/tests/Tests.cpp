@@ -525,6 +525,7 @@ void testState()
     set (strip (1, pid::shift), 1.0f);
     set (pid::link, 0.0f);
     set (pid::output, -3.5f);
+    a.setFinish (1);
 
     juce::MemoryBlock saved;
     a.getStateInformation (saved);
@@ -539,6 +540,7 @@ void testState()
             same = same && std::abs (parameter->getValue() - b.apvts.getParameter (withId->getParameterID())->getValue()) < 1.0e-6f;
 
     check (same, "every parameter comes back");
+    check (b.getFinish() == 1, "the panel finish comes back");
 }
 
 } // namespace

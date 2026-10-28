@@ -50,6 +50,7 @@ private:
 
     private:
         void layoutStrip (Strip&, float top);
+        void applyFinish (panel::Finish);
         void paintStripMarkings (juce::Graphics&, int index, float top) const;
 
         LacquerProcessor& processor;
@@ -58,6 +59,10 @@ private:
         panel::Toggle      link;
         panel::SteppedKnob output;
         panel::PilotLamp   pilot;
+        panel::FinishSelector finishSelector;
+
+        panel::Finish         finish  { panel::Finish::white };
+        const panel::Palette* palette { &panel::Palette::forFinish (panel::Finish::white) };
 
         int shownLink { -1 };
 

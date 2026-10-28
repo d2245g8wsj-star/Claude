@@ -2,7 +2,7 @@
     Renders the editor to a PNG without opening a window, so the layout can be
     looked at from a terminal or in CI.
 
-    Usage:  lacquer_shot <output.png> [width]
+    Usage:  lacquer_shot <output.png> [width] [white|black]
 */
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -53,6 +53,9 @@ int main (int argc, char* argv[])
     set (forStrip (1, lacquer::pid::trebleBoostFreq),   8.0f);
     set (forStrip (1, lacquer::pid::trebleBoostAmount), 8.0f);
     set (forStrip (1, lacquer::pid::transformer),       0.0f);
+
+    if (argc > 3 && juce::String (argv[3]) == "black")
+        processor.setFinish (1);
 
     processor.prepareToPlay (48000.0, 512);
 

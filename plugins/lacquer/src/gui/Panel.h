@@ -5,29 +5,39 @@
 namespace lacquer::panel
 {
 
-// The plate: a white powder coated 5U face with engraved, colour filled
-// markings and no numbers on it. Each band has its own colour, carried by the
-// dots of its switches' scales, so a setting is read by position and colour
-// the way it is on the hardware.
-inline const juce::Colour plateTop     { 0xfff0eee7 };
-inline const juce::Colour plateBottom  { 0xffe1ded5 };
-inline const juce::Colour engraving    { 0xff2b2926 };
-inline const juce::Colour engravingDim { 0xff8e8a82 };
+/** The two finishes the hardware was built in. */
+enum class Finish { white = 0, black };
 
-inline const juce::Colour bassColour        { 0xffc3342c };
-inline const juce::Colour midBoostColour    { 0xffe0961f };
-inline const juce::Colour midCutColour      { 0xff3c955a };
-inline const juce::Colour trebleBellColour  { 0xff2f5fb3 };
-inline const juce::Colour trebleShelfColour { 0xff7a49ae };
-inline const juce::Colour trebleCutColour   { 0xff23899a };
-inline const juce::Colour neutralColour     { 0xff4a4743 };
+/** The colours that change with the finish. Each band has its own ink,
+    carried by the dots of its switches' scales and by its symbol, so a
+    setting is read by position and colour the way it is on the hardware. */
+enum class Ink { bass = 0, bassCut, midBoost, midCut, trebleBell, trebleShelf, trebleCut, neutral, numInks };
+
+struct Palette
+{
+    juce::Colour plateTop, plateBottom;
+    juce::Colour engraving, engravingDim;
+
+    /** The lit wall of an engraved cut, drawn just below each mark. */
+    juce::Colour lip;
+
+    /** Specks of the coating, light and dark. */
+    juce::Colour speckLight, speckDark;
+
+    /** A highlight round the edge of a knob, so black knobs read on black. */
+    juce::Colour knobRim;
+
+    std::array<juce::Colour, (size_t) Ink::numInks> inks;
+
+    juce::Colour ink (Ink i) const noexcept { return inks[(size_t) i]; }
+
+    static const Palette& forFinish (Finish);
+};
 
 juce::Font plateFont (float height, bool bold = true);
 
-void drawTrackedLabel (juce::Graphics&, const juce::String&, juce::Rectangle<float>,
-                       float height, float tracking = 1.5f,
-                       juce::Justification = juce::Justification::centred,
-                       juce::Colour = engraving);
+void drawTrackedLabel (juce::Graphics&, const Palette&, const juce::String&, juce::Rectangle<float>,
+                       float height, float tracking, juce::Justification, juce::Colour);
 
 /** The symbols engraved in place of words. */
 enum class Glyph
@@ -36,10 +46,10 @@ enum class Glyph
     width, shift, buffer, transformer, power, link, output
 };
 
-void drawGlyph (juce::Graphics&, Glyph, juce::Rectangle<float> area, juce::Colour);
+void drawGlyph (juce::Graphics&, const Palette&, Glyph, juce::Rectangle<float> area, juce::Colour);
 
 /** A rack ear cut from the same plate: two slots, a screw in each. */
-void drawRackEar (juce::Graphics&, juce::Rectangle<float>);
+void drawRackEar (juce::Graphics&, const Palette&, juce::Rectangle<float>);
 
 /** A countersunk panel screw. */
 void drawScrew (juce::Graphics&, juce::Point<float> centre, float diameter);
@@ -53,7 +63,7 @@ public:
     /** One position's mark on the plate. */
     struct Mark
     {
-        juce::Colour colour;
+        Ink   ink;
         float size { 1.0f };      ///< relative dot diameter
         bool  bar  { false };     ///< a short engraved line instead of a dot
     };
@@ -64,12 +74,15 @@ public:
     void paint (juce::Graphics&) override;
 
     /** Marks for an amount switch: dots that grow towards the end of travel. */
-    static std::vector<Mark> rampMarks (int positions, juce::Colour);
+    static std::vector<Mark> rampMarks (int positions, Ink);
 
     /** Marks for a frequency switch: one colour, equal dots. */
-    static std::vector<Mark> evenMarks (int positions, juce::Colour);
+    static std::vector<Mark> evenMarks (int positions, Ink);
+
+    void setPalette (const Palette& p) { palette = &p; repaint(); }
 
 private:
+    const Palette* palette { &Palette::forFinish (Finish::white) };
     Size size;
     std::vector<Mark> marks;
 
@@ -86,10 +99,37 @@ public:
 
     void paintButton (juce::Graphics&, bool highlighted, bool down) override;
 
+    void setPalette (const Palette& p) { palette = &p; repaint(); }
+
 private:
+    const Palette* palette { &Palette::forFinish (Finish::white) };
     juce::AudioProcessorValueTreeState::ButtonAttachment attachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Toggle)
+};
+
+/** Two paint chips, white and black, for choosing the panel finish. The
+    choice is kept in the plugin state rather than as an automatable
+    parameter: it changes how the unit looks, not how it sounds. */
+class FinishSelector final : public juce::Component,
+                             public juce::SettableTooltipClient
+{
+public:
+    FinishSelector();
+
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+
+    void setFinish (Finish);
+
+    std::function<void (Finish)> onChange;
+
+private:
+    juce::Rectangle<float> chip (Finish) const;
+
+    Finish finish { Finish::white };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FinishSelector)
 };
 
 /** The red jewel pilot lamp. */

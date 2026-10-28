@@ -82,6 +82,14 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
 
+    /** The panel finish, 0 white or 1 black. Kept as a property of the saved
+        state rather than as a parameter, since it does not touch the sound.
+        Message thread only. */
+    int  getFinish() const   { return juce::jlimit (0, 1, (int) apvts.state.getProperty (finishProperty, 0)); }
+    void setFinish (int f)   { apvts.state.setProperty (finishProperty, juce::jlimit (0, 1, f), nullptr); }
+
+    static constexpr const char* finishProperty = "finish";
+
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

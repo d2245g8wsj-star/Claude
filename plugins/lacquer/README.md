@@ -7,7 +7,8 @@ cuts, a treble boost that is either an inductor bell or an RC shelf, a passive
 treble cut, and the switchable input buffer, output transformer and **Shift**
 filter set around them.
 
-![The Lacquer editor](docs/ui.png)
+![The Lacquer editor, Classic White](docs/ui.png)
+![The Lacquer editor, Lacquer Black](docs/ui-black.png)
 
 Built with JUCE 8. Ships as **VST3** and **Standalone** on Windows, macOS and
 Linux, plus **AU** on macOS.
@@ -40,8 +41,10 @@ Four toggles per channel, each under its symbol (up is on):
 | coils | **Transformer** | The 1:1 output transformer. On, the core thickens and compresses the lows at level, and the top octave softens by a fraction of a dB. Off is the single ended output. |
 | power | **EQ In** | Relays the filter network in and out. The amplifiers stay in circuit. |
 
-In the bar between the channels: the pilot lamp (lit unless bypassed),
-**Link** (channel I's controls drive both channels; channel II greys out) and
+In the bar between the channels: the pilot lamp (lit unless bypassed), two
+paint chips that switch the panel between the hardware's two finishes,
+**Classic White** and **Lacquer Black** (saved with the session, not a
+parameter, since it does not change the sound), **Link** (channel I's controls drive both channels; channel II greys out) and
 an **Output** trim of ±12 dB, which the hardware does not have.
 
 ## Signal flow
@@ -117,6 +120,7 @@ cmake -B build -DLACQUER_BUILD_TESTS=ON -DLACQUER_BUILD_TOOLS=ON
 cmake --build build --target lacquer_tests lacquer_shot --parallel
 ./build/lacquer_tests_artefacts/Release/lacquer_tests
 ./build/lacquer_shot_artefacts/Release/lacquer_shot docs/ui.png 1400
+./build/lacquer_shot_artefacts/Release/lacquer_shot docs/ui-black.png 1400 black
 ```
 
 The checks assert: every switch has the published positions; the taper rises at
@@ -127,7 +131,7 @@ of the treble boost; the transformer's low frequency harmonics, their level
 dependence and their absence in the mids; the buffer's effect on the second
 harmonic; link, channel independence and an exact bypass; latency the same at
 every rate and lined up with the output; finite output at extreme settings and
-under random automation; and state surviving a save.
+under random automation; and state, panel finish included, surviving a save.
 
 ## Source
 

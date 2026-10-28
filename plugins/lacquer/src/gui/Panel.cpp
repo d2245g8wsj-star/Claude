@@ -14,11 +14,11 @@ namespace
     }
 
     /** An engraved stroke: the cut in shadow just above, the fill on it. */
-    void engrave (juce::Graphics& g, const juce::Path& path, float width, juce::Colour colour)
+    void engrave (juce::Graphics& g, const Palette& palette, const juce::Path& path, float width, juce::Colour colour)
     {
         const juce::PathStrokeType stroke (width, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
 
-        g.setColour (juce::Colours::white.withAlpha (0.7f));
+        g.setColour (palette.lip);
         g.strokePath (path, stroke, juce::AffineTransform::translation (0.0f, 0.7f));
         g.setColour (colour);
         g.strokePath (path, stroke);
@@ -44,13 +44,41 @@ namespace
     float smoothStep (float t) { t = juce::jlimit (0.0f, 1.0f, t); return t * t * (3.0f - 2.0f * t); }
 }
 
+const Palette& Palette::forFinish (Finish finish)
+{
+    // Classic White: powder coat, black fill in the engraving.
+    static const Palette white {
+        juce::Colour (0xfff0eee7), juce::Colour (0xffe1ded5),
+        juce::Colour (0xff2b2926), juce::Colour (0xff8e8a82),
+        juce::Colours::white.withAlpha (0.7f),
+        juce::Colours::white.withAlpha (0.25f), juce::Colours::black.withAlpha (0.035f),
+        juce::Colours::transparentWhite,
+        { juce::Colour (0xffc3342c), juce::Colour (0xff82231d), juce::Colour (0xffe0961f), juce::Colour (0xff3c955a),
+          juce::Colour (0xff2f5fb3), juce::Colour (0xff7a49ae), juce::Colour (0xff23899a), juce::Colour (0xff4a4743) }
+    };
+
+    // Lacquer Black: a deep gloss, cream fill, the inks lifted so they
+    // read on a dark ground.
+    static const Palette black {
+        juce::Colour (0xff1f1f21), juce::Colour (0xff0d0d0e),
+        juce::Colour (0xffece6d6), juce::Colour (0xff8f8a7f),
+        juce::Colours::black.withAlpha (0.8f),
+        juce::Colours::white.withAlpha (0.035f), juce::Colours::black.withAlpha (0.25f),
+        juce::Colours::white.withAlpha (0.22f),
+        { juce::Colour (0xffe8463b), juce::Colour (0xffb8564c), juce::Colour (0xfff2aa33), juce::Colour (0xff52c478),
+          juce::Colour (0xff5c8fe6), juce::Colour (0xffa57ddc), juce::Colour (0xff3bb6c7), juce::Colour (0xffb9b4a8) }
+    };
+
+    return finish == Finish::black ? black : white;
+}
+
 juce::Font plateFont (float height, bool bold)
 {
     return juce::Font (juce::FontOptions (juce::Font::getDefaultSansSerifFontName(), height,
                                           bold ? juce::Font::bold : juce::Font::plain));
 }
 
-void drawTrackedLabel (juce::Graphics& g, const juce::String& text, juce::Rectangle<float> area,
+void drawTrackedLabel (juce::Graphics& g, const Palette& palette, const juce::String& text, juce::Rectangle<float> area,
                        float height, float tracking, juce::Justification justification,
                        juce::Colour colour)
 {
@@ -61,15 +89,15 @@ void drawTrackedLabel (juce::Graphics& g, const juce::String& text, juce::Rectan
     glyphs.addFittedText (font, text, area.getX(), area.getY(), area.getWidth(), area.getHeight(),
                           justification, 1, 1.0f);
 
-    // Engraved into a light plate: the lower wall of the cut catches the light.
-    g.setColour (juce::Colours::white.withAlpha (0.75f));
+    // The lower wall of the cut, just below the letter.
+    g.setColour (palette.lip);
     glyphs.draw (g, juce::AffineTransform::translation (0.0f, 0.8f));
 
     g.setColour (colour);
     glyphs.draw (g);
 }
 
-void drawGlyph (juce::Graphics& g, Glyph glyph, juce::Rectangle<float> area, juce::Colour colour)
+void drawGlyph (juce::Graphics& g, const Palette& palette, Glyph glyph, juce::Rectangle<float> area, juce::Colour colour)
 {
     const auto w = juce::jmax (1.2f, area.getHeight() * 0.09f);
     const auto box = area.reduced (area.getWidth() * 0.06f, area.getHeight() * 0.12f);
@@ -77,20 +105,20 @@ void drawGlyph (juce::Graphics& g, Glyph glyph, juce::Rectangle<float> area, juc
     switch (glyph)
     {
         case Glyph::lowShelfBoost:
-            engrave (g, curve (box, [] (float t) { return 0.85f - 1.6f * smoothStep ((t - 0.25f) / 0.5f)
+            engrave (g, palette, curve (box, [] (float t) { return 0.85f - 1.6f * smoothStep ((t - 0.25f) / 0.5f)
                                                          + 0.25f * std::exp (-std::pow ((t - 0.3f) / 0.1f, 2.0f)); }), w, colour);
             break;
 
         case Glyph::lowShelfCut:
-            engrave (g, curve (box, [] (float t) { return -0.8f + 1.6f * smoothStep ((t - 0.25f) / 0.5f); }), w, colour);
+            engrave (g, palette, curve (box, [] (float t) { return -0.8f + 1.6f * smoothStep ((t - 0.25f) / 0.5f); }), w, colour);
             break;
 
         case Glyph::bellBoost:
-            engrave (g, curve (box, [] (float t) { return -0.7f + 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.17f, 2.0f)); }), w, colour);
+            engrave (g, palette, curve (box, [] (float t) { return -0.7f + 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.17f, 2.0f)); }), w, colour);
             break;
 
         case Glyph::bellCut:
-            engrave (g, curve (box, [] (float t) { return 0.7f - 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.09f, 2.0f)); }), w, colour);
+            engrave (g, palette, curve (box, [] (float t) { return 0.7f - 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.09f, 2.0f)); }), w, colour);
             break;
 
         case Glyph::trebleBoost:
@@ -98,28 +126,28 @@ void drawGlyph (juce::Graphics& g, Glyph glyph, juce::Rectangle<float> area, juc
             // A bell and a shelf drawn together: the switch is either.
             const auto left  = box.withWidth (box.getWidth() * 0.48f);
             const auto right = box.withTrimmedLeft (box.getWidth() * 0.52f);
-            engrave (g, curve (left,  [] (float t) { return -0.7f + 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.18f, 2.0f)); }), w, trebleBellColour);
-            engrave (g, curve (right, [] (float t) { return -0.8f + 1.6f * smoothStep ((t - 0.2f) / 0.6f); }), w, trebleShelfColour);
+            engrave (g, palette, curve (left,  [] (float t) { return -0.7f + 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.18f, 2.0f)); }), w, palette.ink (Ink::trebleBell));
+            engrave (g, palette, curve (right, [] (float t) { return -0.8f + 1.6f * smoothStep ((t - 0.2f) / 0.6f); }), w, palette.ink (Ink::trebleShelf));
             break;
         }
 
         case Glyph::highShelfCut:
-            engrave (g, curve (box, [] (float t) { return 0.8f - 1.6f * smoothStep ((t - 0.25f) / 0.5f); }), w, colour);
+            engrave (g, palette, curve (box, [] (float t) { return 0.8f - 1.6f * smoothStep ((t - 0.25f) / 0.5f); }), w, colour);
             break;
 
         case Glyph::width:
         {
             // A wide and a narrow bell, one inside the other.
-            engrave (g, curve (box, [] (float t) { return -0.8f + 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.26f, 2.0f)); }), w * 0.8f, colour);
-            engrave (g, curve (box, [] (float t) { return -0.8f + 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.07f, 2.0f)); }), w * 0.8f, colour);
+            engrave (g, palette, curve (box, [] (float t) { return -0.8f + 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.26f, 2.0f)); }), w * 0.8f, colour);
+            engrave (g, palette, curve (box, [] (float t) { return -0.8f + 1.6f * std::exp (-std::pow ((t - 0.5f) / 0.07f, 2.0f)); }), w * 0.8f, colour);
             break;
         }
 
         case Glyph::shift:
         {
             // Two shelves, the second moved along: a second filter set.
-            engrave (g, curve (box, [] (float t) { return 0.7f - 1.4f * smoothStep ((t - 0.10f) / 0.4f); }), w * 0.85f, colour);
-            engrave (g, curve (box, [] (float t) { return 0.7f - 1.4f * smoothStep ((t - 0.45f) / 0.4f); }), w * 0.85f, colour.withAlpha (0.55f));
+            engrave (g, palette, curve (box, [] (float t) { return 0.7f - 1.4f * smoothStep ((t - 0.10f) / 0.4f); }), w * 0.85f, colour);
+            engrave (g, palette, curve (box, [] (float t) { return 0.7f - 1.4f * smoothStep ((t - 0.45f) / 0.4f); }), w * 0.85f, colour.withAlpha (0.55f));
             break;
         }
 
@@ -133,7 +161,7 @@ void drawGlyph (juce::Graphics& g, Glyph glyph, juce::Rectangle<float> area, juc
             p.lineTo (tri.getX(), tri.getCentreY());
             p.startNewSubPath (tri.getRight(), tri.getCentreY());
             p.lineTo (box.getRight(), tri.getCentreY());
-            engrave (g, p, w, colour);
+            engrave (g, palette, p, w, colour);
             break;
         }
 
@@ -159,7 +187,7 @@ void drawGlyph (juce::Graphics& g, Glyph glyph, juce::Rectangle<float> area, juc
 
             p.startNewSubPath (cx - 0.8f * w, box.getY());  p.lineTo (cx - 0.8f * w, box.getBottom());
             p.startNewSubPath (cx + 0.8f * w, box.getY());  p.lineTo (cx + 0.8f * w, box.getBottom());
-            engrave (g, p, w * 0.8f, colour);
+            engrave (g, palette, p, w * 0.8f, colour);
             break;
         }
 
@@ -171,7 +199,7 @@ void drawGlyph (juce::Graphics& g, Glyph glyph, juce::Rectangle<float> area, juc
                              0.7f, juce::MathConstants<float>::twoPi - 0.7f, true);
             p.startNewSubPath (c.getCentreX(), c.getY() - 1.0f);
             p.lineTo (c.getCentreX(), c.getCentreY());
-            engrave (g, p, w, colour);
+            engrave (g, palette, p, w, colour);
             break;
         }
 
@@ -181,7 +209,7 @@ void drawGlyph (juce::Graphics& g, Glyph glyph, juce::Rectangle<float> area, juc
             juce::Path p;
             p.addRoundedRectangle (box.getCentreX() - h * 1.5f, box.getCentreY() - h * 0.5f, h * 1.8f, h, h * 0.5f);
             p.addRoundedRectangle (box.getCentreX() - h * 0.3f, box.getCentreY() - h * 0.5f, h * 1.8f, h, h * 0.5f);
-            engrave (g, p, w * 0.9f, colour);
+            engrave (g, palette, p, w * 0.9f, colour);
             break;
         }
 
@@ -193,7 +221,7 @@ void drawGlyph (juce::Graphics& g, Glyph glyph, juce::Rectangle<float> area, juc
             p.lineTo (box.getRight(), box.getBottom());
             p.lineTo (box.getRight(), box.getY());
             p.closeSubPath();
-            engrave (g, p, w * 0.9f, colour);
+            engrave (g, palette, p, w * 0.9f, colour);
             break;
         }
     }
@@ -218,7 +246,7 @@ void drawScrew (juce::Graphics& g, juce::Point<float> centre, float diameter)
     g.drawLine (centre.x - r * 0.2f, centre.y + r, centre.x + r * 0.2f, centre.y - r, diameter * 0.12f);
 }
 
-void drawRackEar (juce::Graphics& g, juce::Rectangle<float> area)
+void drawRackEar (juce::Graphics& g, const Palette& palette, juce::Rectangle<float> area)
 {
     for (auto y : { area.getY() + 36.0f, area.getCentreY(), area.getBottom() - 36.0f })
     {
@@ -227,7 +255,7 @@ void drawRackEar (juce::Graphics& g, juce::Rectangle<float> area)
 
         g.setColour (juce::Colour (0xff1e1d1b));
         g.fillRoundedRectangle (slot, 6.5f);
-        g.setColour (juce::Colours::white.withAlpha (0.8f));
+        g.setColour (palette.lip);
         g.drawRoundedRectangle (slot.translated (0.0f, 0.8f), 6.5f, 0.8f);
 
         drawScrew (g, slot.getCentre(), 15.0f);
@@ -258,7 +286,7 @@ SteppedKnob::SteppedKnob (juce::AudioProcessorValueTreeState& state, const juce:
     }
 }
 
-std::vector<SteppedKnob::Mark> SteppedKnob::rampMarks (int positions, juce::Colour colour)
+std::vector<SteppedKnob::Mark> SteppedKnob::rampMarks (int positions, Ink ink)
 {
     std::vector<Mark> m;
 
@@ -269,17 +297,17 @@ std::vector<SteppedKnob::Mark> SteppedKnob::rampMarks (int positions, juce::Colo
         // Whole numbers get a full dot, half steps a small one; the first
         // position, where the band does nothing, is a bar.
         if (i == 0)
-            m.push_back ({ neutralColour, 1.0f, true });
+            m.push_back ({ Ink::neutral, 1.0f, true });
         else
-            m.push_back ({ colour, (i % 2 == 0 ? 0.75f : 0.45f) + 0.55f * t, false });
+            m.push_back ({ ink, (i % 2 == 0 ? 0.75f : 0.45f) + 0.55f * t, false });
     }
 
     return m;
 }
 
-std::vector<SteppedKnob::Mark> SteppedKnob::evenMarks (int positions, juce::Colour colour)
+std::vector<SteppedKnob::Mark> SteppedKnob::evenMarks (int positions, Ink ink)
 {
-    return std::vector<Mark> ((size_t) positions, Mark { colour, 1.0f, false });
+    return std::vector<Mark> ((size_t) positions, Mark { ink, 1.0f, false });
 }
 
 void SteppedKnob::paint (juce::Graphics& g)
@@ -302,21 +330,22 @@ void SteppedKnob::paint (juce::Graphics& g)
         const auto t = marks.size() > 1 ? (float) i / (float) (marks.size() - 1) : 0.0f;
         const auto a = startAngle + t * (endAngle - startAngle);
         const auto& mark = marks[i];
-        const auto colour = enabled ? mark.colour : mark.colour.withSaturation (0.0f).withAlpha (0.35f);
+        const auto ink    = palette->ink (mark.ink);
+        const auto colour = enabled ? ink : ink.withSaturation (0.0f).withAlpha (0.35f);
 
         if (mark.bar)
         {
             juce::Path bar;
             bar.startNewSubPath (onCircle (centre, dotRadius - dotSize * 0.7f, a));
             bar.lineTo (onCircle (centre, dotRadius + dotSize * 0.7f, a));
-            engrave (g, bar, dotSize * 0.45f, colour);
+            engrave (g, *palette, bar, dotSize * 0.45f, colour);
             continue;
         }
 
         const auto d   = dotSize * mark.size;
         const auto dot = juce::Rectangle<float> (d, d).withCentre (onCircle (centre, dotRadius, a));
 
-        g.setColour (juce::Colours::white.withAlpha (0.7f));
+        g.setColour (palette->lip);
         g.fillEllipse (dot.translated (0.0f, 0.7f));
         g.setColour (colour);
         g.fillEllipse (dot);
@@ -364,6 +393,10 @@ void SteppedKnob::paint (juce::Graphics& g)
     g.setColour (juce::Colours::black.withAlpha (0.6f));
     g.drawEllipse (body, 1.0f);
 
+    // On a dark plate the light catches the skirt's edge.
+    g.setColour (palette->knobRim);
+    g.drawEllipse (skirt.reduced (0.6f), 1.2f);
+
     // Specular highlight.
     g.setColour (juce::Colours::white.withAlpha (0.10f));
     g.fillEllipse (body.withSizeKeepingCentre (body.getWidth() * 0.5f, body.getHeight() * 0.32f)
@@ -376,7 +409,7 @@ void SteppedKnob::paint (juce::Graphics& g)
 
     if (! enabled)
     {
-        g.setColour (plateTop.withAlpha (0.45f));
+        g.setColour (palette->plateTop.withAlpha (0.45f));
         g.fillEllipse (skirt.expanded (1.0f));
     }
 }
@@ -454,8 +487,75 @@ void Toggle::paintButton (juce::Graphics& g, bool highlighted, bool)
 
     if (! isEnabled())
     {
-        g.setColour (plateTop.withAlpha (0.5f));
+        g.setColour (palette->plateTop.withAlpha (0.5f));
         g.fillRect (bounds);
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+FinishSelector::FinishSelector()
+{
+    setTooltip ("Panel finish: Classic White or Lacquer Black");
+    setMouseCursor (juce::MouseCursor::PointingHandCursor);
+}
+
+juce::Rectangle<float> FinishSelector::chip (Finish f) const
+{
+    const auto bounds = getLocalBounds().toFloat();
+    const auto half   = bounds.getWidth() * 0.5f;
+    const auto side   = juce::jmin (half, bounds.getHeight()) * 0.62f;
+
+    return juce::Rectangle<float> (side, side).withCentre ({ bounds.getX() + half * (f == Finish::white ? 0.5f : 1.5f),
+                                                             bounds.getCentreY() });
+}
+
+void FinishSelector::setFinish (Finish f)
+{
+    if (finish != f)
+    {
+        finish = f;
+        repaint();
+    }
+}
+
+void FinishSelector::mouseDown (const juce::MouseEvent& event)
+{
+    for (auto f : { Finish::white, Finish::black })
+    {
+        if (chip (f).expanded (4.0f).contains (event.position) && f != finish)
+        {
+            setFinish (f);
+
+            if (onChange != nullptr)
+                onChange (f);
+        }
+    }
+}
+
+void FinishSelector::paint (juce::Graphics& g)
+{
+    const auto& plate = Palette::forFinish (finish);
+
+    for (auto f : { Finish::white, Finish::black })
+    {
+        const auto area = chip (f);
+        const auto& p   = Palette::forFinish (f);
+
+        g.setColour (juce::Colours::black.withAlpha (0.25f));
+        g.fillEllipse (area.translated (0.0f, 1.0f));
+
+        g.setGradientFill (juce::ColourGradient (p.plateTop, area.getX(), area.getY(),
+                                                 p.plateBottom.darker (0.1f), area.getRight(), area.getBottom(), false));
+        g.fillEllipse (area);
+        g.setColour (plate.engravingDim);
+        g.drawEllipse (area, 0.8f);
+
+        if (f == finish)
+        {
+            g.setColour (plate.engraving);
+            g.drawEllipse (area.expanded (3.0f), 1.3f);
+        }
     }
 }
 

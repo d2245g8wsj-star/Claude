@@ -36,15 +36,15 @@ namespace
         return juce::Rectangle<float> (side, side).withCentre ({ centreX, centreY }).toNearestInt();
     }
 
-    std::vector<SteppedKnob::Mark> amountMarks (juce::Colour colour)
+    std::vector<SteppedKnob::Mark> amountMarks (panel::Ink ink)
     {
-        return SteppedKnob::rampMarks (voicing::amountSteps + 1, colour);
+        return SteppedKnob::rampMarks (voicing::amountSteps + 1, ink);
     }
 
     std::vector<SteppedKnob::Mark> midCutMarks()
     {
-        auto marks = SteppedKnob::evenMarks ((int) voicing::midCutHz.size(), panel::midCutColour);
-        marks[0] = { panel::neutralColour, 1.0f, true };    // OUT
+        auto marks = SteppedKnob::evenMarks ((int) voicing::midCutHz.size(), panel::Ink::midCut);
+        marks[0] = { panel::Ink::neutral, 1.0f, true };    // OUT
         return marks;
     }
 
@@ -58,7 +58,7 @@ namespace
             // The two 10 kHz bells differ by their coil: the high inductance
             // one is drawn larger.
             const auto size = i == 3 ? 0.75f : i == 4 ? 1.3f : 1.0f;
-            marks.push_back ({ bell ? panel::trebleBellColour : panel::trebleShelfColour, size, false });
+            marks.push_back ({ bell ? panel::Ink::trebleBell : panel::Ink::trebleShelf, size, false });
         }
 
         return marks;
@@ -69,7 +69,7 @@ namespace
         std::vector<SteppedKnob::Mark> marks;
 
         for (int i = 0; i <= voicing::qSteps; ++i)
-            marks.push_back ({ panel::neutralColour, 0.55f + 0.06f * (float) i, false });
+            marks.push_back ({ panel::Ink::neutral, 0.55f + 0.06f * (float) i, false });
 
         return marks;
     }
@@ -79,22 +79,22 @@ namespace
 
 LacquerEditor::Strip::Strip (LacquerProcessor& p, int index)
     : lowBoostFreq      (p.apvts, pid::forStrip (index, pid::lowBoostFreq),      Size::medium,
-                         SteppedKnob::evenMarks ((int) voicing::lowBoostHz.size(), panel::bassColour)),
-      lowBoostAmount    (p.apvts, pid::forStrip (index, pid::lowBoostAmount),    Size::large, amountMarks (panel::bassColour)),
+                         SteppedKnob::evenMarks ((int) voicing::lowBoostHz.size(), panel::Ink::bass)),
+      lowBoostAmount    (p.apvts, pid::forStrip (index, pid::lowBoostAmount),    Size::large, amountMarks (panel::Ink::bass)),
       lowCutFreq        (p.apvts, pid::forStrip (index, pid::lowCutFreq),        Size::medium,
-                         SteppedKnob::evenMarks ((int) voicing::lowCutHz.size(), panel::bassColour.darker (0.5f))),
-      lowCutAmount      (p.apvts, pid::forStrip (index, pid::lowCutAmount),      Size::large, amountMarks (panel::bassColour.darker (0.5f))),
+                         SteppedKnob::evenMarks ((int) voicing::lowCutHz.size(), panel::Ink::bassCut)),
+      lowCutAmount      (p.apvts, pid::forStrip (index, pid::lowCutAmount),      Size::large, amountMarks (panel::Ink::bassCut)),
       midBoostFreq      (p.apvts, pid::forStrip (index, pid::midBoostFreq),      Size::medium,
-                         SteppedKnob::evenMarks ((int) voicing::midBoostHz.size(), panel::midBoostColour)),
-      midBoostAmount    (p.apvts, pid::forStrip (index, pid::midBoostAmount),    Size::large, amountMarks (panel::midBoostColour)),
+                         SteppedKnob::evenMarks ((int) voicing::midBoostHz.size(), panel::Ink::midBoost)),
+      midBoostAmount    (p.apvts, pid::forStrip (index, pid::midBoostAmount),    Size::large, amountMarks (panel::Ink::midBoost)),
       midCutFreq        (p.apvts, pid::forStrip (index, pid::midCutFreq),        Size::medium, midCutMarks()),
-      midCutAmount      (p.apvts, pid::forStrip (index, pid::midCutAmount),      Size::large, amountMarks (panel::midCutColour)),
+      midCutAmount      (p.apvts, pid::forStrip (index, pid::midCutAmount),      Size::large, amountMarks (panel::Ink::midCut)),
       trebleBoostFreq   (p.apvts, pid::forStrip (index, pid::trebleBoostFreq),   Size::medium, trebleBoostMarks()),
       trebleQ           (p.apvts, pid::forStrip (index, pid::trebleQ),           Size::small,  qMarks()),
-      trebleBoostAmount (p.apvts, pid::forStrip (index, pid::trebleBoostAmount), Size::large, amountMarks (panel::trebleBellColour)),
+      trebleBoostAmount (p.apvts, pid::forStrip (index, pid::trebleBoostAmount), Size::large, amountMarks (panel::Ink::trebleBell)),
       trebleCutFreq     (p.apvts, pid::forStrip (index, pid::trebleCutFreq),     Size::medium,
-                         SteppedKnob::evenMarks ((int) voicing::trebleCutHz.size(), panel::trebleCutColour)),
-      trebleCutAmount   (p.apvts, pid::forStrip (index, pid::trebleCutAmount),   Size::large, amountMarks (panel::trebleCutColour)),
+                         SteppedKnob::evenMarks ((int) voicing::trebleCutHz.size(), panel::Ink::trebleCut)),
+      trebleCutAmount   (p.apvts, pid::forStrip (index, pid::trebleCutAmount),   Size::large, amountMarks (panel::Ink::trebleCut)),
       shift             (p.apvts, pid::forStrip (index, pid::shift)),
       buffer            (p.apvts, pid::forStrip (index, pid::buffer)),
       transformer       (p.apvts, pid::forStrip (index, pid::transformer)),
@@ -115,8 +115,14 @@ std::vector<juce::Component*> LacquerEditor::Strip::components()
 LacquerEditor::Face::Face (LacquerProcessor& p)
     : processor (p),
       link   (p.apvts, pid::link),
-      output (p.apvts, pid::output, Size::small, SteppedKnob::evenMarks (25, panel::neutralColour))
+      output (p.apvts, pid::output, Size::small, SteppedKnob::evenMarks (25, panel::Ink::neutral))
 {
+    finishSelector.onChange = [this] (panel::Finish f)
+    {
+        processor.setFinish ((int) f);
+        applyFinish (f);
+    };
+
     for (int i = 0; i < numChannelStrips; ++i)
     {
         strips[(size_t) i] = std::make_unique<Strip> (p, i);
@@ -128,6 +134,8 @@ LacquerEditor::Face::Face (LacquerProcessor& p)
     addAndMakeVisible (link);
     addAndMakeVisible (output);
     addAndMakeVisible (pilot);
+    addAndMakeVisible (finishSelector);
+    applyFinish ((panel::Finish) processor.getFinish());
     refresh();
 }
 
@@ -140,6 +148,7 @@ void LacquerEditor::Face::resized()
     pilot .setBounds (square (112.0f, middle, 30.0f));
     link  .setBounds (juce::Rectangle<float> (40.0f, 50.0f).withCentre ({ 1112.0f, middle }).toNearestInt());
     output.setBounds (square (1240.0f, middle, 64.0f));
+    finishSelector.setBounds (juce::Rectangle<float> (56.0f, 28.0f).withCentre ({ 300.0f, middle }).toNearestInt());
 }
 
 void LacquerEditor::Face::layoutStrip (Strip& s, float top)
@@ -164,8 +173,34 @@ void LacquerEditor::Face::layoutStrip (Strip& s, float top)
         toggles[i]->setBounds (juce::Rectangle<float> (66.0f, 84.0f).withCentre ({ toggleX[i], top + toggleY }).toNearestInt());
 }
 
+void LacquerEditor::Face::applyFinish (panel::Finish f)
+{
+    finish  = f;
+    palette = &panel::Palette::forFinish (f);
+    finishSelector.setFinish (f);
+
+    const auto apply = [this] (juce::Component* c)
+    {
+        if (auto* knob = dynamic_cast<panel::SteppedKnob*> (c))  knob->setPalette (*palette);
+        if (auto* toggle = dynamic_cast<panel::Toggle*> (c))     toggle->setPalette (*palette);
+    };
+
+    for (auto& strip : strips)
+        for (auto* child : strip->components())
+            apply (child);
+
+    apply (&link);
+    apply (&output);
+    repaint();
+}
+
 void LacquerEditor::Face::refresh()
 {
+    // The finish lives in the plugin state, so a session or preset recall
+    // can change it under an open editor.
+    if (const auto stored = (panel::Finish) processor.getFinish(); stored != finish)
+        applyFinish (stored);
+
     // The pilot is the power lamp: lit unless the host has bypassed the unit.
     pilot.setLit (processor.apvts.getRawParameterValue (pid::bypass)->load() < 0.5f);
 
@@ -188,12 +223,12 @@ void LacquerEditor::Face::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
 
-    g.setGradientFill (juce::ColourGradient (panel::plateTop, 0.0f, 0.0f,
-                                             panel::plateBottom, 0.0f, bounds.getBottom(), false));
+    g.setGradientFill (juce::ColourGradient (palette->plateTop, 0.0f, 0.0f,
+                                             palette->plateBottom, 0.0f, bounds.getBottom(), false));
     g.fillRect (bounds);
 
-    // Powder coat: a fine, even speckle, seeded so the plate is the same
-    // plate every time it is drawn.
+    // The coating's speckle, seeded so the plate is the same plate every
+    // time it is drawn.
     juce::Random grain (0x4c4143);
 
     for (int i = 0; i < 5200; ++i)
@@ -201,7 +236,7 @@ void LacquerEditor::Face::paint (juce::Graphics& g)
         const auto x = grain.nextFloat() * bounds.getWidth();
         const auto y = grain.nextFloat() * bounds.getHeight();
         const auto dark = grain.nextBool();
-        g.setColour ((dark ? juce::Colours::black : juce::Colours::white).withAlpha (dark ? 0.035f : 0.25f));
+        g.setColour (dark ? palette->speckDark : palette->speckLight);
         g.fillRect (x, y, 1.2f, 1.2f);
     }
 
@@ -210,21 +245,33 @@ void LacquerEditor::Face::paint (juce::Graphics& g)
                                              juce::Colours::black.withAlpha (0.06f), 0.0f, 0.0f, true));
     g.fillRect (bounds);
 
+    // Gloss: the black lacquer carries a broad, soft reflection of the room
+    // light across its upper half.
+    if (finish == panel::Finish::black)
+    {
+        juce::ColourGradient sheen (juce::Colours::white.withAlpha (0.0f), 0.0f, 0.0f,
+                                    juce::Colours::white.withAlpha (0.0f), bounds.getWidth() * 0.55f, bounds.getHeight(), false);
+        sheen.addColour (0.30, juce::Colours::white.withAlpha (0.055f));
+        sheen.addColour (0.42, juce::Colours::white.withAlpha (0.015f));
+        g.setGradientFill (sheen);
+        g.fillRect (bounds);
+    }
+
     // The edge of the plate.
-    g.setColour (juce::Colours::white.withAlpha (0.8f));
+    g.setColour (palette->lip);
     g.drawRect (bounds.reduced (0.5f), 1.0f);
     g.setColour (juce::Colours::black.withAlpha (0.18f));
     g.drawLine (0.0f, bounds.getBottom() - 0.5f, bounds.getRight(), bounds.getBottom() - 0.5f, 1.0f);
 
-    panel::drawRackEar (g, bounds.withWidth (earWidth));
-    panel::drawRackEar (g, bounds.withLeft (bounds.getRight() - earWidth));
+    panel::drawRackEar (g, *palette, bounds.withWidth (earWidth));
+    panel::drawRackEar (g, *palette, bounds.withLeft (bounds.getRight() - earWidth));
 
     // The bar between the channels, engraved top and bottom.
     for (auto y : { middleTop, middleBottom })
     {
-        g.setColour (juce::Colours::white.withAlpha (0.8f));
+        g.setColour (palette->lip);
         g.fillRect (64.0f, y + 0.8f, bounds.getWidth() - 128.0f, 1.0f);
-        g.setColour (panel::engravingDim.withAlpha (0.8f));
+        g.setColour (palette->engravingDim.withAlpha (0.8f));
         g.fillRect (64.0f, y, bounds.getWidth() - 128.0f, 1.0f);
     }
 
@@ -237,18 +284,18 @@ void LacquerEditor::Face::paint (juce::Graphics& g)
                                                    juce::Font::bold | juce::Font::italic));
         name.addFittedText (font, "Lacquer", 540.0f, middle - 24.0f, 320.0f, 36.0f, juce::Justification::centred, 1);
 
-        g.setColour (juce::Colours::white.withAlpha (0.8f));
+        g.setColour (palette->lip);
         name.draw (g, juce::AffineTransform::translation (0.0f, 1.0f));
-        g.setColour (panel::engraving);
+        g.setColour (palette->engraving);
         name.draw (g);
     }
 
-    panel::drawTrackedLabel (g, "INDIEWAVE AUDIO", { 540.0f, middle + 11.0f, 320.0f, 10.0f }, 7.5f, 3.0f,
-                             juce::Justification::centred, panel::engravingDim);
+    panel::drawTrackedLabel (g, *palette, "INDIEWAVE AUDIO", { 540.0f, middle + 11.0f, 320.0f, 10.0f }, 7.5f, 3.0f,
+                             juce::Justification::centred, palette->engravingDim);
 
-    panel::drawGlyph (g, panel::Glyph::power,  { 136.0f, middle - 9.0f, 18.0f, 18.0f }, panel::engraving);
-    panel::drawGlyph (g, panel::Glyph::link,   { 1062.0f, middle - 10.0f, 30.0f, 20.0f }, panel::engraving);
-    panel::drawGlyph (g, panel::Glyph::output, { 1180.0f, middle - 9.0f, 24.0f, 18.0f }, panel::engraving);
+    panel::drawGlyph (g, *palette, panel::Glyph::power,  { 136.0f, middle - 9.0f, 18.0f, 18.0f }, palette->engraving);
+    panel::drawGlyph (g, *palette, panel::Glyph::link,   { 1062.0f, middle - 10.0f, 30.0f, 20.0f }, palette->engraving);
+    panel::drawGlyph (g, *palette, panel::Glyph::output, { 1180.0f, middle - 9.0f, 24.0f, 18.0f }, palette->engraving);
 
     for (int i = 0; i < numChannelStrips; ++i)
         paintStripMarkings (g, i, rowTop[i]);
@@ -258,26 +305,27 @@ void LacquerEditor::Face::paintStripMarkings (juce::Graphics& g, int index, floa
 {
     const auto dimmed = index == 1 && shownLink == 1;
     const auto tint = [dimmed] (juce::Colour c) { return dimmed ? c.withSaturation (0.0f).withAlpha (0.4f) : c; };
+    const auto ink  = [this] (panel::Ink i) { return palette->ink (i); };
 
     const auto glyphBox = [top] (float x) { return juce::Rectangle<float> (46.0f, 22.0f).withCentre ({ x, top + glyphY }); };
 
-    panel::drawGlyph (g, panel::Glyph::lowShelfBoost, glyphBox (lowBoostX),    tint (panel::bassColour));
-    panel::drawGlyph (g, panel::Glyph::lowShelfCut,   glyphBox (lowCutX),      tint (panel::bassColour.darker (0.5f)));
-    panel::drawGlyph (g, panel::Glyph::bellBoost,     glyphBox (midBoostX),    tint (panel::midBoostColour));
-    panel::drawGlyph (g, panel::Glyph::bellCut,       glyphBox (midCutX),      tint (panel::midCutColour));
-    panel::drawGlyph (g, panel::Glyph::trebleBoost,   glyphBox (trebleBoostX), tint (panel::trebleBellColour));
-    panel::drawGlyph (g, panel::Glyph::highShelfCut,  glyphBox (trebleCutX),   tint (panel::trebleCutColour));
+    panel::drawGlyph (g, *palette, panel::Glyph::lowShelfBoost, glyphBox (lowBoostX),    tint (ink (panel::Ink::bass)));
+    panel::drawGlyph (g, *palette, panel::Glyph::lowShelfCut,   glyphBox (lowCutX),      tint (ink (panel::Ink::bassCut)));
+    panel::drawGlyph (g, *palette, panel::Glyph::bellBoost,     glyphBox (midBoostX),    tint (ink (panel::Ink::midBoost)));
+    panel::drawGlyph (g, *palette, panel::Glyph::bellCut,       glyphBox (midCutX),      tint (ink (panel::Ink::midCut)));
+    panel::drawGlyph (g, *palette, panel::Glyph::trebleBoost,   glyphBox (trebleBoostX), tint (ink (panel::Ink::trebleBell)));
+    panel::drawGlyph (g, *palette, panel::Glyph::highShelfCut,  glyphBox (trebleCutX),   tint (ink (panel::Ink::trebleCut)));
 
-    panel::drawGlyph (g, panel::Glyph::width,
+    panel::drawGlyph (g, *palette, panel::Glyph::width,
                       juce::Rectangle<float> (40.0f, 18.0f).withCentre ({ trebleQX, top + qY - 52.0f }),
-                      tint (panel::neutralColour));
+                      tint (ink (panel::Ink::neutral)));
 
     // Group rules: short engraved lines between bass, mid and treble.
     for (auto x : { 0.5f * (lowCutX + midBoostX), 0.5f * (midCutX + trebleBoostX), 0.5f * (trebleCutX + toggleX[0]) })
     {
-        g.setColour (juce::Colours::white.withAlpha (0.8f));
+        g.setColour (palette->lip);
         g.fillRect (x + 0.8f, top + 40.0f, 1.0f, stripHeight - 70.0f);
-        g.setColour (panel::engravingDim.withAlpha (0.55f));
+        g.setColour (palette->engravingDim.withAlpha (0.55f));
         g.fillRect (x, top + 40.0f, 1.0f, stripHeight - 70.0f);
     }
 
@@ -285,18 +333,18 @@ void LacquerEditor::Face::paintStripMarkings (juce::Graphics& g, int index, floa
                                                      panel::Glyph::transformer, panel::Glyph::power };
 
     for (size_t i = 0; i < switchGlyphs.size(); ++i)
-        panel::drawGlyph (g, switchGlyphs[i],
+        panel::drawGlyph (g, *palette, switchGlyphs[i],
                           juce::Rectangle<float> (42.0f, 26.0f).withCentre ({ toggleX[i], top + toggleGlyphY }),
-                          tint (i == 0 ? panel::bassColour : panel::engraving));
+                          tint (i == 0 ? palette->ink (panel::Ink::bass) : palette->engraving));
 
     // Channel numeral.
     juce::GlyphArrangement numeral;
     numeral.addFittedText (juce::Font (juce::FontOptions (juce::Font::getDefaultSerifFontName(), 30.0f, juce::Font::bold)),
                            index == 0 ? "I" : "II", numeralX - 24.0f, top + 120.0f, 48.0f, 40.0f,
                            juce::Justification::centred, 1);
-    g.setColour (juce::Colours::white.withAlpha (0.8f));
+    g.setColour (palette->lip);
     numeral.draw (g, juce::AffineTransform::translation (0.0f, 1.0f));
-    g.setColour (tint (panel::engraving));
+    g.setColour (tint (palette->engraving));
     numeral.draw (g);
 }
 
@@ -327,7 +375,7 @@ LacquerEditor::~LacquerEditor()
 
 void LacquerEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (panel::plateBottom);
+    g.fillAll (juce::Colours::black);
 }
 
 void LacquerEditor::resized()

@@ -131,18 +131,24 @@ double db (double gain) { return 20.0 * std::log10 (juce::jmax (gain, 1.0e-12));
 juce::String strip (int index, const char* name) { return kiln::pid::forStrip (index, name); }
 
 
-/** Settings with every colour stage out: solid state output, no THD. What is
-    left is the compressor alone. */
+/** Settings with every switchable colour stage out: GREEN output, no THD,
+    tube saturation off. What is left is the input iron and the compressor. */
 Settings clean (Settings extra = {})
 {
     for (int s = 0; s < 2; ++s)
     {
-        extra.emplace (strip (s, kiln::pid::tube), 0.0f);
-        extra.emplace (strip (s, kiln::pid::thd),  0.0f);
+        extra.emplace (strip (s, kiln::pid::tubeIn), 0.0f);
+        extra.emplace (strip (s, kiln::pid::iron),   0.0f);
+        extra.emplace (strip (s, kiln::pid::thd),    0.0f);
     }
 
     return extra;
 }
+
+/** The threshold control for a threshold in dBFS. */
+float th (float dbfs) { return dbfs - kiln::range::ceilingDbfs; }
+
+const float zeroDbu = juce::Decibels::decibelsToGain (kiln::level::dbfsAtZeroDbu);
 
 /** Harmonics 2 to 10 against the fundamental, in percent. */
 double thdOf (const juce::AudioBuffer<float>& buffer, int channel, double hz, int start, int length)
@@ -267,25 +273,38 @@ void testCurves()
 
 void testTransparentWhenIdle()
 {
-    section ("An idle compressor is a wire");
+    section ("Idle: the response and distortion of the unit");
 
     const Settings idle = clean ({ { strip (0, kiln::pid::threshold), 0.0f }, { strip (1, kiln::pid::threshold), 0.0f } });
-    const auto source = tone (1000.0, 0.1f);
 
-    const auto r = residualAgainst (render (idle, source, 48000), source);
-    std::cout << "  residual against the input, latency removed: " << r << " dB" << std::endl;
-    check (r < -60.0, "below threshold, solid output: nulls below -60 dB");
-
-    for (double hz : { 30.0, 1000.0, 10000.0, 18000.0 })
+    for (double hz : { 50.0, 1000.0, 10000.0, 18000.0 })
     {
-        auto o = render (idle, tone (hz, 0.1f), 48000);
-        const auto g = db (amplitudeAt (o, 0, hz, 24000, 24000) / 0.1);
-        check (std::abs (g) < 0.05, "flat to 0.05 dB at " + juce::String (hz) + " Hz, got " + juce::String (g, 3));
+        auto o = render (idle, tone (hz, 0.1f), 96000);
+        const auto g = db (amplitudeAt (o, 0, hz, 48000, 48000) / 0.1);
+        check (std::abs (g) < 0.3, "flat to 0.3 dB at " + juce::String (hz) + " Hz, got " + juce::String (g, 3));
+    }
+
+    {
+        // Specified: 12 Hz to 150 kHz at -3 dB.
+        auto o = render (idle, tone (12.0, 0.1f), 192000);
+        const auto g = db (amplitudeAt (o, 0, 12.0, 96000, 96000) / 0.1);
+        std::cout << "  12 Hz: " << g << " dB" << std::endl;
+        check (g < -1.0 && g > -4.5, "about -3 dB at 12 Hz, as specified");
+    }
+
+    // Specified: THD+N below 0.01 % at 1 kHz, 0 dBu, with the tube in circuit
+    // as it always is on the unit.
+    {
+        const Settings defaults { { strip (0, kiln::pid::threshold), 0.0f } };
+        auto o = render (defaults, tone (1000.0, zeroDbu), 48000);
+        const auto t = thdOf (o, 0, 1000.0, 24000, 24000);
+        std::cout << "  THD at 1 kHz, 0 dBu, tube in: " << t << " %" << std::endl;
+        check (t < 0.01, "below 0.01 % at 0 dBu, as specified");
     }
 
     auto o = render (idle, tone (1000.0, kiln::level::nominalAmplitude()), 48000);
     const auto t = thdOf (o, 0, 1000.0, 24000, 24000);
-    check (t < 0.001, "no distortion from an idle cell, got " + juce::String (t, 5) + " %");
+    check (t < 0.002, "tube out, no reduction: next to no distortion, got " + juce::String (t, 5) + " %");
 }
 
 void testStaticCurve()
@@ -296,7 +315,7 @@ void testStaticCurve()
     {
         std::cout << "  " << (forward ? "feed-forward" : "feedback") << ", threshold -30 dBFS:" << std::endl;
 
-        const Settings base = clean ({ { strip (0, kiln::pid::threshold), -30.0f },
+        const Settings base = clean ({ { strip (0, kiln::pid::threshold), th (-30.0f) },
                                        { strip (0, kiln::pid::attack), 10.0f },
                                        { strip (0, kiln::pid::release), 0.3f },
                                        { strip (0, kiln::pid::feedFwd), forward ? 1.0f : 0.0f } });
@@ -332,7 +351,7 @@ void testStaticCurve()
     // Both topologies share one static curve.
     for (float level : { -24.0f, -18.0f, -9.0f })
     {
-        const Settings fb = clean ({ { strip (0, kiln::pid::threshold), -30.0f }, { strip (0, kiln::pid::release), 0.3f } });
+        const Settings fb = clean ({ { strip (0, kiln::pid::threshold), th (-30.0f) }, { strip (0, kiln::pid::release), 0.3f } });
         auto ff = fb;
         ff[strip (0, kiln::pid::feedFwd)] = 1.0f;
 
@@ -343,7 +362,7 @@ void testStaticCurve()
 
     // Limit is harder at every level past the threshold.
     {
-        const Settings comp = clean ({ { strip (0, kiln::pid::threshold), -30.0f }, { strip (0, kiln::pid::release), 0.3f } });
+        const Settings comp = clean ({ { strip (0, kiln::pid::threshold), th (-30.0f) }, { strip (0, kiln::pid::release), 0.3f } });
         auto lim = comp;
         lim[strip (0, kiln::pid::limit)] = 1.0f;
 
@@ -375,7 +394,7 @@ void testTiming()
 
     auto attackHalf = [&] (float attackMs, bool forward)
     {
-        const auto trace = reductionTrace (clean ({ { strip (0, kiln::pid::threshold), -30.0f },
+        const auto trace = reductionTrace (clean ({ { strip (0, kiln::pid::threshold), th (-30.0f) },
                                                     { strip (0, kiln::pid::attack), attackMs },
                                                     { strip (0, kiln::pid::feedFwd), forward ? 1.0f : 0.0f } }),
                                            stepped (100, 100000), 1100);
@@ -393,7 +412,7 @@ void testTiming()
 
     auto releaseHalf = [&] (float releaseSeconds)
     {
-        const auto trace = reductionTrace (clean ({ { strip (0, kiln::pid::threshold), -30.0f },
+        const auto trace = reductionTrace (clean ({ { strip (0, kiln::pid::threshold), th (-30.0f) },
                                                     { strip (0, kiln::pid::release), releaseSeconds } }),
                                            stepped (0, 1000), 9000);
         return halfwayTime (trace, 1000, 8999);
@@ -407,7 +426,7 @@ void testTiming()
 
 void testColour()
 {
-    section ("THD and the output stage");
+    section ("THD, tube and the output stage");
 
     const auto nominal = kiln::level::nominalAmplitude();
 
@@ -432,46 +451,89 @@ void testColour()
                "THD follows level");
     }
 
-    // The iron: flux, so bass saturates and treble does not.
-    const Settings tubeOut { { strip (0, kiln::pid::threshold), 0.0f }, { strip (0, kiln::pid::tube), 1.0f } };
-    auto pad = tubeOut;
-    pad[strip (0, kiln::pid::ironPad)] = 1.0f;
+    // TUBE drives the vari-mu tube harder without changing the level or the
+    // amount of compression.
+    {
+        Settings s { { strip (0, kiln::pid::threshold), 0.0f } };
+        s[strip (0, kiln::pid::tube)] = 0.0f;
+        auto plain = render (s, tone (1000.0, nominal), 48000);
+        s[strip (0, kiln::pid::tube)] = 15.0f;
+        auto driven = render (s, tone (1000.0, nominal), 48000);
+
+        const auto a = thdOf (plain, 0, 1000.0, 24000, 24000), b = thdOf (driven, 0, 1000.0, 24000, 24000);
+        const auto shift = db (amplitudeAt (driven, 0, 1000.0, 24000, 24000) / amplitudeAt (plain, 0, 1000.0, 24000, 24000));
+        std::cout << "  tube 0 dB: " << a << " %, +15 dB: " << b << " % at +4 dBu" << std::endl;
+        check (b > 10.0 * a && b > 0.3, "TUBE +15 dB saturates audibly");
+        // Saturation at about 2 % squeezes the fundamental a little; the unit
+        // promises the compression stays put, not the last half dB of level.
+        check (std::abs (shift) < 0.6, "and keeps the level, got " + juce::String (shift, 3) + " dB");
+
+        Settings c { { strip (0, kiln::pid::threshold), th (-30.0f) }, { strip (0, kiln::pid::release), 0.3f } };
+        c[strip (0, kiln::pid::tube)] = -15.0f;
+        const auto low = steadyReduction (c, -12.0f);
+        c[strip (0, kiln::pid::tube)] = 15.0f;
+        const auto high = steadyReduction (c, -12.0f);
+        check (std::abs (low - high) < 0.5, "the amount of compression does not follow TUBE: "
+                                                + juce::String (low, 2) + " / " + juce::String (high, 2) + " dB");
+    }
+
+    // RED: the iron saturates on flux, so bass and not treble.
+    const Settings red { { strip (0, kiln::pid::threshold), 0.0f }, { strip (0, kiln::pid::iron), 1.0f },
+                         { strip (0, kiln::pid::tubeIn), 0.0f } };
 
     const auto loud = juce::Decibels::decibelsToGain (-2.0f);
-    auto bass   = render (tubeOut, tone (30.0, loud), 96000);
-    auto treble = render (tubeOut, tone (1000.0, loud), 96000);
-    auto padded = render (pad, tone (30.0, loud), 96000);
+    auto bass   = render (red, tone (30.0, loud), 96000);
+    auto treble = render (red, tone (1000.0, loud), 96000);
 
-    const auto bassThd = thdOf (bass, 0, 30.0, 48000, 48000);
+    // Iron link: 10 dB more output into the iron, 10 dB more pad after it.
+    auto linked = red;
+    linked[strip (0, kiln::pid::output)]  = 10.0f;
+    linked[strip (0, kiln::pid::ironPad)] = 10.0f;
+    auto driven = render (linked, tone (30.0, loud), 96000);
+
+    const auto bassThd   = thdOf (bass, 0, 30.0, 48000, 48000);
     const auto trebleThd = thdOf (treble, 0, 1000.0, 48000, 48000);
-    const auto paddedThd = thdOf (padded, 0, 30.0, 48000, 48000);
+    const auto drivenThd = thdOf (driven, 0, 30.0, 48000, 48000);
 
-    std::cout << "  tube + iron at -2 dBFS: 30 Hz " << bassThd << " %, 1 kHz " << trebleThd
-              << " %, 30 Hz with IRON pad " << paddedThd << " %" << std::endl;
+    std::cout << "  RED at -2 dBFS: 30 Hz " << bassThd << " %, 1 kHz " << trebleThd
+              << " %, 30 Hz with output +10 / pad 10 " << drivenThd << " %" << std::endl;
     check (bassThd > 2.0 * trebleThd, "the transformer saturates on bass");
-    check (paddedThd > 2.0 * bassThd, "the IRON pad drives it harder");
+    check (drivenThd > 2.0 * bassThd, "output up, pad down drives it harder");
 
-    auto nominalBass = render (tubeOut, tone (30.0, nominal), 96000);
-    check (thdOf (nominalBass, 0, 30.0, 48000, 48000) < 0.5, "and stays clean-ish at the operating level");
-
-    for (double hz : { 20.0, 1000.0, 20000.0 })
     {
-        auto o = render (tubeOut, tone (hz, 0.01f), 96000);
-        const auto g = db (amplitudeAt (o, 0, hz, 48000, 48000) / 0.01);
-        std::cout << "  tube output response at " << hz << " Hz: " << g << " dB" << std::endl;
-        check (std::abs (g) < 1.0, "tube output within 1 dB at " + juce::String (hz) + " Hz");
+        const auto shift = db (amplitudeAt (driven, 0, 30.0, 48000, 48000) / amplitudeAt (bass, 0, 30.0, 48000, 48000));
+        check (std::abs (shift) < 1.0, "at about the same level, got " + juce::String (shift, 2) + " dB");
     }
 
     {
-        auto a = render (tubeOut, tone (1000.0, nominal), 48000);
-        auto b = render (pad,     tone (1000.0, nominal), 48000);
+        auto padded = red;
+        padded[strip (0, kiln::pid::ironPad)] = 7.0f;
+        auto a = render (red,    tone (1000.0, nominal), 48000);
+        auto b = render (padded, tone (1000.0, nominal), 48000);
         const auto shift = db (amplitudeAt (b, 0, 1000.0, 24000, 24000) / amplitudeAt (a, 0, 1000.0, 24000, 24000));
-        check (std::abs (shift) < 0.2, "the IRON pad does not change the level, got " + juce::String (shift, 3) + " dB");
+        check (std::abs (shift + 7.0) < 0.05, "the pad is a plain attenuator, got " + juce::String (shift, 3) + " dB");
+
+        auto green = padded;
+        green[strip (0, kiln::pid::iron)] = 0.0f;
+        auto c = render (green, tone (1000.0, nominal), 48000);
+        const auto greenShift = db (amplitudeAt (c, 0, 1000.0, 24000, 24000) / nominal);
+        check (std::abs (greenShift) < 0.05, "and only in RED mode");
     }
 
-    // The gain cell: idle is a wire (checked above), working hard it is not.
+    auto nominalBass = render (red, tone (30.0, nominal), 96000);
+    check (thdOf (nominalBass, 0, 30.0, 48000, 48000) < 0.5, "the iron stays clean-ish at the operating level");
+
+    for (double hz : { 30.0, 1000.0, 20000.0 })
     {
-        const Settings s = clean ({ { strip (0, kiln::pid::threshold), -30.0f }, { strip (0, kiln::pid::attack), 50.0f },
+        auto o = render (red, tone (hz, 0.01f), 96000);
+        const auto g = db (amplitudeAt (o, 0, hz, 48000, 48000) / 0.01);
+        std::cout << "  RED response at " << hz << " Hz: " << g << " dB" << std::endl;
+        check (std::abs (g) < 1.0, "RED within 1 dB at " + juce::String (hz) + " Hz");
+    }
+
+    // The gain cell: working hard it distorts more.
+    {
+        const Settings s = clean ({ { strip (0, kiln::pid::threshold), th (-30.0f) }, { strip (0, kiln::pid::attack), 50.0f },
                                     { strip (0, kiln::pid::release), 2.0f } });
         auto light = render (s, tone (1000.0, juce::Decibels::decibelsToGain (-25.0f)), 96000);
         auto heavy = render (s, tone (1000.0, juce::Decibels::decibelsToGain (-3.0f)), 96000);
@@ -485,11 +547,12 @@ void testSidechain()
 {
     section ("Sidechain");
 
-    const Settings base = clean ({ { strip (0, kiln::pid::threshold), -30.0f } });
+    const Settings base = clean ({ { strip (0, kiln::pid::threshold), th (-30.0f) } });
 
     {
         auto filtered = base;
-        filtered[strip (0, kiln::pid::scHpf)] = 500.0f;
+        filtered[strip (0, kiln::pid::hpfIn)] = 1.0f;
+        filtered[strip (0, kiln::pid::hpf)]   = 500.0f;
         const auto open = steadyReduction (base, -10.0f);
 
         auto bassOpen = render (base, tone (50.0, 0.3f), 96000);
@@ -497,30 +560,37 @@ void testSidechain()
         const auto a = -db (amplitudeAt (bassOpen, 0, 50.0, 48000, 48000) / 0.3);
         const auto b = -db (amplitudeAt (bassCut,  0, 50.0, 48000, 48000) / 0.3);
         std::cout << "  50 Hz: GR " << a << " dB open, " << b << " dB with HPF at 500 Hz" << std::endl;
-        check (b < 0.5 * a, "the HPF stops bass driving the compressor");
+        check (b < 0.6 * a, "the HPF eases bass out of the detector");
+
+        auto switchedOut = filtered;
+        switchedOut[strip (0, kiln::pid::hpfIn)] = 0.0f;
+        auto c = render (switchedOut, tone (50.0, 0.3f), 96000);
+        check (std::abs (-db (amplitudeAt (c, 0, 50.0, 48000, 48000) / 0.3) - a) < 0.1, "and its switch takes it out");
         check (open > 1.0, "and 1 kHz still compresses");
     }
 
     {
         auto shelf = base;
-        shelf[strip (0, kiln::pid::scHfIn)] = 1.0f;
-        shelf[strip (0, kiln::pid::scHf)]   = 3000.0f;
+        shelf[strip (0, kiln::pid::bellIn)] = 1.0f;
+        shelf[strip (0, kiln::pid::bell)]   = 10000.0f;
 
         auto plain = render (base,  tone (10000.0, 0.1f), 96000);
         auto boost = render (shelf, tone (10000.0, 0.1f), 96000);
         const auto a = -db (amplitudeAt (plain, 0, 10000.0, 48000, 48000) / 0.1);
         const auto b = -db (amplitudeAt (boost, 0, 10000.0, 48000, 48000) / 0.1);
-        check (b > a + 1.0, "the HF shelf makes the detector more sensitive to the top");
+        check (b > a + 1.0, "the high bell makes the detector more sensitive to the top");
     }
 
     {
         auto listen = base;
         listen[strip (0, kiln::pid::listen)] = 1.0f;
-        listen[strip (0, kiln::pid::scHpf)]  = 500.0f;
+        listen[strip (0, kiln::pid::hpfIn)]  = 1.0f;
+        listen[strip (0, kiln::pid::hpf)]    = 500.0f;
 
         auto out = render (listen, tone (50.0, 0.3f), 48000);
         const auto g = db (amplitudeAt (out, 0, 50.0, 24000, 24000) / 0.3);
-        check (g < -30.0, "LISTEN plays the sidechain: 50 Hz through a 500 Hz HPF, got " + juce::String (g, 1) + " dB");
+        check (g < -15.0 && g > -25.0, "LISTEN plays the sidechain: 50 Hz through a 500 Hz first order HPF, got "
+                                           + juce::String (g, 1) + " dB");
     }
 }
 
@@ -529,8 +599,8 @@ void testSwitching()
     section ("Switches null where they should");
 
     const Settings busy {
-        { strip (0, kiln::pid::input), 6.0f }, { strip (0, kiln::pid::threshold), -30.0f },
-        { strip (0, kiln::pid::thd), 4.0f }, { strip (0, kiln::pid::ironPad), 1.0f },
+        { strip (0, kiln::pid::input), 6.0f }, { strip (0, kiln::pid::threshold), th (-30.0f) },
+        { strip (0, kiln::pid::thd), 4.0f }, { strip (0, kiln::pid::tube), 9.0f },
         { strip (0, kiln::pid::output), -3.0f }
     };
 
@@ -569,7 +639,7 @@ void testSwitching()
             return std::pair { 0.5f * (float) std::sin (1000.0 * t), 0.01f * (float) std::sin (1500.0 * t) };
         };
 
-        auto settings = clean ({ { strip (0, kiln::pid::threshold), -30.0f }, { strip (1, kiln::pid::threshold), -30.0f } });
+        auto settings = clean ({ { strip (0, kiln::pid::threshold), th (-30.0f) }, { strip (1, kiln::pid::threshold), th (-30.0f) } });
 
         settings[kiln::pid::mode] = (float) kiln::StripMode::stereo;
         auto linked = render (settings, source2, 96000);
@@ -621,8 +691,35 @@ void testSwitching()
 
         check (difference < 1.0e-5, "mid/side: the S strip does nothing to a mono source");
 
-        const auto r = residualAgainst (a, source);
+        // Against dual mono through the same chain, so the input iron's own
+        // phase at low frequencies does not count against the matrix.
+        auto dualSettings = plain;
+        dualSettings[kiln::pid::mode] = (float) kiln::StripMode::dualMono;
+        dualSettings[strip (1, kiln::pid::threshold)] = 0.0f;
+        auto dual = render (dualSettings, source, 24000);
+
+        double error = 0.0, signal = 0.0;
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 4800; i < a.getNumSamples(); ++i)
+            {
+                error  += std::pow (a.getSample (ch, i) - dual.getSample (ch, i), 2.0);
+                signal += std::pow (dual.getSample (ch, i), 2.0);
+            }
+
+        const auto r = 10.0 * std::log10 (error / signal + 1.0e-30);
         check (r < -60.0, "mid/side matrix reconstructs, got " + juce::String (r, 1) + " dB");
+
+        // The output transformers are wired left and right: in mid/side both
+        // follow strip A, whatever strip B says.
+        auto iron = plain;
+        iron[strip (0, kiln::pid::iron)]    = 1.0f;
+        iron[strip (0, kiln::pid::ironPad)] = 6.0f;
+        iron[strip (1, kiln::pid::iron)]    = 0.0f;
+        auto c = render (iron, source, 24000);
+        const auto left  = db (amplitudeAt (c, 0, 220.0, 12000, 12000) / 0.4);
+        const auto right = db (amplitudeAt (c, 1, 220.0, 12000, 12000) / 0.4);
+        check (std::abs (left + 6.0) < 0.2 && std::abs (right + 6.0) < 0.2,
+               "mid/side: IRON and its pad follow strip A on both sides");
     }
 }
 
@@ -657,18 +754,20 @@ void testRobustness()
 
         for (int s = 0; s < 2; ++s)
         {
-            extreme[strip (s, kiln::pid::input)]     = 20.0f;
-            extreme[strip (s, kiln::pid::threshold)] = -40.0f;
+            extreme[strip (s, kiln::pid::input)]     = 15.0f;
+            extreme[strip (s, kiln::pid::threshold)] = kiln::range::thresholdMin;
             extreme[strip (s, kiln::pid::attack)]    = 0.5f;
             extreme[strip (s, kiln::pid::release)]   = 0.1f;
             extreme[strip (s, kiln::pid::limit)]     = 1.0f;
             extreme[strip (s, kiln::pid::feedFwd)]   = forward ? 1.0f : 0.0f;
-            extreme[strip (s, kiln::pid::scHpf)]     = 500.0f;
-            extreme[strip (s, kiln::pid::scHfIn)]    = 1.0f;
-            extreme[strip (s, kiln::pid::scHf)]      = 20000.0f;
+            extreme[strip (s, kiln::pid::hpfIn)]     = 1.0f;
+            extreme[strip (s, kiln::pid::hpf)]       = 500.0f;
+            extreme[strip (s, kiln::pid::bellIn)]    = 1.0f;
+            extreme[strip (s, kiln::pid::bell)]      = 20000.0f;
             extreme[strip (s, kiln::pid::thd)]       = 8.0f;
-            extreme[strip (s, kiln::pid::ironPad)]   = 1.0f;
-            extreme[strip (s, kiln::pid::output)]    = 20.0f;
+            extreme[strip (s, kiln::pid::tube)]      = 15.0f;
+            extreme[strip (s, kiln::pid::iron)]      = 1.0f;
+            extreme[strip (s, kiln::pid::output)]    = 15.0f;
         }
 
         juce::Random random (1234);
@@ -698,7 +797,7 @@ void testState()
 
     kiln::KilnProcessor a;
     a.apvts.getParameter (strip (1, kiln::pid::release))->setValueNotifyingHost (0.73f);
-    a.apvts.getParameter (strip (0, kiln::pid::ironPad))->setValueNotifyingHost (1.0f);
+    a.apvts.getParameter (strip (0, kiln::pid::ironPad))->setValueNotifyingHost (0.6f);
     a.apvts.getParameter (kiln::pid::mode)->setValueNotifyingHost (1.0f);
 
     juce::MemoryBlock state;
@@ -708,7 +807,7 @@ void testState()
     b.setStateInformation (state.getData(), (int) state.getSize());
 
     check (std::abs (b.apvts.getParameter (strip (1, kiln::pid::release))->getValue() - 0.73f) < 1.0e-4f, "release restored");
-    check (b.apvts.getParameter (strip (0, kiln::pid::ironPad))->getValue() > 0.5f, "iron pad restored");
+    check (std::abs (b.apvts.getParameter (strip (0, kiln::pid::ironPad))->getValue() - 0.6f) < 1.0e-4f, "iron pad restored");
     check (b.apvts.getParameter (kiln::pid::mode)->getValue() > 0.99f, "mode restored");
 }
 

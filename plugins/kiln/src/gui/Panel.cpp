@@ -380,7 +380,8 @@ void VuMeter::setLegend (juce::String newLegend)
 float VuMeter::proportionFor (float reductionDb) noexcept
 {
     // Spread like a printed GR scale: the first few dB get most of the arc.
-    return std::log10 (1.0f + juce::jlimit (0.0f, 20.0f, reductionDb)) / std::log10 (21.0f);
+    // Full scale is 16 dB, as on the unit's meter.
+    return std::log10 (1.0f + juce::jlimit (0.0f, 16.0f, reductionDb)) / std::log10 (17.0f);
 }
 
 void VuMeter::push (float reductionDb, float frameSeconds)
@@ -392,7 +393,7 @@ void VuMeter::push (float reductionDb, float frameSeconds)
     constexpr float omega   = 2.0f * juce::MathConstants<float>::pi * 2.2f;
     constexpr float damping = 0.78f;
 
-    const auto target = juce::jlimit (0.0f, 22.0f, reductionDb);
+    const auto target = juce::jlimit (0.0f, 17.0f, reductionDb);
     const auto dt = frameSeconds / (float) steps;
     const auto before = shownDb;
 
@@ -403,7 +404,7 @@ void VuMeter::push (float reductionDb, float frameSeconds)
         shownDb  += velocity * dt;
     }
 
-    shownDb = juce::jlimit (-0.4f, 22.0f, shownDb);
+    shownDb = juce::jlimit (0.0f, 17.0f, shownDb);
 
     if (std::abs (shownDb - before) > 0.005f)
         repaint();
@@ -442,7 +443,7 @@ void VuMeter::paint (juce::Graphics& g)
 
     for (const auto& [db, major] : { Mark { 0, true }, Mark { 1, true }, Mark { 2, true }, Mark { 3, true },
                                      Mark { 4, false }, Mark { 5, true }, Mark { 6, false }, Mark { 8, false },
-                                     Mark { 10, true }, Mark { 15, false }, Mark { 20, true } })
+                                     Mark { 10, true }, Mark { 12, false }, Mark { 16, true } })
     {
         const auto a = angleFor (proportionFor ((float) db));
 

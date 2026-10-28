@@ -6,17 +6,9 @@ namespace kiln
 
 namespace
 {
-    juce::String trimString (float value, int)
-    {
-        if (std::abs (value) < 0.05f)
-            return "0.0 dB";
-
-        return (value > 0.0f ? "+" : "") + juce::String (value, 1) + " dB";
-    }
-
     juce::String thresholdString (float value, int)
     {
-        return juce::String (value, 1) + " dBFS";
+        return value > -0.05f ? juce::String ("Off") : juce::String (value, 1) + " dB";
     }
 
     juce::String attackString (float value, int)
@@ -36,6 +28,20 @@ namespace
             return juce::String (value / 1000.0f, value >= 10000.0f ? 1 : 2) + " kHz";
 
         return juce::String (juce::roundToInt (value)) + " Hz";
+    }
+
+    juce::String trimStepString (float value, int)
+    {
+        if (std::abs (value) < 0.01f)
+            return "0.00 dB";
+
+        return (value > 0.0f ? "+" : "") + juce::String (value, 2) + " dB";
+    }
+
+    juce::String padString (float value, int)
+    {
+        const auto steps = juce::roundToInt (value);
+        return steps == 0 ? juce::String ("0 dB") : "-" + juce::String (steps) + " dB";
     }
 
     juce::String percentString (float value, int)
@@ -80,16 +86,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout KilnProcessor::createParamet
         const auto id   = [strip] (const char* name) { return juce::ParameterID { pid::forStrip (strip, name), 1 }; };
         const auto name = [strip] (const char* text) { return juce::String (strip == 0 ? "A " : "B ") + text; };
 
-        // Half dB steps, as the stepped encoders on the unit move.
-        const juce::NormalisableRange<float> trimRange (-range::trimDb, range::trimDb, 0.5f);
+        // Quarter dB steps, as the encoders on the unit move.
+        const juce::NormalisableRange<float> trimRange (-range::trimDb, range::trimDb, 0.25f);
 
         layout.add (std::make_unique<FloatP> (id (pid::input), name ("Input"), trimRange, 0.0f,
-                                              Attr().withLabel ("dB").withStringFromValueFunction (trimString)));
+                                              Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
 
         layout.add (std::make_unique<FloatP> (id (pid::threshold), name ("Threshold"),
-                                              juce::NormalisableRange<float> (range::thresholdMin, range::thresholdMax, 0.1f),
-                                              -18.0f,
-                                              Attr().withLabel ("dBFS").withStringFromValueFunction (thresholdString)));
+                                              juce::NormalisableRange<float> (range::thresholdMin, 0.0f, 0.1f),
+                                              -20.0f,
+                                              Attr().withLabel ("dB").withStringFromValueFunction (thresholdString)));
         layout.add (std::make_unique<FloatP> (id (pid::attack), name ("Attack"),
                                               logRange (range::attackMin, range::attackMax), 10.0f,
                                               Attr().withLabel ("ms").withStringFromValueFunction (attackString)));
@@ -99,28 +105,36 @@ juce::AudioProcessorValueTreeState::ParameterLayout KilnProcessor::createParamet
         layout.add (std::make_unique<BoolP>  (id (pid::feedFwd), name ("Feed Forward"), false));
         layout.add (std::make_unique<BoolP>  (id (pid::limit),   name ("Limit"),        false));
 
-        layout.add (std::make_unique<FloatP> (id (pid::scHpf), name ("SC HPF"),
-                                              logRange (range::hpfMin, range::hpfMax), 20.0f,
+        layout.add (std::make_unique<FloatP> (id (pid::hpf), name ("SC HPF"),
+                                              logRange (range::hpfMin, range::hpfMax), 80.0f,
                                               Attr().withLabel ("Hz").withStringFromValueFunction (frequencyString)));
-        layout.add (std::make_unique<FloatP> (id (pid::scHf), name ("SC HF"),
-                                              logRange (range::hfMin, range::hfMax), 8000.0f,
+        layout.add (std::make_unique<BoolP>  (id (pid::hpfIn), name ("SC HPF In"), false));
+        layout.add (std::make_unique<FloatP> (id (pid::bell), name ("SC High Bell"),
+                                              logRange (range::bellMin, range::bellMax), 8000.0f,
                                               Attr().withLabel ("Hz").withStringFromValueFunction (frequencyString)));
-        layout.add (std::make_unique<BoolP>  (id (pid::scHfIn), name ("SC HF In"), false));
+        layout.add (std::make_unique<BoolP>  (id (pid::bellIn), name ("SC High Bell In"), false));
         layout.add (std::make_unique<BoolP>  (id (pid::listen), name ("SC Listen"), false));
 
         layout.add (std::make_unique<FloatP> (id (pid::thd), name ("THD"),
                                               juce::NormalisableRange<float> (0.0f, range::thdMax, 0.01f, 0.6f), 0.0f,
                                               Attr().withLabel ("%").withStringFromValueFunction (percentString)));
-        layout.add (std::make_unique<BoolP>  (id (pid::tube),    name ("Tube Output"), true));
-        layout.add (std::make_unique<BoolP>  (id (pid::ironPad), name ("Iron Pad"),    false));
+        layout.add (std::make_unique<FloatP> (id (pid::tube), name ("Tube"), trimRange, 0.0f,
+                                              Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
+        layout.add (std::make_unique<BoolP>  (id (pid::tubeIn), name ("Tube In"), true));
+
+        layout.add (std::make_unique<BoolP>  (id (pid::iron), name ("Iron"), false));
+        layout.add (std::make_unique<FloatP> (id (pid::ironPad), name ("Iron Pad"),
+                                              juce::NormalisableRange<float> (0.0f, range::ironPadMax, 1.0f), 0.0f,
+                                              Attr().withLabel ("dB").withStringFromValueFunction (padString)));
+        layout.add (std::make_unique<BoolP>  (id (pid::ironLink), name ("Iron Link"), false));
 
         layout.add (std::make_unique<FloatP> (id (pid::mix), name ("Mix"),
                                               juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 100.0f,
                                               Attr().withLabel ("%").withStringFromValueFunction (percentString)));
         layout.add (std::make_unique<FloatP> (id (pid::output), name ("Output"), trimRange, 0.0f,
-                                              Attr().withLabel ("dB").withStringFromValueFunction (trimString)));
-        layout.add (std::make_unique<BoolP>  (id (pid::active), name ("In"), true));
-        layout.add (std::make_unique<BoolP>  (id (pid::link),   name ("I/O Link"), false));
+                                              Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
+        layout.add (std::make_unique<BoolP>  (id (pid::active),  name ("In"), true));
+        layout.add (std::make_unique<BoolP>  (id (pid::dynLink), name ("Dynamic Link"), false));
     }
 
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::bypass, 1 }, "Bypass", false));
@@ -145,13 +159,16 @@ KilnProcessor::KilnProcessor()
         s.release   = findParameter<juce::AudioParameterFloat> (id (pid::release));
         s.feedFwd   = findParameter<juce::AudioParameterBool>  (id (pid::feedFwd));
         s.limit     = findParameter<juce::AudioParameterBool>  (id (pid::limit));
-        s.scHpf     = findParameter<juce::AudioParameterFloat> (id (pid::scHpf));
-        s.scHf      = findParameter<juce::AudioParameterFloat> (id (pid::scHf));
-        s.scHfIn    = findParameter<juce::AudioParameterBool>  (id (pid::scHfIn));
+        s.hpf       = findParameter<juce::AudioParameterFloat> (id (pid::hpf));
+        s.hpfIn     = findParameter<juce::AudioParameterBool>  (id (pid::hpfIn));
+        s.bell      = findParameter<juce::AudioParameterFloat> (id (pid::bell));
+        s.bellIn    = findParameter<juce::AudioParameterBool>  (id (pid::bellIn));
         s.listen    = findParameter<juce::AudioParameterBool>  (id (pid::listen));
         s.thd       = findParameter<juce::AudioParameterFloat> (id (pid::thd));
-        s.tube      = findParameter<juce::AudioParameterBool>  (id (pid::tube));
-        s.ironPad   = findParameter<juce::AudioParameterBool>  (id (pid::ironPad));
+        s.tube      = findParameter<juce::AudioParameterFloat> (id (pid::tube));
+        s.tubeIn    = findParameter<juce::AudioParameterBool>  (id (pid::tubeIn));
+        s.iron      = findParameter<juce::AudioParameterBool>  (id (pid::iron));
+        s.ironPad   = findParameter<juce::AudioParameterFloat> (id (pid::ironPad));
         s.mix       = findParameter<juce::AudioParameterFloat> (id (pid::mix));
         s.output    = findParameter<juce::AudioParameterFloat> (id (pid::output));
         s.active    = findParameter<juce::AudioParameterBool>  (id (pid::active));
@@ -180,53 +197,60 @@ bool KilnProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 
 void KilnProcessor::ChannelPath::prepare (double innerRate, double hostRate)
 {
+    inputIron.prepare (innerRate);
+    thdStage.prepare (innerRate);
     sidechain.prepare (innerRate);
     envelope.prepare (innerRate);
     cell.prepare (innerRate);
-    thdStage.prepare (innerRate);
     outputStage.prepare (innerRate);
 
-    inputGain .reset (innerRate, 0.02);
-    outputGain.reset (innerRate, 0.02);
-    threshold .reset (innerRate, 0.02);
-    thdDrive  .reset (innerRate, 0.02);
-    mix       .reset (innerRate, 0.02);
-    engaged   .reset (hostRate,  0.02);
+    for (auto* v : { &inputGain, &outputGain, &tubeGain, &threshold })
+        v->reset (innerRate, 0.02);
+
+    thdDrive.reset (innerRate, 0.02);
+    mix     .reset (innerRate, 0.02);
+    engaged .reset (hostRate,  0.02);
 
     reset();
 }
 
 void KilnProcessor::ChannelPath::reset()
 {
+    inputIron.reset();
+    thdStage.reset();
     sidechain.reset();
     envelope.reset();
     cell.reset();
-    thdStage.reset();
     outputStage.reset();
     lastCellOutput = 0.0f;
 }
 
-void KilnProcessor::ChannelPath::setTargets (const StripParameters& p, bool engagedNow)
+void KilnProcessor::ChannelPath::setTargets (const StripParameters& p, const StripParameters& outputStrip, bool engagedNow)
 {
+    const auto thresholdControl = p.threshold->get();
+    compressing = thresholdControl < -0.05f;
+
     inputGain .setTargetValue (juce::Decibels::decibelsToGain (p.input ->get()));
     outputGain.setTargetValue (juce::Decibels::decibelsToGain (p.output->get()));
-    threshold .setTargetValue (juce::Decibels::decibelsToGain (p.threshold->get()));
+    tubeGain  .setTargetValue (juce::Decibels::decibelsToGain (p.tube  ->get()));
+    threshold .setTargetValue (juce::Decibels::decibelsToGain (range::thresholdDbfs (juce::jmin (thresholdControl, -0.05f))));
     thdDrive  .setTargetValue (tube::ThdCalibration::get().driveFor (p.thd->get()));
     mix       .setTargetValue (p.mix->get() / 100.0f);
     engaged   .setTargetValue (engagedNow ? 1.0f : 0.0f);
 
     envelope.setTimes (p.attack->get() / 1000.0f, p.release->get());
-    sidechain.setTargets (p.scHpf->get(), p.scHf->get(), p.scHfIn->get());
-    outputStage.setTargets (p.tube->get(), p.ironPad->get());
+    sidechain.setTargets (p.hpfIn->get(), p.hpf->get(), p.bellIn->get(), p.bell->get());
+    outputStage.setTargets (outputStrip.iron->get(), outputStrip.ironPad->get());
 
     feedForward = p.feedFwd->get();
     limiting    = p.limit->get();
     listening   = p.listen->get();
+    tubeOn      = p.tubeIn->get();
 }
 
 void KilnProcessor::ChannelPath::snapToTargets()
 {
-    for (auto* v : { &inputGain, &outputGain, &threshold })
+    for (auto* v : { &inputGain, &outputGain, &tubeGain, &threshold })
         v->setCurrentAndTargetValue (v->getTargetValue());
 
     for (auto* v : { &thdDrive, &mix, &engaged })
@@ -283,13 +307,17 @@ void KilnProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBu
     const auto midSide  = mode == StripMode::midSide && numChannels == 2;
 
     // In stereo mode strip A drives both channels and the two share one
-    // detector, so the image cannot shift; strip B waits for the mode to change.
+    // detector, so the image cannot shift; strip B waits for the mode to
+    // change. In dual mono and mid/side the detectors are fully unlinked.
     const auto linked = mode == StripMode::stereo && numChannels == 2;
 
     for (int ch = 0; ch < numChannels; ++ch)
     {
+        // IN is a true bypass on the physical channel, ahead of the M/S
+        // matrix, so in mid/side strip A's IN is the left and B's the right.
         const auto& p = strips[(size_t) (mode == StripMode::stereo ? 0 : ch)];
-        paths[(size_t) ch].setTargets (p, ! bypassed && p.active->get());
+        const auto& o = strips[(size_t) (mode == StripMode::dualMono ? ch : 0)];
+        paths[(size_t) ch].setTargets (p, o, ! bypassed && p.active->get());
     }
 
     if (! pathsSnapped)
@@ -298,20 +326,6 @@ void KilnProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBu
             path.snapToTargets();
 
         pathsSnapped = true;
-    }
-
-    if (midSide)
-    {
-        auto* left  = buffer.getWritePointer (0);
-        auto* right = buffer.getWritePointer (1);
-
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
-        {
-            const auto m = 0.5f * (left[i] + right[i]);
-            const auto s = 0.5f * (left[i] - right[i]);
-            left[i]  = m;
-            right[i] = s;
-        }
     }
 
     const auto numSamples = buffer.getNumSamples();
@@ -339,16 +353,30 @@ void KilnProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBu
 
     for (size_t i = 0; i < inner.getNumSamples(); ++i)
     {
-        std::array<float, 2> x {}, sc {};
+        std::array<float, 2> raw { data[0][i], numChannels > 1 ? data[1][i] : 0.0f };
+
+        if (midSide)
+            raw = { 0.5f * (raw[0] + raw[1]), 0.5f * (raw[0] - raw[1]) };
+
+        // Input trim and input transformer, then THD, the first saturation
+        // stage, ahead of the compressor. The dry half of the mix is taken
+        // after the transformer and before the THD.
+        std::array<float, 2> dryIn {}, x {}, sc {};
 
         for (int ch = 0; ch < numChannels; ++ch)
         {
             auto& path = paths[(size_t) ch];
-            x[(size_t) ch]  = data[(size_t) ch][i] * path.inputGain.getNextValue();
+            const auto c = (size_t) ch;
+
+            dryIn[c] = path.inputIron.process (raw[c] * path.inputGain.getNextValue());
+
+            const auto drive = path.thdDrive.getNextValue();
+            drivePeak[c] = juce::jmax (drivePeak[c], std::abs (dryIn[c]) * drive);
+            x[c] = path.thdStage.process (dryIn[c], drive);
 
             // Feedback listens to what the gain cell has already done, as a
             // classic vari-mu does; feed-forward listens to what is coming.
-            sc[(size_t) ch] = path.sidechain.process (path.feedForward ? x[(size_t) ch] : path.lastCellOutput);
+            sc[c] = path.sidechain.process (path.feedForward ? x[c] : path.lastCellOutput);
         }
 
         std::array<float, 2> reduction {};
@@ -356,45 +384,60 @@ void KilnProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBu
         if (linked)
         {
             auto& lead = paths[0];
-            const auto envelope = lead.envelope.process (juce::jmax (std::abs (sc[0]), std::abs (sc[1])));
+            const auto envelope  = lead.envelope.process (juce::jmax (std::abs (sc[0]), std::abs (sc[1])));
             const auto threshold = lead.threshold.getNextValue();
             paths[1].threshold.getNextValue();
 
-            reduction[0] = reduction[1] = varimu::reduction (envelope, threshold, lead.feedForward, lead.limiting);
+            if (lead.compressing)
+                reduction[0] = reduction[1] = varimu::reduction (envelope, threshold, lead.feedForward, lead.limiting);
         }
         else
         {
             for (int ch = 0; ch < numChannels; ++ch)
             {
                 auto& path = paths[(size_t) ch];
-                const auto envelope = path.envelope.process (std::abs (sc[(size_t) ch]));
-                reduction[(size_t) ch] = varimu::reduction (envelope, path.threshold.getNextValue(),
-                                                            path.feedForward, path.limiting);
+                const auto envelope  = path.envelope.process (std::abs (sc[(size_t) ch]));
+                const auto threshold = path.threshold.getNextValue();
+
+                if (path.compressing)
+                    reduction[(size_t) ch] = varimu::reduction (envelope, threshold, path.feedForward, path.limiting);
             }
         }
+
+        std::array<float, 2> out {};
+        auto listening = false;
 
         for (int ch = 0; ch < numChannels; ++ch)
         {
             auto& path = paths[(size_t) ch];
-            const auto in = x[(size_t) ch];
+            const auto c = (size_t) ch;
 
-            auto y = path.cell.process (in, reduction[(size_t) ch]);
+            const auto y = path.cell.process (x[c], reduction[c], path.tubeGain.getNextValue(), path.tubeOn);
             path.lastCellOutput = y;
 
-            const auto drive = path.thdDrive.getNextValue();
-            drivePeak[(size_t) ch] = juce::jmax (drivePeak[(size_t) ch], std::abs (y) * drive);
-
-            y = path.thdStage.process (y, drive);
-            y = path.outputStage.process (y);
-
-            // Parallel compression against the trimmed input, in the same
-            // domain, so the two halves are sample aligned.
+            // Parallel compression, sample aligned, then the output gain,
+            // which in RED mode is also what drives the tube and the iron.
             const auto wet = path.mix.getNextValue();
-            auto out = in + wet * (y - in);
-            out *= path.outputGain.getNextValue();
+            out[c] = (dryIn[c] + wet * (y - dryIn[c])) * path.outputGain.getNextValue();
 
-            data[(size_t) ch][i] = path.listening ? sc[(size_t) ch] : out;
-            reductionPeak[(size_t) ch] = juce::jmax (reductionPeak[(size_t) ch], reduction[(size_t) ch]);
+            if (path.listening)
+            {
+                out[c] = sc[c];
+                listening = true;
+            }
+
+            reductionPeak[c] = juce::jmax (reductionPeak[c], reduction[c]);
+        }
+
+        // The output stages are wired left and right, outside the mid/side
+        // domain.
+        if (midSide)
+            out = { out[0] + out[1], out[0] - out[1] };
+
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            const auto shaped = paths[(size_t) ch].outputStage.process (out[(size_t) ch]);
+            data[(size_t) ch][i] = listening ? out[(size_t) ch] : shaped;
         }
     }
 
@@ -418,20 +461,6 @@ void KilnProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBu
         {
             const auto wet = path.engaged.getNextValue();
             out[i] = dry[i] + wet * (out[i] - dry[i]);
-        }
-    }
-
-    if (midSide)
-    {
-        auto* left  = buffer.getWritePointer (0);
-        auto* right = buffer.getWritePointer (1);
-
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
-        {
-            const auto m = left[i];
-            const auto s = right[i];
-            left[i]  = m + s;
-            right[i] = m - s;
         }
     }
 }

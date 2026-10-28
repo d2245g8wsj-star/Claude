@@ -23,17 +23,21 @@ namespace pid
     inline constexpr const char* release   = "release";
     inline constexpr const char* feedFwd   = "feed_forward";
     inline constexpr const char* limit     = "limit";
-    inline constexpr const char* scHpf     = "sc_hpf";
-    inline constexpr const char* scHf      = "sc_hf";
-    inline constexpr const char* scHfIn    = "sc_hf_in";
+    inline constexpr const char* hpf       = "sc_hpf";
+    inline constexpr const char* hpfIn     = "sc_hpf_in";
+    inline constexpr const char* bell      = "sc_bell";
+    inline constexpr const char* bellIn    = "sc_bell_in";
     inline constexpr const char* listen    = "sc_listen";
     inline constexpr const char* thd       = "thd";
-    inline constexpr const char* tube      = "tube_out";
+    inline constexpr const char* tube      = "tube";
+    inline constexpr const char* tubeIn    = "tube_in";
+    inline constexpr const char* iron      = "iron";
     inline constexpr const char* ironPad   = "iron_pad";
+    inline constexpr const char* ironLink  = "iron_link";
     inline constexpr const char* mix       = "mix";
     inline constexpr const char* output    = "output";
     inline constexpr const char* active    = "in";
-    inline constexpr const char* link      = "io_link";
+    inline constexpr const char* dynLink   = "dynamic_link";
 
     inline constexpr const char* mode      = "mode";
     inline constexpr const char* bypass    = "bypass";
@@ -49,13 +53,20 @@ enum class StripMode { dualMono = 0, stereo, midSide };
 
 namespace range
 {
-    inline constexpr float trimDb       = 20.0f;
-    inline constexpr float thresholdMin = -40.0f, thresholdMax = 0.0f;   ///< dBFS
+    inline constexpr float trimDb       = 15.0f;                         ///< input, tube and output, either way
+    inline constexpr float thresholdMin = -40.0f;                        ///< dB below the +26 dBu ceiling
     inline constexpr float attackMin    = 0.5f,   attackMax    = 100.0f; ///< ms
     inline constexpr float releaseMin   = 0.1f,   releaseMax   = 3.0f;   ///< s
     inline constexpr float hpfMin       = 20.0f,  hpfMax       = 500.0f;
-    inline constexpr float hfMin        = 2000.0f, hfMax       = 20000.0f;
+    inline constexpr float bellMin      = 2000.0f, bellMax     = 20000.0f;
     inline constexpr float thdMax       = 8.0f;                          ///< %
+    inline constexpr float ironPadMax   = OutputStage::maxPadDb;
+
+    /** The threshold reads in dB below the unit's +26 dBu ceiling, which is
+        +8 dBFS here. At 0, fully clockwise, the compressor is off. */
+    inline constexpr float ceilingDbfs = 26.0f + level::dbfsAtZeroDbu;
+
+    inline float thresholdDbfs (float control) noexcept { return control + ceilingDbfs; }
 }
 
 /** Everything runs at 4x: the feedback loop wants a short loop delay, and the
@@ -108,13 +119,16 @@ private:
         juce::AudioParameterFloat* release   { nullptr };
         juce::AudioParameterBool*  feedFwd   { nullptr };
         juce::AudioParameterBool*  limit     { nullptr };
-        juce::AudioParameterFloat* scHpf     { nullptr };
-        juce::AudioParameterFloat* scHf      { nullptr };
-        juce::AudioParameterBool*  scHfIn    { nullptr };
+        juce::AudioParameterFloat* hpf       { nullptr };
+        juce::AudioParameterBool*  hpfIn     { nullptr };
+        juce::AudioParameterFloat* bell      { nullptr };
+        juce::AudioParameterBool*  bellIn    { nullptr };
         juce::AudioParameterBool*  listen    { nullptr };
         juce::AudioParameterFloat* thd       { nullptr };
-        juce::AudioParameterBool*  tube      { nullptr };
-        juce::AudioParameterBool*  ironPad   { nullptr };
+        juce::AudioParameterFloat* tube      { nullptr };
+        juce::AudioParameterBool*  tubeIn    { nullptr };
+        juce::AudioParameterBool*  iron      { nullptr };
+        juce::AudioParameterFloat* ironPad   { nullptr };
         juce::AudioParameterFloat* mix       { nullptr };
         juce::AudioParameterFloat* output    { nullptr };
         juce::AudioParameterBool*  active    { nullptr };
@@ -123,25 +137,30 @@ private:
     /** The signal path of one channel, at the oversampled rate. */
     struct ChannelPath
     {
+        Transformer      inputIron { Transformer::input };
+        tube::Stage      thdStage;
         SidechainFilter  sidechain;
         varimu::Envelope envelope;
         varimu::Cell     cell;
-        tube::Stage      thdStage;
         OutputStage      outputStage;
 
         using Multiplicative = juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative>;
         using Linear         = juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear>;
 
-        Multiplicative inputGain { 1.0f }, outputGain { 1.0f }, threshold { 0.1f };
+        Multiplicative inputGain { 1.0f }, outputGain { 1.0f }, tubeGain { 1.0f }, threshold { 1.0f };
         Linear thdDrive { 0.0f }, mix { 1.0f }, engaged { 1.0f };
 
-        bool feedForward { false }, limiting { false }, listening { false };
+        bool compressing { true }, feedForward { false }, limiting { false }, listening { false }, tubeOn { true };
 
         float lastCellOutput { 0.0f };
 
         void prepare (double innerRate, double hostRate);
         void reset();
-        void setTargets (const StripParameters&, bool engagedNow);
+
+        /** The output stage takes its settings from its own strip in dual
+            mono; in stereo and mid/side the output transformers work on left
+            and right and both follow strip A, as on the unit. */
+        void setTargets (const StripParameters&, const StripParameters& outputStrip, bool engagedNow);
         void snapToTargets();
     };
 

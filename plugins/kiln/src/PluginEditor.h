@@ -7,7 +7,7 @@ namespace kiln
 {
 
 /** Every coordinate in the editor is in these units; the face is scaled as one. */
-inline constexpr int designWidth  = 1600;
+inline constexpr int designWidth  = 1840;
 inline constexpr int designHeight = 340;
 
 class KilnEditor final : public juce::AudioProcessorEditor,
@@ -23,29 +23,50 @@ public:
 private:
     void timerCallback() override;
 
-    /** One channel's row: input, compressor, sidechain, colour, mix, output,
-        IN and the gain reduction meter. */
+    /** Moves other parameters along with a knob while a hand is on it, as the
+        unit's linking does. Each follower moves by the knob's travel since
+        the drag began, times its sign, so stepped targets such as the IRON
+        PAD land on whole steps rather than losing small moves to rounding.
+        Automation and recalled state set each parameter as it was saved. */
+    class Follow
+    {
+    public:
+        Follow (panel::Knob& source, juce::RangedAudioParameter* enable,
+                std::vector<std::pair<juce::RangedAudioParameter*, float>> followers,
+                std::function<bool()> extraCondition = {});
+
+    private:
+        void begin();
+        void update();
+        void end();
+
+        panel::Knob& source;
+        juce::RangedAudioParameter* enable;
+        std::vector<std::pair<juce::RangedAudioParameter*, float>> followers;
+        std::function<bool()> extraCondition;
+
+        bool dragging { false };
+        float sourceStart { 0.0f };
+        std::vector<float> followerStart;
+    };
+
+    /** One channel's row: input, compressor, sidechain, saturation, output
+        stage, IN and the gain reduction meter. */
     struct Strip
     {
         Strip (KilnProcessor&, int index);
 
         std::vector<juce::Component*> components();
 
-        panel::Knob input, threshold, attack, release, scHpf, scHf, thd, mix, output;
-        panel::Lamp link, feedForward, limit, listen, scHfIn, tube, ironPad, active;
+        panel::Knob input, threshold, attack, release, hpf, bell, thd, tube, mix, output, ironPad;
+        panel::Lamp dynLink, feedForward, limit, hpfIn, bellIn, listen, tubeIn, iron, ironLink, active;
         panel::DriveLamp heat;
         panel::VuMeter meter;
 
-    private:
-        /** With I/O LINK in, a turn of the input moves the output the other
-            way, so the level stays put while the drive changes. Only a hand on
-            the knob does this: automation and recalled state set each
-            parameter as they were saved. */
-        void followInput();
-
-        juce::RangedAudioParameter* outputParameter { nullptr };
-        juce::RangedAudioParameter* linkParameter { nullptr };
-        float lastInput { 0.0f };
+        /** Dynamic link: input and threshold move together and the output
+            the other way, so the drive changes and the level does not. Iron
+            link: output and pad move together in RED mode. */
+        std::vector<std::unique_ptr<Follow>> links;
     };
 
     class Face final : public juce::Component

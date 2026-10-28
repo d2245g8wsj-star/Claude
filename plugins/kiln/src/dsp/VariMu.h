@@ -154,10 +154,15 @@ namespace varimu
         return reductionForExcess (limiting ? limit : compress, envelope / threshold - 1.0f);
     }
 
-    /** The gain cell. Push-pull, so mostly odd harmonics, with a small
-        imbalance that lets some even through. The curvature grows with the
-        reduction because the tubes are being driven towards cutoff, so an
-        idle cell is exactly linear and a hard working one is audibly not.
+    /** The gain cell: the vari-mu tube itself. It is always in the signal
+        path, compressing or not, so it always colours a little.
+
+        Push-pull, so mostly odd harmonics, with a small imbalance that lets
+        some even through. The curvature has two parts: the tube's own, which
+        the TUBE control drives into (up to 15 dB harder, made up again after
+        the cell, the way the unit's adaptive circuit keeps the compression
+        unchanged), and a part that grows with the reduction because the grid
+        is being pushed towards cutoff.
 
         The curve acts on the cell's output swing rather than its input: the
         reduction is already a compression of the input, and bending the input
@@ -165,8 +170,12 @@ namespace varimu
     class Cell
     {
     public:
+        /** Calibrated to the unit's specification of below 0.01 % THD+N at
+            0 dBu with the tube at rest; driven 15 dB harder it reaches a
+            couple of percent at the operating level. */
+        static constexpr float tubeCurvature  = 0.18f;
         static constexpr float curvaturePerDb = 0.12f;
-        static constexpr float imbalance      = 0.08f;
+        static constexpr float imbalance      = 0.003f;
 
         void prepare (double sampleRate) noexcept
         {
@@ -176,21 +185,24 @@ namespace varimu
 
         void reset() noexcept { dcState = 0.0f; }
 
-        float process (float x, float reductionDb) noexcept
+        /** drive is the TUBE gain, linear; tubeOn false leaves only the
+            curvature the reduction itself brings. */
+        float process (float x, float reductionDb, float drive, bool tubeOn) noexcept
         {
             const auto gain = std::pow (10.0f, -reductionDb / 20.0f);
-            const auto h    = curvaturePerDb * reductionDb;
+            const auto v    = gain * x;
+            // A tube driven harder bends faster than in proportion.
+            const auto h = (tubeOn ? tubeCurvature * drive * std::sqrt (drive) : 0.0f) + curvaturePerDb * reductionDb;
 
             if (h <= 1.0e-5f)
             {
                 dcState *= 1.0f - dcCoeff;
-                return gain * x;
+                return v;
             }
 
             static const float offset = std::tanh (imbalance);
             static const float slope  = 1.0f - offset * offset;
 
-            const auto v = gain * x;
             auto residual = (std::tanh (v * h + imbalance) - offset) / (slope * h) - v;
             dcState += dcCoeff * (residual - dcState);
             residual -= dcState;
@@ -205,11 +217,17 @@ namespace varimu
 }
 
 /** What the detector listens to: a high pass to stop the low end pumping the
-    whole mix, and a high shelf to make it more sensitive to the top. */
+    whole mix, and a high bell to make it more sensitive to the top, each
+    with its own switch.
+
+    The unit's manual gives the ranges but not the slope or the boost. The
+    high pass is first order, 6 dB per octave, as the sidechain filters of
+    the same maker's bus compressor are; the bell is +6 dB at a Q of 0.7. */
 class SidechainFilter
 {
 public:
-    static constexpr float shelfGainDb = 6.0f;
+    static constexpr float bellGainDb = 6.0f;
+    static constexpr float bellQ      = 0.7f;
 
     void prepare (double newSampleRate) noexcept
     {
@@ -218,39 +236,41 @@ public:
         update();
     }
 
-    void reset() noexcept { h1 = h2 = s1 = 0.0f; }
+    void reset() noexcept { h1 = b1 = b2 = 0.0f; }
 
-    void setTargets (float highPassHz, float shelfHz, bool shelfOn) noexcept
+    void setTargets (bool highPassOn, float highPassHz, bool bellOn, float bellHz) noexcept
     {
         const auto moved = [] (float a, float b) { return std::abs (a - b) > 1.0e-3f; };
 
-        if (moved (highPassHz, hpHz) || moved (shelfHz, hfHz) || shelfOn != hfOn)
+        hpOn = highPassOn;
+        hfOn = bellOn;
+
+        if (moved (highPassHz, hpHz) || moved (bellHz, hfHz))
         {
             hpHz = highPassHz;
-            hfHz = shelfHz;
-            hfOn = shelfOn;
+            hfHz = bellHz;
             update();
         }
     }
 
     float process (float x) noexcept
     {
-        // Second order high pass, Butterworth, state variable.
-        const auto hp = (x - (2.0f * r + g) * h1 - h2) * hpNorm;
-        const auto bp = g * hp + h1;
-        const auto lp = g * bp + h2;
-        h1 = g * hp + bp;
-        h2 = g * bp + lp;
+        // First order high pass: the input less its low passed copy. The
+        // filter keeps running while switched out, so switching is seamless.
+        const auto w  = (x - h1) * a0;
+        const auto lp = w + h1;
+        h1 = lp + w;
 
-        if (! hfOn)
-            return hp;
+        const auto hp = hpOn ? x - lp : x;
 
-        // First order high shelf: the input plus a boosted copy of its top.
-        const auto v  = (hp - s1) * a1;
-        const auto low = v + s1;
-        s1 = low + v;
+        // Bell: the input plus a boosted band pass copy, unity at its centre.
+        const auto v3 = hp - b2;
+        const auto v1 = c1 * b1 + c2 * v3;
+        const auto v2 = b2 + c2 * b1 + c3 * v3;
+        b1 = 2.0f * v1 - b1;
+        b2 = 2.0f * v2 - b2;
 
-        return hp + shelfBoost * (hp - low);
+        return hfOn ? hp + bellBoost * v1 / bellQ : hp;
     }
 
 private:
@@ -259,22 +279,22 @@ private:
         constexpr double pi = 3.14159265358979323846;
         const auto nyquistSafe = [this] (float hz) { return std::min ((double) hz, 0.45 * sampleRate); };
 
-        g      = (float) std::tan (pi * nyquistSafe (hpHz) / sampleRate);
-        r      = 0.70710678f;
-        hpNorm = 1.0f / (1.0f + 2.0f * r * g + g * g);
+        const auto g = (float) std::tan (pi * nyquistSafe (hpHz) / sampleRate);
+        a0 = g / (1.0f + g);
 
-        const auto gs = (float) std::tan (pi * nyquistSafe (hfHz) / sampleRate);
-        a1 = gs / (1.0f + gs);
-        shelfBoost = std::pow (10.0f, shelfGainDb / 20.0f) - 1.0f;
+        const auto gb = (float) std::tan (pi * nyquistSafe (hfHz) / sampleRate);
+        c1 = 1.0f / (1.0f + gb * (gb + 1.0f / bellQ));
+        c2 = gb * c1;
+        c3 = gb * c2;
+        bellBoost = std::pow (10.0f, bellGainDb / 20.0f) - 1.0f;
     }
 
     double sampleRate { 48000.0 };
     float hpHz { 20.0f }, hfHz { 8000.0f };
-    bool  hfOn { false };
+    bool  hpOn { true }, hfOn { false };
 
-    float g { 0.0f }, r { 0.7071f }, hpNorm { 1.0f };
-    float a1 { 0.0f }, shelfBoost { 1.0f };
-    float h1 { 0.0f }, h2 { 0.0f }, s1 { 0.0f };
+    float a0 { 0.0f }, c1 { 0.0f }, c2 { 0.0f }, c3 { 0.0f }, bellBoost { 1.0f };
+    float h1 { 0.0f }, b1 { 0.0f }, b2 { 0.0f };
 };
 
 } // namespace kiln

@@ -8,7 +8,8 @@
 namespace kiln
 {
 
-/** The output transformer.
+/** A Carnhill style audio transformer. The unit has four: one at each
+    channel's input, always in circuit, and one at each output in RED mode.
 
     A transformer saturates on flux, and flux is the integral of the voltage
     across the winding, so for the same level a low note pushes the core much
@@ -25,11 +26,24 @@ namespace kiln
 class Transformer
 {
 public:
-    static constexpr float fluxCornerHz  = 25.0f;
-    static constexpr float coreSoftness  = 0.8f;    ///< 1 / the flux the core carries before bending
-    static constexpr float couplingHz    = 7.0f;
-    static constexpr float resonanceHz   = 48000.0f;
-    static constexpr float resonanceQ    = 0.85f;
+    struct Voicing
+    {
+        float coreSoftness;   ///< 1 / the flux the core carries before bending
+        float couplingHz;
+        float resonanceHz;
+        float resonanceQ;
+    };
+
+    /** The input side runs at line level with plenty of core; the overall
+        response of the unit is 12 Hz to 150 kHz at -3 dB. */
+    static constexpr Voicing input  { 0.45f, 8.0f, 150000.0f, 0.70f };
+
+    /** The output side is driven by the tube stage and is meant to be heard. */
+    static constexpr Voicing output { 0.80f, 5.0f, 48000.0f, 0.85f };
+
+    static constexpr float fluxCornerHz = 25.0f;
+
+    explicit Transformer (Voicing v) noexcept : voicing (v) {}
 
     void prepare (double newSampleRate) noexcept
     {
@@ -39,14 +53,14 @@ public:
         const auto fluxG = std::tan (pi * fluxCornerHz / sampleRate);
         fluxCoeff = (float) (fluxG / (1.0 + fluxG));
 
-        const auto cg = std::tan (pi * couplingHz / sampleRate);
+        const auto cg = std::tan (pi * voicing.couplingHz / sampleRate);
         couplingCoeff = (float) (cg / (1.0 + cg));
 
         // The resonance would sit past Nyquist at low inner rates; it is only
         // there to shape the top octave, so keep it in band.
-        const auto hz = std::min ((double) resonanceHz, 0.42 * sampleRate);
+        const auto hz = std::min ((double) voicing.resonanceHz, 0.42 * sampleRate);
         g = (float) std::tan (pi * hz / sampleRate);
-        r = 1.0f / (2.0f * resonanceQ);
+        r = 1.0f / (2.0f * voicing.resonanceQ);
         norm = 1.0f / (1.0f + 2.0f * r * g + g * g);
 
         reset();
@@ -54,17 +68,15 @@ public:
 
     void reset() noexcept { flux = coupling = h1 = h2 = 0.0f; }
 
-    /** drive scales how hard the core is pushed for a given output level:
-        1 normally, 10 dB more with the IRON pad in. */
-    float process (float x, float drive) noexcept
+    float process (float x) noexcept
     {
         const auto w = (x - flux) * fluxCoeff;
         const auto f = w + flux;
         flux = f + w;
 
         // Flux the core cannot carry, in output units.
-        const auto u = f * coreSoftness * drive;
-        const auto lost = f - std::tanh (u) / (coreSoftness * drive);
+        const auto k = voicing.coreSoftness;
+        const auto lost = f - std::tanh (f * k) / k;
 
         auto y = x - lost;
 
@@ -85,15 +97,22 @@ public:
     }
 
 private:
+    const Voicing voicing;
+
     double sampleRate { 192000.0 };
     float fluxCoeff { 0.0f }, couplingCoeff { 0.0f };
     float g { 0.0f }, r { 0.5f }, norm { 1.0f };
     float flux { 0.0f }, coupling { 0.0f }, h1 { 0.0f }, h2 { 0.0f };
 };
 
-/** The two output paths of the unit: a tube line amplifier into a
-    transformer, or an electronically balanced stage that adds nothing. They
-    are crossfaded rather than switched, so changing path does not click. */
+/** The two output paths of the unit. RED: a tube line amplifier into a
+    transformer, ending in a passive attenuator (the IRON PAD). GREEN: an
+    electronically balanced stage that adds nothing. They are crossfaded
+    rather than switched, so changing path does not click.
+
+    The make-up gain sits in front of this stage, so it is what drives the
+    iron; the pad comes after the transformer and only takes level away. Turn
+    both up together and the core works harder at the same output level. */
 class OutputStage
 {
 public:
@@ -101,8 +120,7 @@ public:
         harmonic, rising with level towards the +26 dBu ceiling. */
     static constexpr float tubeThdPercent = 0.1f;
 
-    /** The IRON pad: 10 dB more into the core, 10 dB less after it. */
-    static constexpr float ironPadDb = 10.0f;
+    static constexpr float maxPadDb = 15.0f;
 
     void prepare (double sampleRate) noexcept
     {
@@ -110,8 +128,7 @@ public:
         iron.prepare (sampleRate);
         tubeDrive = tube::ThdCalibration::get().driveFor (tubeThdPercent);
 
-        const auto glide = 1.0f - std::exp (-1.0f / (0.02f * (float) sampleRate));
-        smoothing = glide;
+        smoothing = 1.0f - std::exp (-1.0f / (0.02f * (float) sampleRate));
         reset();
     }
 
@@ -121,44 +138,44 @@ public:
         iron.reset();
     }
 
-    void setTargets (bool tubePath, bool ironPad) noexcept
+    void setTargets (bool ironPath, float padDb) noexcept
     {
-        targetTube = tubePath ? 1.0f : 0.0f;
-        targetPad  = ironPad ? std::pow (10.0f, ironPadDb / 20.0f) : 1.0f;
+        targetIron = ironPath ? 1.0f : 0.0f;
+        targetPad  = std::pow (10.0f, -std::clamp (padDb, 0.0f, maxPadDb) / 20.0f);
     }
 
     void snapToTargets() noexcept
     {
-        tubeAmount = targetTube;
+        ironAmount = targetIron;
         pad = targetPad;
     }
 
     float process (float x) noexcept
     {
-        tubeAmount += smoothing * (targetTube - tubeAmount);
+        ironAmount += smoothing * (targetIron - ironAmount);
         pad        += smoothing * (targetPad  - pad);
 
-        if (std::abs (targetTube - tubeAmount) < 1.0e-5f) tubeAmount = targetTube;
-        if (std::abs (targetPad  - pad)        < 1.0e-5f) pad        = targetPad;
+        if (std::abs (targetIron - ironAmount) < 1.0e-5f) ironAmount = targetIron;
+        if (std::abs (targetPad  - pad)        < 1.0e-6f) pad        = targetPad;
 
-        if (tubeAmount <= 0.0f)
+        if (ironAmount <= 0.0f)
         {
             // Keep the iron's state moving so switching back is seamless.
-            iron.process (x, pad);
+            iron.process (x);
             return x;
         }
 
-        const auto coloured = iron.process (tube.process (x, tubeDrive), pad);
-        return x + tubeAmount * (coloured - x);
+        const auto coloured = pad * iron.process (tube.process (x, tubeDrive));
+        return x + ironAmount * (coloured - x);
     }
 
 private:
     tube::Stage tube;
-    Transformer iron;
+    Transformer iron { Transformer::output };
 
     float tubeDrive { 0.0f };
     float smoothing { 0.001f };
-    float targetTube { 1.0f }, tubeAmount { 1.0f };
+    float targetIron { 1.0f }, ironAmount { 1.0f };
     float targetPad { 1.0f }, pad { 1.0f };
 };
 

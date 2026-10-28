@@ -1,40 +1,42 @@
 #include "PluginEditor.h"
-#include "BinaryData.h"
 
 namespace swell
 {
 
 namespace
 {
-    constexpr float rowTop[]  = { 82.0f, 232.0f };
-    constexpr float rowHeight = 140.0f;
+    constexpr float rowTop[]  = { 20.0f, 182.0f };
+    constexpr float rowHeight = 138.0f;
 
-    // Horizontal plan of a row, left to right: the strip's own well, the three
-    // bands, then output and IN.
-    constexpr float stripX  = 80.0f,   stripWidth  = 156.0f;
-    constexpr float bandX[] = { 246.0f, 526.0f, 806.0f };
-    constexpr float bandWidth = 270.0f;
-    constexpr float outX    = 1086.0f, outWidth    = 234.0f;
+    // Horizontal plan of a row, left to right.
+    constexpr float letterCentre = 266.0f;
+    constexpr float inputCentre  = 330.0f;
+    constexpr float bandX[]      = { 384.0f, 644.0f, 904.0f };
+    constexpr float bandWidth    = 250.0f;
+    constexpr float outputCentre = 1206.0f;
+    constexpr float activeCentre = 1262.0f;
+    constexpr float meterX       = 1290.0f;
+    constexpr float meterWidth   = 130.0f;
+    constexpr float meterHeight  = 88.0f;
 
-    constexpr float meterX[] = { 26.0f, 1342.0f };
-    constexpr float meterWidth = 32.0f;
-
-    constexpr float largeKnob = 74.0f;
-    constexpr float trimKnob  = 70.0f;
-    constexpr float smallKnob = 54.0f;
+    constexpr float earWidth = 44.0f;
 
     juce::Rectangle<int> square (float centreX, float centreY, float side)
     {
         return juce::Rectangle<float> (side, side).withCentre ({ centreX, centreY }).toNearestInt();
     }
 
-    struct BandText { const char* name; const char* kind; const char* low; const char* high; };
+    panel::Knob::Legends gainLegends()
+    {
+        return { { -10.0f, "-10" }, { -5.0f, "-5" }, { 0.0f, "0" }, { 5.0f, "+5" }, { 10.0f, "+10" } };
+    }
 
-    constexpr BandText bandText[] = {
-        { "LO",  "SHELF", "20",  "420" },
-        { "MID", "PEAK",  "200", "6.2k" },
-        { "HI",  "SHELF", "5k",  "25k" },
-    };
+    panel::Knob::Legends trimLegends()
+    {
+        return { { -20.0f, "-20" }, { 0.0f, "0" }, { 20.0f, "+20" } };
+    }
+
+    constexpr const char* bandTitle[] = { "LO  SHELF", "MID  PEAK", "HI  SHELF" };
 
     const char* channelLetter (StripMode mode, int strip)
     {
@@ -51,82 +53,68 @@ namespace
 
 // ---------------------------------------------------------------------------
 
-SwellEditor::Strip::Strip (SwellProcessor& p, int index, const panel::Filmstrip& large,
-                           const panel::Filmstrip& small, const panel::LedImages& leds)
-    : input    (p.apvts, pid::forStrip (index, pid::input),   large),
-      loLevel  (p.apvts, pid::forStrip (index, pid::loGain),  large),
-      loFreq   (p.apvts, pid::forStrip (index, pid::loFreq),  small),
-      midLevel (p.apvts, pid::forStrip (index, pid::midGain), large),
-      midFreq  (p.apvts, pid::forStrip (index, pid::midFreq), small),
-      hiLevel  (p.apvts, pid::forStrip (index, pid::hiGain),  large),
-      hiFreq   (p.apvts, pid::forStrip (index, pid::hiFreq),  small),
-      output   (p.apvts, pid::forStrip (index, pid::output),  large),
-      loIn     (p.apvts, pid::forStrip (index, pid::loIn),    "IN"),
-      midIn    (p.apvts, pid::forStrip (index, pid::midIn),   "IN"),
-      hiIn     (p.apvts, pid::forStrip (index, pid::hiIn),    "IN"),
-      active   (p.apvts, pid::forStrip (index, pid::active),  "IN"),
-      loDrive  (leds),
-      midDrive (leds),
-      hiDrive  (leds)
+SwellEditor::Strip::Strip (SwellProcessor& p, int index)
+    : input    (p.apvts, pid::forStrip (index, pid::input),   panel::capTrim, 52.0f, trimLegends()),
+      loLevel  (p.apvts, pid::forStrip (index, pid::loGain),  panel::capLo,   62.0f, gainLegends()),
+      loFreq   (p.apvts, pid::forStrip (index, pid::loFreq),  panel::capLo,   42.0f,
+                { { 20.0f, "20" }, { 60.0f, "60" }, { 140.0f, "140" }, { 420.0f, "420" } }),
+      midLevel (p.apvts, pid::forStrip (index, pid::midGain), panel::capMid,  62.0f, gainLegends()),
+      midFreq  (p.apvts, pid::forStrip (index, pid::midFreq), panel::capMid,  42.0f,
+                { { 200.0f, ".2k" }, { 600.0f, ".6k" }, { 1800.0f, "1.8k" }, { 6200.0f, "6.2k" } }),
+      hiLevel  (p.apvts, pid::forStrip (index, pid::hiGain),  panel::capHi,   62.0f, gainLegends()),
+      hiFreq   (p.apvts, pid::forStrip (index, pid::hiFreq),  panel::capHi,   42.0f,
+                { { 5000.0f, "5k" }, { 8000.0f, "8k" }, { 14000.0f, "14k" }, { 25000.0f, "25k" } }),
+      output   (p.apvts, pid::forStrip (index, pid::output),  panel::capTrim, 52.0f, trimLegends()),
+      loIn     (p.apvts, pid::forStrip (index, pid::loIn)),
+      midIn    (p.apvts, pid::forStrip (index, pid::midIn)),
+      hiIn     (p.apvts, pid::forStrip (index, pid::hiIn)),
+      active   (p.apvts, pid::forStrip (index, pid::active))
 {
 }
 
 std::vector<juce::Component*> SwellEditor::Strip::controls()
 {
     return { &input, &loLevel, &loFreq, &midLevel, &midFreq, &hiLevel, &hiFreq, &output,
-             &loIn, &midIn, &hiIn, &active, &loDrive, &midDrive, &hiDrive };
+             &loIn, &midIn, &hiIn, &active, &loDrive, &midDrive, &hiDrive, &meter };
 }
 
 // ---------------------------------------------------------------------------
 
 SwellEditor::Face::Face (SwellProcessor& p)
     : processor (p),
-      largeStrip (BinaryData::knob_large_png, BinaryData::knob_large_pngSize),
-      smallStrip (BinaryData::knob_small_png, BinaryData::knob_small_pngSize),
-      mode   (p.apvts, pid::mode,   "MODE"),
-      bypass (p.apvts, pid::bypass, "BYPASS")
+      mode (p.apvts, pid::mode, { "DUAL", "STEREO", "M-S" })
 {
     // Rendered at twice the design size, so it stays sharp at the largest
     // editor size the resize limits allow.
-    plate = panel::renderPlate (designWidth * 2, designHeight * 2);
+    enamel = panel::renderPaint (designWidth * 2, designHeight * 2);
 
     for (int i = 0; i < numChannelStrips; ++i)
     {
-        strips[(size_t) i] = std::make_unique<Strip> (p, i, largeStrip, smallStrip, leds);
+        strips[(size_t) i] = std::make_unique<Strip> (p, i);
 
         for (auto* child : strips[(size_t) i]->controls())
             addAndMakeVisible (child);
-
-        meters[(size_t) i] = std::make_unique<panel::LedMeter> (leds);
-        addAndMakeVisible (*meters[(size_t) i]);
-        addAndMakeVisible (peaks[(size_t) i]);
     }
 
     addAndMakeVisible (mode);
-    addAndMakeVisible (bypass);
     refresh();
 }
 
 void SwellEditor::Face::resized()
 {
     for (int i = 0; i < numChannelStrips; ++i)
-    {
         layoutStrip (*strips[(size_t) i], rowTop[i]);
 
-        meters[(size_t) i]->setBounds (juce::Rectangle<float> (meterX[i], 88.0f, meterWidth, 274.0f).toNearestInt());
-        peaks[(size_t) i].setBounds (juce::Rectangle<float> (56.0f, 20.0f)
-                                         .withCentre ({ meterX[i] + meterWidth * 0.5f, 390.0f }).toNearestInt());
-    }
-
-    mode  .setBounds (545, 396, 310, 36);
-    bypass.setBounds (1196, 412, 104, 20);
+    mode.setBounds (54, 176, 170, 104);
 }
 
 void SwellEditor::Face::layoutStrip (Strip& s, float top)
 {
-    s.input.setBounds (square (stripX + 110.0f, top + 80.0f, trimKnob));
+    const auto middle = top + rowHeight * 0.5f + 4.0f;
 
-    const std::array<std::tuple<panel::Knob*, panel::Knob*, panel::Switch*, panel::DriveLamp*>, 3> bands {
+    s.input.setBounds (square (inputCentre, middle, 110.0f));
+
+    const std::array<std::tuple<panel::Knob*, panel::Knob*, panel::Toggle*, panel::JewelLamp*>, 3> bands {
         std::make_tuple (&s.loLevel,  &s.loFreq,  &s.loIn,  &s.loDrive),
         std::make_tuple (&s.midLevel, &s.midFreq, &s.midIn, &s.midDrive),
         std::make_tuple (&s.hiLevel,  &s.hiFreq,  &s.hiIn,  &s.hiDrive)
@@ -137,14 +125,15 @@ void SwellEditor::Face::layoutStrip (Strip& s, float top)
         const auto x = bandX[b];
         auto [level, frequency, in, drive] = bands[b];
 
-        level    ->setBounds (square (x + 72.0f,  top + 82.0f, largeKnob));
-        frequency->setBounds (square (x + 170.0f, top + 84.0f, smallKnob));
-        in       ->setBounds (juce::Rectangle<float> (x + 214.0f, top + 74.0f, 44.0f, 20.0f).toNearestInt());
-        drive    ->setBounds (juce::Rectangle<float> (x + bandWidth - 34.0f, top + 10.0f, 20.0f, 11.0f).toNearestInt());
+        level    ->setBounds (square (x + 66.0f,  middle, 120.0f));
+        frequency->setBounds (square (x + 160.0f, middle - 6.0f, 96.0f));
+        in       ->setBounds (juce::Rectangle<float> (30.0f, 70.0f).withCentre ({ x + 223.0f, middle }).toNearestInt());
+        drive    ->setBounds (juce::Rectangle<float> (16.0f, 16.0f).withCentre ({ x + bandWidth - 18.0f, top + 14.0f }).toNearestInt());
     }
 
-    s.output.setBounds (square (outX + 74.0f, top + 80.0f, trimKnob));
-    s.active.setBounds (juce::Rectangle<float> (outX + 144.0f, top + 72.0f, 74.0f, 22.0f).toNearestInt());
+    s.output.setBounds (square (outputCentre, middle, 110.0f));
+    s.active.setBounds (juce::Rectangle<float> (30.0f, 70.0f).withCentre ({ activeCentre, middle }).toNearestInt());
+    s.meter .setBounds (juce::Rectangle<float> (meterX, middle - meterHeight * 0.5f, meterWidth, meterHeight).toNearestInt());
 }
 
 void SwellEditor::Face::refresh()
@@ -154,13 +143,10 @@ void SwellEditor::Face::refresh()
         auto& s = *strips[(size_t) i];
         auto& source = processor.meters.channels[(size_t) i];
 
-        meters[(size_t) i]->push (MeterSource::take (source.outputPeak));
+        s.meter   .push (MeterSource::take (source.outputPeak));
         s.loDrive .push (MeterSource::take (source.bandDrive[0]));
         s.midDrive.push (MeterSource::take (source.bandDrive[1]));
         s.hiDrive .push (MeterSource::take (source.bandDrive[2]));
-
-        const auto hold = meters[(size_t) i]->getHoldDb();
-        peaks[(size_t) i].setValue (hold <= -60.0f ? juce::String ("-inf") : juce::String (hold, 1));
     }
 
     const auto modeIndex = mode.getSelected();
@@ -170,14 +156,19 @@ void SwellEditor::Face::refresh()
 
     shownMode = modeIndex;
 
+    const auto stripMode = static_cast<StripMode> (modeIndex);
+
+    for (int i = 0; i < numChannelStrips; ++i)
+        strips[(size_t) i]->meter.setCaption (channelLetter (stripMode, i));
+
     // In stereo mode strip A drives both channels, so B's controls would only be
-    // pretending. They stay in place, faded, and B's lamps still light for the
+    // pretending. They stay in place, faded; B's lamps and meter still show the
     // right hand channel.
-    const auto linked = static_cast<StripMode> (modeIndex) == StripMode::stereo;
+    const auto linked = stripMode == StripMode::stereo;
 
     for (auto* child : strips[1]->controls())
     {
-        if (dynamic_cast<panel::DriveLamp*> (child) != nullptr)
+        if (dynamic_cast<panel::JewelLamp*> (child) != nullptr || dynamic_cast<panel::VuMeter*> (child) != nullptr)
             continue;
 
         child->setEnabled (! linked);
@@ -191,105 +182,53 @@ void SwellEditor::Face::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
 
-    g.drawImage (plate, bounds, juce::RectanglePlacement::stretchToFit);
+    g.drawImage (enamel, bounds, juce::RectanglePlacement::stretchToFit);
 
-    // Screws, each slot at its own angle the way a real panel ends up.
-    panel::drawScrew (g, { 36.0f, 36.0f },     12.0f, -0.45f);
-    panel::drawScrew (g, { 1364.0f, 36.0f },   12.0f,  1.15f);
-    panel::drawScrew (g, { 36.0f, 434.0f },    12.0f,  0.35f);
-    panel::drawScrew (g, { 1364.0f, 434.0f },  12.0f, -1.05f);
+    panel::drawRackEar (g, bounds.withWidth (earWidth));
+    panel::drawRackEar (g, bounds.withLeft (bounds.getRight() - earWidth));
 
-    // Header, laid out as Crest's is.
-    panel::drawTrackedLabel (g, "INDIEWAVE AUDIO", { 136.0f, 26.0f, 300.0f, 16.0f }, 10.5f, 3.2f,
-                             juce::Justification::centredLeft);
-    panel::drawTrackedLabel (g, "SWELL", { 500.0f, 14.0f, 400.0f, 40.0f }, 30.0f, 10.0f);
-    panel::drawTrackedLabel (g, "HARMONIC EQUALISER", { 964.0f, 26.0f, 300.0f, 16.0f }, 9.5f, 2.6f,
-                             juce::Justification::centredRight);
+    // Name block.
+    panel::drawNameplate (g, { 62.0f, 26.0f, 154.0f, 62.0f });
+    panel::drawLegend (g, "MODE", { 62.0f, 150.0f, 154.0f, 14.0f }, 11.0f, 2.4f);
+    panel::drawLegend (g, "INDIEWAVE AUDIO", { 52.0f, 300.0f, 174.0f, 14.0f }, 9.5f, 2.6f,
+                       juce::Justification::centred, panel::silkDim);
 
-    const auto stripMode = static_cast<StripMode> (juce::jmax (0, shownMode));
+    // The rule between the name block and the strips.
+    g.setColour (panel::silk.withAlpha (0.3f));
+    g.drawVerticalLine (236, 20.0f, bounds.getBottom() - 20.0f);
 
     for (int i = 0; i < numChannelStrips; ++i)
-    {
-        const auto x = meterX[i] + meterWidth * 0.5f;
-        panel::drawTrackedLabel (g, channelLetter (stripMode, i), { x - 20.0f, 70.0f, 40.0f, 12.0f }, 9.5f, 1.0f);
-        panel::drawTrackedLabel (g, "OUT", { x - 20.0f, 366.0f, 40.0f, 10.0f }, 7.5f, 1.2f,
-                                 juce::Justification::centred, 0.6f);
-
         paintStrip (g, i, rowTop[i]);
-    }
-
-    // The converter details, as along the foot of Crest.
-    const auto rate = processor.getSampleRate();
-    const auto latency = processor.getLatencySamples();
-    const auto status = juce::String (rate > 0.0 ? rate / 1000.0 : 48.0, 1) + " kHz   ·   LATENCY "
-                      + juce::String (latency) + " smp   ·   4x OVERSAMPLED   ·   SWELL v"
-                      + JucePlugin_VersionString;
-
-    g.setColour (panel::ink.withAlpha (0.5f));
-    g.setFont (panel::plateFont (9.0f, false));
-    g.drawText (status, juce::Rectangle<float> (300.0f, 444.0f, 800.0f, 14.0f), juce::Justification::centred, false);
 }
 
 void SwellEditor::Face::paintStrip (juce::Graphics& g, int index, float top) const
 {
-    using panel::drawTrackedLabel;
-
     const auto stripMode = static_cast<StripMode> (juce::jmax (0, shownMode));
     const auto linked    = stripMode == StripMode::stereo && index == 1;
-    const auto dim       = linked ? 0.35f : 0.88f;
+    const auto middle    = top + rowHeight * 0.5f + 4.0f;
 
-    // The strip's own well: its letter and the input.
-    panel::drawGroupWell (g, { stripX, top, stripWidth, rowHeight });
-    drawTrackedLabel (g, channelLetter (stripMode, index), { stripX + 8.0f, top + 52.0f, 44.0f, 44.0f }, 34.0f, 0.0f,
-                      juce::Justification::centred, linked ? 0.45f : 0.88f);
+    panel::drawLegend (g, channelLetter (stripMode, index), { letterCentre - 20.0f, middle - 22.0f, 40.0f, 40.0f },
+                       34.0f, 0.0f, juce::Justification::centred, linked ? panel::silkDim : panel::silk);
 
     if (linked)
-        drawTrackedLabel (g, "LINKED", { stripX + 4.0f, top + 98.0f, 52.0f, 10.0f }, 7.0f, 1.0f,
-                          juce::Justification::centred, 0.6f);
+        panel::drawLegend (g, "LINKED", { letterCentre - 26.0f, middle + 20.0f, 52.0f, 12.0f }, 8.5f, 1.4f,
+                           juce::Justification::centred, panel::capMid);
 
-    drawTrackedLabel (g, "INPUT", { stripX + 70.0f, top + 28.0f, 80.0f, 12.0f }, 9.0f, 1.6f,
-                      juce::Justification::centred, dim);
-    drawTrackedLabel (g, "-20", { stripX + 66.0f, top + 116.0f, 30.0f, 10.0f }, 7.0f, 0.4f,
-                      juce::Justification::centred, dim * 0.7f);
-    drawTrackedLabel (g, "+20", { stripX + 124.0f, top + 116.0f, 30.0f, 10.0f }, 7.0f, 0.4f,
-                      juce::Justification::centred, dim * 0.7f);
+    panel::drawLegend (g, "INPUT",  { inputCentre - 40.0f,  top + 2.0f, 80.0f, 14.0f }, 10.0f, 1.8f);
+    panel::drawLegend (g, "OUTPUT", { outputCentre - 40.0f, top + 2.0f, 80.0f, 14.0f }, 10.0f, 1.8f);
 
     for (int b = 0; b < 3; ++b)
     {
-        const auto x    = bandX[b];
-        const auto& txt = bandText[b];
+        const auto x = bandX[b];
+        panel::drawSection (g, { x, top + 8.0f, bandWidth, rowHeight - 8.0f }, bandTitle[b]);
 
-        panel::drawGroupWell (g, { x, top, bandWidth, rowHeight });
-
-        drawTrackedLabel (g, txt.name, { x + 14.0f, top + 8.0f, 60.0f, 15.0f }, 11.0f, 2.4f,
-                          juce::Justification::centredLeft, dim);
-        drawTrackedLabel (g, txt.kind, { x + 64.0f, top + 9.0f, 80.0f, 14.0f }, 7.5f, 1.6f,
-                          juce::Justification::centredLeft, dim * 0.65f);
-
-        drawTrackedLabel (g, "LEVEL", { x + 32.0f, top + 32.0f, 80.0f, 12.0f }, 8.5f, 1.6f,
-                          juce::Justification::centred, dim);
-        drawTrackedLabel (g, "-10", { x + 26.0f, top + 120.0f, 30.0f, 10.0f }, 7.0f, 0.4f,
-                          juce::Justification::centred, dim * 0.7f);
-        drawTrackedLabel (g, "+10", { x + 88.0f, top + 120.0f, 30.0f, 10.0f }, 7.0f, 0.4f,
-                          juce::Justification::centred, dim * 0.7f);
-
-        drawTrackedLabel (g, "FREQ", { x + 140.0f, top + 42.0f, 60.0f, 12.0f }, 8.5f, 1.6f,
-                          juce::Justification::centred, dim);
-        drawTrackedLabel (g, txt.low,  { x + 130.0f, top + 112.0f, 30.0f, 10.0f }, 7.0f, 0.4f,
-                          juce::Justification::centred, dim * 0.7f);
-        drawTrackedLabel (g, txt.high, { x + 180.0f, top + 112.0f, 30.0f, 10.0f }, 7.0f, 0.4f,
-                          juce::Justification::centred, dim * 0.7f);
+        panel::drawLegend (g, "LEVEL", { x + 36.0f, top + rowHeight - 18.0f, 60.0f, 12.0f }, 9.0f, 1.6f,
+                           juce::Justification::centred, panel::silkDim);
+        panel::drawLegend (g, "FREQ",  { x + 130.0f, top + rowHeight - 18.0f, 60.0f, 12.0f }, 9.0f, 1.6f,
+                           juce::Justification::centred, panel::silkDim);
+        panel::drawLegend (g, "DRIVE", { x + bandWidth - 78.0f, top + 8.0f, 50.0f, 12.0f }, 8.0f, 1.2f,
+                           juce::Justification::centredRight, panel::silkDim);
     }
-
-    panel::drawGroupWell (g, { outX, top, outWidth, rowHeight });
-    drawTrackedLabel (g, "OUTPUT", { outX + 34.0f, top + 28.0f, 80.0f, 12.0f }, 9.0f, 1.6f,
-                      juce::Justification::centred, dim);
-    drawTrackedLabel (g, "-20", { outX + 30.0f, top + 116.0f, 30.0f, 10.0f }, 7.0f, 0.4f,
-                      juce::Justification::centred, dim * 0.7f);
-    drawTrackedLabel (g, "+20", { outX + 88.0f, top + 116.0f, 30.0f, 10.0f }, 7.0f, 0.4f,
-                      juce::Justification::centred, dim * 0.7f);
-    drawTrackedLabel (g, "CHANNEL", { outX + 144.0f, top + 56.0f, 74.0f, 12.0f }, 8.0f, 1.6f,
-                      juce::Justification::centred, dim * 0.8f);
 }
 
 // ---------------------------------------------------------------------------
@@ -319,7 +258,7 @@ SwellEditor::~SwellEditor()
 
 void SwellEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (panel::cream);
+    g.fillAll (panel::paint);
 }
 
 void SwellEditor::resized()

@@ -50,20 +50,6 @@ juce_add_plugin(Swell
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD     FALSE)
 
-# The knob and LED art is Crest's own, shared rather than copied, so the two
-# plugins keep the same hardware as each other.
-set(CREST_GUI ${CMAKE_CURRENT_SOURCE_DIR}/../../resources/gui)
-
-juce_add_binary_data(SwellAssets SOURCES
-    ${CREST_GUI}/knob_large.png
-    ${CREST_GUI}/knob_small.png
-    ${CREST_GUI}/led_off.png
-    ${CREST_GUI}/led_green.png
-    ${CREST_GUI}/led_amber.png
-    ${CREST_GUI}/led_red.png)
-
-set_target_properties(SwellAssets PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-
 target_sources(Swell PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
@@ -80,7 +66,6 @@ target_compile_definitions(Swell PUBLIC
     JUCE_STRICT_REFCOUNTEDPOINTER=1)
 
 target_link_libraries(Swell PRIVATE
-    SwellAssets
     juce::juce_audio_utils
     juce::juce_dsp
     PUBLIC

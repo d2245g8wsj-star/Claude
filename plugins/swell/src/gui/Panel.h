@@ -6,86 +6,122 @@
 namespace swell::panel
 {
 
-// The IndieWave plate, the same colours Crest is printed in, so the two sit
-// side by side in a session as one family.
-inline const juce::Colour ink    { 0xff3a352e };
-inline const juce::Colour cream  { 0xffe4dcc8 };
-inline const juce::Colour amber  { 0xffc77b3c };
-inline const juce::Colour recess { 0xff181510 };
+// A painted steel front panel with silkscreened legends, the way outboard was
+// finished before anyone rendered a knob: flat paint, one ink, a few colours
+// kept for the parts that need telling apart.
+inline const juce::Colour paint     { 0xff3f4a52 };   // blue grey enamel
+inline const juce::Colour silk      { 0xffe8dfc8 };   // cream silkscreen
+inline const juce::Colour silkDim   { 0xffb9b19d };
+inline const juce::Colour bakelite  { 0xff1c1a18 };
+inline const juce::Colour brass     { 0xffc3a467 };
 
-juce::Font plateFont (float height, bool bold = true);
+// Knob cap inserts, one per band, faded the way coloured plastic goes.
+inline const juce::Colour capLo     { 0xffa65a42 };   // oxide red
+inline const juce::Colour capMid    { 0xffc59a42 };   // mustard
+inline const juce::Colour capHi     { 0xff5d8796 };   // faded teal
+inline const juce::Colour capTrim   { 0xffd9cfb6 };   // ivory
 
-/** The brushed cream plate, rendered once at the size it will be drawn. */
-juce::Image renderPlate (int width, int height);
+/** Narrow, heavy capitals, the face silkscreen legends were set in. */
+juce::Font legendFont (float height);
 
-/** A group enclosure milled into the plate, drawn as a cut rather than an outline. */
-void drawGroupWell (juce::Graphics&, juce::Rectangle<float>, float corner = 7.0f);
+/** The enamel, rendered once at the size it will be drawn. */
+juce::Image renderPaint (int width, int height);
 
-/** Engraved lettering, letterspaced the way the plate's own lettering is. */
-void drawTrackedLabel (juce::Graphics&, const juce::String&, juce::Rectangle<float>,
-                       float height, float tracking,
-                       juce::Justification = juce::Justification::centred,
-                       float alpha = 0.88f);
+/** Silkscreened text: one flat ink, no shadow, letterspaced. */
+void drawLegend (juce::Graphics&, const juce::String&, juce::Rectangle<float>, float height,
+                 float tracking = 1.2f, juce::Justification = juce::Justification::centred,
+                 juce::Colour = silk);
 
-/** A slotted panel screw, the slot turned to a fixed angle per screw. */
-void drawScrew (juce::Graphics&, juce::Point<float> centre, float radius, float slotAngle);
+/** A printed section box: a thin rule with its title set into a gap in the top line. */
+void drawSection (juce::Graphics&, juce::Rectangle<float>, const juce::String& title);
 
-/** Loads a vertical filmstrip once and hands out frames. */
-class Filmstrip
-{
-public:
-    Filmstrip (const void* data, int size);
+void drawRackEar (juce::Graphics&, juce::Rectangle<float>);
+void drawScrew (juce::Graphics&, juce::Point<float>, float radius, float slotAngle);
 
-    void drawProportion (juce::Graphics&, juce::Rectangle<float> area, float proportion) const;
+/** The engraved brass maker's plate. */
+void drawNameplate (juce::Graphics&, juce::Rectangle<float>);
 
-private:
-    juce::Image image;
-    int numFrames { 1 };
-    int frameHeight { 1 };
-};
-
-/** A rotary painted from Crest's knob filmstrip, with its value shown while in use. */
+/** A fluted bakelite knob with a coloured cap and a printed scale around it. */
 class Knob final : public juce::Slider
 {
 public:
-    Knob (juce::AudioProcessorValueTreeState&, const juce::String& parameterID, const Filmstrip&);
+    using Legends = std::vector<std::pair<float, juce::String>>;
+
+    Knob (juce::AudioProcessorValueTreeState&, const juce::String& parameterID,
+          juce::Colour cap, float knobDiameter, Legends);
 
     void paint (juce::Graphics&) override;
 
 private:
-    const Filmstrip& filmstrip;
+    juce::Colour cap;
+    float diameter;
+    Legends legends;
     juce::AudioProcessorValueTreeState::SliderAttachment attachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Knob)
 };
 
-/** A latching plate switch: cream at rest, lit copper when engaged. */
-class Switch final : public juce::Component,
+/** A bat handle toggle: lever up is IN, down is OUT. */
+class Toggle final : public juce::Component,
                      public juce::SettableTooltipClient
 {
 public:
-    Switch (juce::AudioProcessorValueTreeState&, const juce::String& parameterID, juce::String caption);
+    Toggle (juce::AudioProcessorValueTreeState&, const juce::String& parameterID);
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
-    void mouseEnter (const juce::MouseEvent&) override { hover = true;  repaint(); }
-    void mouseExit  (const juce::MouseEvent&) override { hover = false; repaint(); }
 
 private:
     juce::RangedAudioParameter& parameter;
-    juce::String caption;
     juce::ParameterAttachment attachment;
-    bool on { false }, hover { false };
+    bool on { false };
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Switch)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Toggle)
 };
 
-/** A row of plate switches selecting one choice of a parameter. */
-class Bank final : public juce::Component,
-                   public juce::SettableTooltipClient
+/** A faceted pilot lamp whose brightness follows how hard a band is driven. */
+class JewelLamp final : public juce::Component,
+                        public juce::SettableTooltipClient
 {
 public:
-    Bank (juce::AudioProcessorValueTreeState&, const juce::String& parameterID, juce::String caption);
+    JewelLamp();
+
+    void paint (juce::Graphics&) override;
+    void push (float drive);
+
+private:
+    float glow { 0.0f };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JewelLamp)
+};
+
+/** A moving coil meter: cream face, black needle, red past zero. */
+class VuMeter final : public juce::Component
+{
+public:
+    VuMeter();
+
+    void paint (juce::Graphics&) override;
+
+    /** Takes the peak since the last frame, linear. */
+    void push (float peak);
+
+    void setCaption (const juce::String&);
+
+private:
+    float needle { -20.0f };    ///< in VU
+    float peakLamp { 0.0f };
+    juce::String caption;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VuMeter)
+};
+
+/** A chicken head rotary switch over a choice parameter. */
+class Selector final : public juce::Component,
+                       public juce::SettableTooltipClient
+{
+public:
+    Selector (juce::AudioProcessorValueTreeState&, const juce::String& parameterID, juce::StringArray positions);
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
@@ -93,73 +129,15 @@ public:
     int getSelected() const noexcept { return index; }
 
 private:
-    juce::Rectangle<float> cell (int) const;
+    float angleFor (int position) const;
+    juce::Rectangle<float> labelArea (int position) const;
 
     juce::RangedAudioParameter& parameter;
-    juce::String caption;
-    juce::StringArray choices;
+    juce::StringArray names;
     juce::ParameterAttachment attachment;
     int index { 0 };
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Bank)
-};
-
-/** The LED segment images Crest's meters are built from. */
-struct LedImages
-{
-    LedImages();
-    juce::Image off, green, amber, red;
-};
-
-/** A column of LED segments over a recessed window, fed a peak per frame. */
-class LedMeter final : public juce::Component
-{
-public:
-    explicit LedMeter (const LedImages&);
-
-    void paint (juce::Graphics&) override;
-
-    /** Takes the peak since the last frame, linear. */
-    void push (float peak);
-
-    float getHoldDb() const noexcept { return hold; }
-
-private:
-    const LedImages& leds;
-    float level { -100.0f }, hold { -100.0f };
-    int holdTicks { 0 };
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LedMeter)
-};
-
-/** One amber segment that lights as a band's curve starts to bend. */
-class DriveLamp final : public juce::Component,
-                        public juce::SettableTooltipClient
-{
-public:
-    explicit DriveLamp (const LedImages&);
-
-    void paint (juce::Graphics&) override;
-    void push (float drive);
-
-private:
-    const LedImages& leds;
-    float glow { 0.0f };
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DriveLamp)
-};
-
-/** A figure in a dark window, as under Crest's meters. */
-class Readout final : public juce::Component
-{
-public:
-    Readout() { setInterceptsMouseClicks (false, false); }
-
-    void paint (juce::Graphics&) override;
-    void setValue (const juce::String&);
-
-private:
-    juce::String value { "-inf" };
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Selector)
 };
 
 } // namespace swell::panel

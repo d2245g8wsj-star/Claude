@@ -6,10 +6,9 @@
 namespace swell
 {
 
-/** Every coordinate in the editor is in these units; the face is scaled as one.
-    The same design size as Crest, so the two open at the same size. */
-inline constexpr int designWidth  = 1400;
-inline constexpr int designHeight = 470;
+/** Every coordinate in the editor is in these units; the face is scaled as one. */
+inline constexpr int designWidth  = 1480;
+inline constexpr int designHeight = 340;
 
 class SwellEditor final : public juce::AudioProcessorEditor,
                           private juce::Timer
@@ -24,17 +23,17 @@ public:
 private:
     void timerCallback() override;
 
-    /** One channel's row: input, the three bands, output and IN. */
+    /** One channel's row: input, the three bands, output, IN and the meter. */
     struct Strip
     {
-        Strip (SwellProcessor&, int index, const panel::Filmstrip& large,
-               const panel::Filmstrip& small, const panel::LedImages&);
+        Strip (SwellProcessor&, int index);
 
         std::vector<juce::Component*> controls();
 
         panel::Knob input, loLevel, loFreq, midLevel, midFreq, hiLevel, hiFreq, output;
-        panel::Switch loIn, midIn, hiIn, active;
-        panel::DriveLamp loDrive, midDrive, hiDrive;
+        panel::Toggle loIn, midIn, hiIn, active;
+        panel::JewelLamp loDrive, midDrive, hiDrive;
+        panel::VuMeter meter;
     };
 
     class Face final : public juce::Component
@@ -52,17 +51,10 @@ private:
         void paintStrip (juce::Graphics&, int index, float top) const;
 
         SwellProcessor& processor;
-
-        juce::Image plate;
-        panel::Filmstrip largeStrip, smallStrip;
-        panel::LedImages leds;
+        juce::Image enamel;
 
         std::array<std::unique_ptr<Strip>, numChannelStrips> strips;
-        std::array<std::unique_ptr<panel::LedMeter>, 2> meters;
-        std::array<panel::Readout, 2> peaks;
-
-        panel::Bank   mode;
-        panel::Switch bypass;
+        panel::Selector mode;
 
         int shownMode { -1 };
 

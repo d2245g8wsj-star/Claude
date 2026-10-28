@@ -533,6 +533,13 @@ void testLatency()
         }
     }
 
+    for (int os = 0; os < 5; ++os)
+    {
+        int latency = 0;
+        render ({ { zenith::pid::oversampling, (float) os } }, tone (100.0, 0.1f), 10, 48000.0, 512, &latency);
+        std::cout << "  " << (1 << os) << "x, default lookahead: " << latency << " samples" << std::endl;
+    }
+
     int modernLatency = 0, analogLatency = 0;
     render ({ { zenith::pid::engine, 0.0f }, { zenith::pid::lookahead, 5.0f } }, tone (100.0, 0.1f), 10, 48000.0, 512, &modernLatency);
     render ({ { zenith::pid::engine, 1.0f }, { zenith::pid::lookahead, 5.0f } }, tone (100.0, 0.1f), 10, 48000.0, 512, &analogLatency);

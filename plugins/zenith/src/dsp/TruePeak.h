@@ -97,11 +97,11 @@ public:
 
         for (int k = 0; k < tapsPerPhase; ++k)
         {
-            const auto x = oldest[k];
+            const auto input = oldest[k];
             const auto& c = coefficients[(size_t) k];
 
             for (int p = 0; p < factor; ++p)
-                y[(size_t) p] += c[(size_t) p] * x;
+                y[(size_t) p] += c[(size_t) p] * input;
         }
 
         current = y;

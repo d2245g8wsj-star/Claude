@@ -12,6 +12,7 @@ on:
       - "LICENSE"
       - "plugins/**"
       - ".github/workflows/ember.yml"
+      - ".github/workflows/hinge.yml"
   pull_request:
     paths-ignore:
       - "**.md"
@@ -19,6 +20,7 @@ on:
       - "LICENSE"
       - "plugins/**"
       - ".github/workflows/ember.yml"
+      - ".github/workflows/hinge.yml"
   workflow_dispatch:
 
 jobs:

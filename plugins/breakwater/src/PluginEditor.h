@@ -78,6 +78,9 @@ private:
     juce::TooltipWindow  tooltips { this, 650 };
     Face                 face;
 
+    std::unique_ptr<juce::PropertiesFile> userSettings;
+    bool sizeRestored { false };
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BreakwaterEditor)
 };
 

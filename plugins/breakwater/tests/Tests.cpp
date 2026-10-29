@@ -1086,6 +1086,35 @@ void testPerformance()
     }
 }
 
+void testEditorSize()
+{
+    section ("Editor size");
+
+    breakwater::BreakwaterProcessor processor;
+    juce::MemoryBlock state;
+
+    {
+        std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+        editor->setSize (1500, juce::roundToInt (1500.0 * editor->getHeight() / editor->getWidth()));
+    }
+
+    // Closed and reopened: the same size.
+    {
+        std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+        check (editor->getWidth() == 1500, "reopens at the size it was closed at: " + juce::String (editor->getWidth()));
+    }
+
+    // Saved with the project and loaded into a new instance: the same size.
+    processor.getStateInformation (state);
+    breakwater::BreakwaterProcessor restored;
+    restored.setStateInformation (state.getData(), (int) state.getSize());
+
+    {
+        std::unique_ptr<juce::AudioProcessorEditor> editor (restored.createEditor());
+        check (editor->getWidth() == 1500, "a saved project reopens at its size: " + juce::String (editor->getWidth()));
+    }
+}
+
 void testState()
 {
     section ("State");
@@ -1130,6 +1159,7 @@ int main()
     testSidechain();
     testVu();
     testPerformance();
+    testEditorSize();
     testState();
 
     std::cout << "\n" << (checks - failures) << " / " << checks << " checks passed" << std::endl;

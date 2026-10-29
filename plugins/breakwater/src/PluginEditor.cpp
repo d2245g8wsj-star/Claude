@@ -31,8 +31,24 @@ namespace
     constexpr Group compressorGroup { 24.0f,  rowTop[1], 712.0f, "COMPRESSOR" };
     constexpr Group outputGroup     { 748.0f, rowTop[1], 428.0f, "OUTPUT" };
 
-    /** Where the editor remembers whether the advanced panel was open. */
+    /** Where the editor remembers whether the advanced panel was open, and
+        how large it was: in the plugin's state, so a project reopens as it
+        was left, and in a user settings file, so a new instance opens at the
+        size last used anywhere. */
     const juce::Identifier advancedProperty { "advancedView" };
+    const juce::Identifier scaleProperty    { "editorScale" };
+
+    constexpr double minimumScale = 0.5, maximumScale = 2.0;
+
+    std::unique_ptr<juce::PropertiesFile> openUserSettings()
+    {
+        juce::PropertiesFile::Options options;
+        options.applicationName     = "Breakwater";
+        options.folderName          = "IndieWave Audio";
+        options.filenameSuffix      = ".settings";
+        options.osxLibrarySubFolder = "Application Support";
+        return std::make_unique<juce::PropertiesFile> (options);
+    }
 
     juce::Rectangle<int> box (float x, float y, float w, float h)
     {
@@ -388,9 +404,20 @@ BreakwaterEditor::BreakwaterEditor (BreakwaterProcessor& p)
 
     face.advanced.onClick = [this] { setAdvanced (face.advanced.getToggleState()); };
 
+    // The project's own size first; failing that, the last size used anywhere.
+    userSettings = openUserSettings();
+    auto scale = userSettings->getDoubleValue (scaleProperty.toString(), 1.0);
+
+    if (processor.apvts.state.hasProperty (scaleProperty))
+        scale = (double) processor.apvts.state.getProperty (scaleProperty);
+
+    scale = juce::jlimit (minimumScale, maximumScale, scale);
+
     setResizable (true, true);
-    setSize (designWidth * 4 / 5, designHeight * 4 / 5);
+    setSize (juce::roundToInt (designWidth * scale), juce::roundToInt (designHeight * scale));
     setAdvanced (processor.apvts.state.getProperty (advancedProperty, false));
+
+    sizeRestored = true;
 
     startTimerHz (30);
 }
@@ -398,6 +425,9 @@ BreakwaterEditor::BreakwaterEditor (BreakwaterProcessor& p)
 BreakwaterEditor::~BreakwaterEditor()
 {
     stopTimer();
+
+    if (userSettings != nullptr)
+        userSettings->saveIfNeeded();
 }
 
 void BreakwaterEditor::setAdvanced (bool shouldShow)
@@ -409,7 +439,8 @@ void BreakwaterEditor::setAdvanced (bool shouldShow)
 
     face.showAdvanced (shouldShow);
 
-    setResizeLimits (designWidth / 2, height / 2, designWidth * 2, height * 2);
+    setResizeLimits (juce::roundToInt (designWidth * minimumScale), juce::roundToInt (height * minimumScale),
+                     juce::roundToInt (designWidth * maximumScale), juce::roundToInt (height * maximumScale));
 
     if (auto* sizeLimits = getConstrainer())
         sizeLimits->setFixedAspectRatio ((double) designWidth / height);
@@ -427,6 +458,17 @@ void BreakwaterEditor::resized()
 {
     face.setTransform (juce::AffineTransform::scale ((float) getWidth()  / (float) designWidth,
                                                      (float) getHeight() / (float) face.getHeight()));
+
+    // Remember the size, but not the default the constructor passes through
+    // on its way to the stored one.
+    if (sizeRestored)
+    {
+        const auto scale = (double) getWidth() / designWidth;
+        processor.apvts.state.setProperty (scaleProperty, scale, nullptr);
+
+        if (userSettings != nullptr)
+            userSettings->setValue (scaleProperty.toString(), scale);
+    }
 }
 
 void BreakwaterEditor::timerCallback()

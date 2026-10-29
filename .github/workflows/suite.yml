@@ -98,7 +98,7 @@ jobs:
 
           Install by copying, from each plugin's folder:
 
-              <Name>.vst3  ->  C:\Program Files\Common Files\VST3\
+              <Name>.vst3  ->  C:\\Program Files\\Common Files\\VST3\\
               <Name>.exe   ->  anywhere you like (standalone, optional)
 
           Then let your DAW rescan its plugins. The files are not code

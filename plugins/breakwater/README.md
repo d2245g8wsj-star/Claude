@@ -8,6 +8,16 @@ reaches the shore.
 
 ![The Breakwater editor](docs/ui.png)
 
+The editor opens in its simple view: engine, style, the display and meters,
+and the controls a master is made with (Gain, Ceiling, Transients, Low Punch,
+Detail, True Peak, Gain Match, Delta and the loudness target). **Advanced**
+opens a second panel underneath with everything else: lookahead, attack,
+release, window and linking; the compressor; Balance, Clip, DC filter and the
+external sidechain; oversampling, word length and dither. The editor
+remembers which view was open.
+
+![The advanced panel](docs/ui-advanced.png)
+
 Built with JUCE 8. Ships as **VST3** and **Standalone** on Windows, macOS and
 Linux, plus **AU** on macOS.
 

@@ -2,7 +2,7 @@
     Renders the editor to a PNG without opening a window, so the layout can be
     looked at from a terminal or in CI.
 
-    Usage:  breakwater_shot <output.png> [width]
+    Usage:  breakwater_shot <output.png> [width] [advanced]
 */
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -48,6 +48,9 @@ int main (int argc, char* argv[])
 
     processor.prepareToPlay (48000.0, 512);
 
+    // A third argument "advanced" opens the advanced panel for the shot.
+    processor.apvts.state.setProperty ("advancedView", argc > 3 && juce::String (argv[3]) == "advanced", nullptr);
+
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
 
     if (editor == nullptr)
@@ -56,7 +59,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * breakwater::designHeight / breakwater::designWidth));
+    editor->setSize (width, juce::roundToInt ((double) width * editor->getHeight() / editor->getWidth()));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.

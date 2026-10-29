@@ -84,11 +84,14 @@ public:
     Toggle (juce::AudioProcessorValueTreeState&, const juce::String& parameterID,
             const juce::String& legend, juce::Colour lamp = accent);
 
+    /** A pill that belongs to the editor rather than to a parameter. */
+    explicit Toggle (const juce::String& legend, juce::Colour lamp = accent);
+
     void paintButton (juce::Graphics&, bool highlighted, bool down) override;
 
 private:
     juce::Colour lamp;
-    juce::AudioProcessorValueTreeState::ButtonAttachment attachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> attachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Toggle)
 };

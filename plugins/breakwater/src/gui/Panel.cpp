@@ -221,11 +221,18 @@ void Segmented::mouseMove (const juce::MouseEvent& e)
 Toggle::Toggle (juce::AudioProcessorValueTreeState& state, const juce::String& parameterID,
                 const juce::String& legend, juce::Colour lampColour)
     : juce::Button (legend),
-      lamp (lampColour),
-      attachment (state, parameterID, *this)
+      lamp (lampColour)
 {
     setClickingTogglesState (true);
+    attachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (state, parameterID, *this);
     setTooltip (state.getParameter (parameterID)->getName (64));
+}
+
+Toggle::Toggle (const juce::String& legend, juce::Colour lampColour)
+    : juce::Button (legend),
+      lamp (lampColour)
+{
+    setClickingTogglesState (true);
 }
 
 void Toggle::paintButton (juce::Graphics& g, bool highlighted, bool down)

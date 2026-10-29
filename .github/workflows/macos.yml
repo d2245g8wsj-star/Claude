@@ -3,22 +3,26 @@ name: macOS
 on:
   push:
     branches: ["**"]
-    tags: ["v*"]
-    # macOS runners bill at ten times the rate of Linux ones, so a change that
-    # cannot affect the binary does not start one.
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - "LICENSE"
-      - "plugins/**"
-      - ".github/workflows/swell.yml"
+    # Path filters do not apply to tag pushes, so a crest-v* tag always builds.
+    tags: ["crest-v*"]
+    # macOS runners bill at ten times the rate of Linux ones, so only a change
+    # to Crest itself starts one. The other plugins live under plugins/ and
+    # have their own workflows.
+    paths:
+      - "src/**"
+      - "resources/**"
+      - "tests/**"
+      - "tools/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/macos.yml"
   pull_request:
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - "LICENSE"
-      - "plugins/**"
-      - ".github/workflows/swell.yml"
+    paths:
+      - "src/**"
+      - "resources/**"
+      - "tests/**"
+      - "tools/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/macos.yml"
   workflow_dispatch:
 
 jobs:

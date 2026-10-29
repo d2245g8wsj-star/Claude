@@ -33,29 +33,19 @@ int main (int argc, char* argv[])
     };
 
     // Settings that show the controls doing something, rather than all at rest.
-    using beacon::pid::forStrip;
-    set (beacon::pid::mode, (float) beacon::StripMode::dualMono);
-    set (forStrip (0, beacon::pid::input),     3.0f);
-    set (forStrip (0, beacon::pid::threshold), -30.0f);
-    set (forStrip (0, beacon::pid::attack),    8.0f);
-    set (forStrip (0, beacon::pid::release),   0.6f);
-    set (forStrip (0, beacon::pid::hpfIn),     1.0f);
-    set (forStrip (0, beacon::pid::hpf),       90.0f);
-    set (forStrip (0, beacon::pid::thd),       2.5f);
-    set (forStrip (0, beacon::pid::tube),      6.0f);
-    set (forStrip (0, beacon::pid::mix),       80.0f);
-    set (forStrip (0, beacon::pid::output),    2.0f);
-    set (forStrip (1, beacon::pid::threshold), -24.0f);
-    set (forStrip (1, beacon::pid::attack),    30.0f);
-    set (forStrip (1, beacon::pid::release),   1.2f);
-    set (forStrip (1, beacon::pid::feedFwd),   1.0f);
-    set (forStrip (1, beacon::pid::limit),     1.0f);
-    set (forStrip (1, beacon::pid::bellIn),    1.0f);
-    set (forStrip (1, beacon::pid::iron),      1.0f);
-    set (forStrip (1, beacon::pid::output),    6.0f);
-    set (forStrip (1, beacon::pid::ironPad),   6.0f);
-    set (forStrip (1, beacon::pid::ironLink),  1.0f);
-    set (forStrip (1, beacon::pid::thd),       0.8f);
+    set (beacon::pid::mode,      (float) beacon::ChannelMode::stereo);
+    set (beacon::pid::input,     3.0f);
+    set (beacon::pid::threshold, -30.0f);
+    set (beacon::pid::attack,    8.0f);
+    set (beacon::pid::release,   0.6f);
+    set (beacon::pid::hpfIn,     1.0f);
+    set (beacon::pid::hpf,       90.0f);
+    set (beacon::pid::thd,       2.5f);
+    set (beacon::pid::tube,      6.0f);
+    set (beacon::pid::mix,       80.0f);
+    set (beacon::pid::iron,      1.0f);
+    set (beacon::pid::output,    4.0f);
+    set (beacon::pid::ironPad,   3.0f);
 
     processor.prepareToPlay (48000.0, 512);
 

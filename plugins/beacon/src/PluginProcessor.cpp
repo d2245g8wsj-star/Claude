@@ -79,12 +79,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout BeaconProcessor::createParam
 
     layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { pid::mode, 1 }, "Mode",
                                                               juce::StringArray { "Dual Mono", "Stereo", "Mid/Side" },
-                                                              static_cast<int> (StripMode::stereo)));
+                                                              static_cast<int> (ChannelMode::stereo)));
 
-    for (int strip = 0; strip < numChannelStrips; ++strip)
     {
-        const auto id   = [strip] (const char* name) { return juce::ParameterID { pid::forStrip (strip, name), 1 }; };
-        const auto name = [strip] (const char* text) { return juce::String (strip == 0 ? "A " : "B ") + text; };
+        const auto id   = [] (const char* name) { return juce::ParameterID { name, 1 }; };
+        const auto name = [] (const char* text) { return juce::String (text); };
 
         // Quarter dB steps, as the encoders on the unit move.
         const juce::NormalisableRange<float> trimRange (-range::trimDb, range::trimDb, 0.25f);
@@ -133,7 +132,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout BeaconProcessor::createParam
                                               Attr().withLabel ("%").withStringFromValueFunction (percentString)));
         layout.add (std::make_unique<FloatP> (id (pid::output), name ("Output"), trimRange, 0.0f,
                                               Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
-        layout.add (std::make_unique<BoolP>  (id (pid::active),  name ("In"), true));
         layout.add (std::make_unique<BoolP>  (id (pid::dynLink), name ("Dynamic Link"), false));
     }
 
@@ -148,10 +146,9 @@ BeaconProcessor::BeaconProcessor()
                                 .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
       apvts (*this, nullptr, "BEACON", createParameterLayout())
 {
-    for (int strip = 0; strip < numChannelStrips; ++strip)
     {
-        auto& s = strips[(size_t) strip];
-        const auto id = [strip] (const char* name) { return pid::forStrip (strip, name); };
+        auto& s = params;
+        const auto id = [] (const char* name) { return juce::String (name); };
 
         s.input     = findParameter<juce::AudioParameterFloat> (id (pid::input));
         s.threshold = findParameter<juce::AudioParameterFloat> (id (pid::threshold));
@@ -171,7 +168,6 @@ BeaconProcessor::BeaconProcessor()
         s.ironPad   = findParameter<juce::AudioParameterFloat> (id (pid::ironPad));
         s.mix       = findParameter<juce::AudioParameterFloat> (id (pid::mix));
         s.output    = findParameter<juce::AudioParameterFloat> (id (pid::output));
-        s.active    = findParameter<juce::AudioParameterBool>  (id (pid::active));
     }
 
     modeParam       = findParameter<juce::AudioParameterChoice> (pid::mode);
@@ -225,7 +221,7 @@ void BeaconProcessor::ChannelPath::reset()
     lastCellOutput = 0.0f;
 }
 
-void BeaconProcessor::ChannelPath::setTargets (const StripParameters& p, const StripParameters& outputStrip, bool engagedNow)
+void BeaconProcessor::ChannelPath::setTargets (const Parameters& p, bool engagedNow)
 {
     const auto thresholdControl = p.threshold->get();
     compressing = thresholdControl < -0.05f;
@@ -240,7 +236,7 @@ void BeaconProcessor::ChannelPath::setTargets (const StripParameters& p, const S
 
     envelope.setTimes (p.attack->get() / 1000.0f, p.release->get());
     sidechain.setTargets (p.hpfIn->get(), p.hpf->get(), p.bellIn->get(), p.bell->get());
-    outputStage.setTargets (outputStrip.iron->get(), outputStrip.ironPad->get());
+    outputStage.setTargets (p.iron->get(), p.ironPad->get());
 
     feedForward = p.feedFwd->get();
     limiting    = p.limit->get();
@@ -302,23 +298,16 @@ void BeaconProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     if (numChannels == 0 || buffer.getNumSamples() == 0 || oversampler == nullptr)
         return;
 
-    const auto mode     = static_cast<StripMode> (modeParam->getIndex());
+    const auto mode     = static_cast<ChannelMode> (modeParam->getIndex());
     const auto bypassed = bypassParameter->get();
-    const auto midSide  = mode == StripMode::midSide && numChannels == 2;
+    const auto midSide  = mode == ChannelMode::midSide && numChannels == 2;
 
-    // In stereo mode strip A drives both channels and the two share one
-    // detector, so the image cannot shift; strip B waits for the mode to
-    // change. In dual mono and mid/side the detectors are fully unlinked.
-    const auto linked = mode == StripMode::stereo && numChannels == 2;
+    // In stereo mode the two channels share one detector, so the image
+    // cannot shift. In dual mono and mid/side the detectors are unlinked.
+    const auto linked = mode == ChannelMode::stereo && numChannels == 2;
 
-    for (int ch = 0; ch < numChannels; ++ch)
-    {
-        // IN is a true bypass on the physical channel, ahead of the M/S
-        // matrix, so in mid/side strip A's IN is the left and B's the right.
-        const auto& p = strips[(size_t) (mode == StripMode::stereo ? 0 : ch)];
-        const auto& o = strips[(size_t) (mode == StripMode::dualMono ? ch : 0)];
-        paths[(size_t) ch].setTargets (p, o, ! bypassed && p.active->get());
-    }
+    for (auto& path : paths)
+        path.setTargets (params, ! bypassed);
 
     if (! pathsSnapped)
     {

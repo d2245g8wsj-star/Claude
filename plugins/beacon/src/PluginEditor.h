@@ -7,8 +7,8 @@ namespace beacon
 {
 
 /** Every coordinate in the editor is in these units; the face is scaled as one. */
-inline constexpr int designWidth  = 1280;
-inline constexpr int designHeight = 844;
+inline constexpr int designWidth  = 1180;
+inline constexpr int designHeight = 510;
 
 class BeaconEditor final : public juce::AudioProcessorEditor,
                          private juce::Timer
@@ -50,16 +50,15 @@ private:
         std::vector<float> followerStart;
     };
 
-    /** One channel: input, compressor, sidechain, saturation, output stage,
-        IN and the gain reduction meter. */
-    struct Strip
+    /** Every control on the face, and the gain reduction meter. */
+    struct Controls
     {
-        Strip (BeaconProcessor&, int index);
+        explicit Controls (BeaconProcessor&);
 
         std::vector<juce::Component*> components();
 
         panel::Knob input, threshold, attack, release, hpf, bell, thd, tube, mix, output, ironPad;
-        panel::Lamp dynLink, feedForward, limit, hpfIn, bellIn, listen, tubeIn, iron, ironLink, active;
+        panel::Lamp dynLink, feedForward, limit, hpfIn, bellIn, listen, tubeIn, iron, ironLink, bypass;
         panel::DriveLamp heat;
         panel::VuMeter meter;
 
@@ -80,20 +79,16 @@ private:
         void refresh();
 
     private:
-        /** Each channel is a column: its meter at the top, then the
-            compressor, sidechain and saturation, and output stage, one
-            section to a row. left is the column's left edge. */
-        void layoutStrip (Strip&, float left);
-        void paintStripLegends (juce::Graphics&, int index, float left) const;
 
         /** THD stage drive to heater lamp brightness. */
         static const float heatScale;
 
         BeaconProcessor& processor;
-        std::array<std::unique_ptr<Strip>, numChannelStrips> strips;
+        Controls controls;
         panel::ModeSelector mode;
 
         int shownMode { -1 };
+        bool shownRed { true };   // so the first refresh sets the PAD up
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
     };

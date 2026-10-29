@@ -11,10 +11,7 @@
 namespace beacon
 {
 
-inline constexpr int numChannelStrips = 2;
-
-/** Parameter identifiers. Every per channel control exists twice, prefixed
-    "a_" and "b_", so the editor builds both strips from one list. */
+/** Parameter identifiers. One set of controls drives both channels. */
 namespace pid
 {
     inline constexpr const char* input     = "input";
@@ -36,20 +33,19 @@ namespace pid
     inline constexpr const char* ironLink  = "iron_link";
     inline constexpr const char* mix       = "mix";
     inline constexpr const char* output    = "output";
-    inline constexpr const char* active    = "in";
     inline constexpr const char* dynLink   = "dynamic_link";
 
     inline constexpr const char* mode      = "mode";
     inline constexpr const char* bypass    = "bypass";
-
-    inline juce::String forStrip (int strip, const char* name)
-    {
-        return juce::String (strip == 0 ? "a_" : "b_") + name;
-    }
 }
 
-/** How the two strips are applied to the two channels. */
-enum class StripMode { dualMono = 0, stereo, midSide };
+/** How the controls are applied to the two channels. The settings are the
+    same in every mode; what changes is what each detector listens to.
+
+    dualMono: each channel compresses on its own detector.
+    stereo:   one detector for both, so the image cannot shift.
+    midSide:  mid and side each compress on their own detector. */
+enum class ChannelMode { dualMono = 0, stereo, midSide };
 
 namespace range
 {
@@ -111,7 +107,7 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    struct StripParameters
+    struct Parameters
     {
         juce::AudioParameterFloat* input     { nullptr };
         juce::AudioParameterFloat* threshold { nullptr };
@@ -131,7 +127,6 @@ private:
         juce::AudioParameterFloat* ironPad   { nullptr };
         juce::AudioParameterFloat* mix       { nullptr };
         juce::AudioParameterFloat* output    { nullptr };
-        juce::AudioParameterBool*  active    { nullptr };
     };
 
     /** The signal path of one channel, at the oversampled rate. */
@@ -157,10 +152,7 @@ private:
         void prepare (double innerRate, double hostRate);
         void reset();
 
-        /** The output stage takes its settings from its own strip in dual
-            mono; in stereo and mid/side the output transformers work on left
-            and right and both follow strip A, as on the unit. */
-        void setTargets (const StripParameters&, const StripParameters& outputStrip, bool engagedNow);
+        void setTargets (const Parameters&, bool engagedNow);
         void snapToTargets();
     };
 
@@ -172,7 +164,7 @@ private:
         return p;
     }
 
-    std::array<StripParameters, numChannelStrips> strips;
+    Parameters params;
     juce::AudioParameterChoice* modeParam       { nullptr };
     juce::AudioParameterBool*   bypassParameter { nullptr };
 

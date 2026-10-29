@@ -1,7 +1,7 @@
 # BEACON — IndieWave Audio
 
-A two channel variable-mu tube compressor, modelled on a well known hardware
-unit with digital recall. No ratio knob: like the hardware, the ratio is a property of level,
+A stereo variable-mu tube compressor, modelled on a well known two channel
+hardware unit with digital recall. No ratio knob: like the hardware, the ratio is a property of level,
 gentle at the threshold and steepening as the signal goes past it. Around the
 vari-mu tube sit input transformers, a calibrated THD stage, a TUBE drive
 control, and a choice of output: RED (tube amplifier, transformer and IRON PAD)
@@ -25,14 +25,14 @@ in ─┬─ [M/S encode] ─ input ─ input iron ─┬─ THD ─ vari-mu tub
     │                                     │          FF: from the cell's input ┘  ▲                │   │
     │                                     │          FB: from the cell's output ──┘                │   │
     │                                     └───────────────────── dry ─────────────────────────────┴───┘
-    └─ IN / bypass: true bypass per physical channel, delay matched, so switching out is the input exactly
+    └─ bypass: delay matched, so switching out is the input exactly
 ```
 
 Everything from the input trim to the output stage runs at 4x.
 
 ## Controls
 
-Per channel strip (A and B):
+One set of controls drives both channels:
 
 | Control | Range | What it does |
 | --- | --- | --- |
@@ -53,16 +53,19 @@ Per channel strip (A and B):
 | **IRON** | | RED: tube amplifier, output transformer and PAD. Off: GREEN, electronically balanced, clean. |
 | **PAD** | 0 … 15 dB, 1 dB steps | IRON PAD: a passive attenuator at the very end, RED only, after the mix. |
 | **LINK** (output) | | Iron link: Output and PAD move together, so the iron is driven harder at the same level. |
-| **IN** | | True bypass of the channel. |
+| **BYPASS** | | The host's bypass, on the panel. |
 
-Global **Mode**: **Dual Mono** (independent strips and detectors), **Stereo**
-(strip A on both channels with one shared detector; B greys out) and
-**Mid/Side** (A on the mid, B on the side, detectors unlinked). In Stereo and
-Mid/Side the output transformers stay in left/right, outside the M/S matrix,
-and both follow strip A; strip B's output stage greys out.
+**Mode** sets what the detectors listen to; the settings are the same in all
+three. **Stereo** (the default): one detector for both channels, so the image
+cannot shift. **Dual Mono**: each channel compresses on its own detector, which
+the hardware's manual calls its most common use on a stereo source.
+**Mid/Side**: mid and side each compress on their own detector. In Mid/Side
+the output transformers stay in left/right, outside the M/S matrix, as on the
+unit. For different settings per channel, use two instances on mono tracks.
 
-Each strip has a moving coil gain reduction meter, 0 to 16 dB like the unit's,
-and a heater lamp in the SATURATION section that glows as THD is driven.
+The moving coil gain reduction meter reads 0 to 16 dB like the unit's, and
+shows whichever channel is being reduced more. A heater lamp in the
+SATURATION section glows as THD is driven.
 
 ## How it is modelled
 
@@ -130,7 +133,8 @@ descriptions and specifications:
 * the curves of the THD stage, the tube and the transformers;
 * the dry tap for the mix (after the input transformer, before THD).
 
-Features of the unit left out: the separate output values the unit keeps for
+Features of the unit left out: separate settings for its two channels (one set
+of controls drives both here), the separate output values the unit keeps for
 RED and GREEN, IRON PAD mix compensation, mute, and the A/B/C memories (a DAW
 does that job). The interface is an original design in the IndieWave style,
 and no name, logo or panel artwork of any other product is used.
@@ -157,7 +161,7 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DBEACON_BUILD_TESTS=ON -DBEACON_BUILD_TOOLS=ON
 cmake --build build --target beacon_tests beacon_shot --parallel
 ./build/beacon_tests_artefacts/Release/beacon_tests
-./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 1024
+./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 944
 ```
 
 The checks assert: the THD table inverts; the idle response is flat and the
@@ -167,7 +171,7 @@ static curve; LIMIT is harder; attack and release times scale; the THD knob
 reads true; TUBE saturates without changing the compression; the iron
 saturates on bass, Output up with PAD down drives it harder at the same level,
 and the PAD is a plain attenuator in RED only; the sidechain filters, their
-switches and listen work; IN, bypass and mix at 0 % behave; stereo linking
+switches and listen work; bypass and mix at 0 % behave; stereo linking
 holds the image; the mid/side matrix reconstructs and the iron stays in
 left/right; reported latency; finite output at extreme settings across rates
 and block sizes; and state surviving a save.
@@ -179,9 +183,9 @@ src/dsp/VariMu.h        gain law, rectifier, the vari-mu tube, sidechain filter
 src/dsp/Tube.h          triode curve, THD calibration, level reference
 src/dsp/OutputStage.h   transformers, tube line amp, RED/GREEN, iron pad
 src/dsp/Meters.h        audio thread to editor
-src/PluginProcessor.*   parameters, routing, linking, oversampling, the strips
+src/PluginProcessor.*   parameters, channel modes, linking, oversampling, the signal path
 src/gui/Panel.*         knobs, lamps, mode buttons, VU meter, all drawn in code
-src/PluginEditor.*      two channel columns, dynamic and iron links, scaled as a whole from one design size
+src/PluginEditor.*      layout, dynamic and iron links, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render
 ```

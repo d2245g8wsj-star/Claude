@@ -7,26 +7,25 @@ namespace
 {
     using Size = panel::Knob::Size;
 
-    // Vertical plan, top to bottom: the header with the name and modes, then
-    // two columns, A on the left and B on the right.
-    constexpr float earWidth    = 34.0f;
+    // The plan: a header with the name and modes, then two rows of wells.
+    // The top row is the compressor and the meter, the bottom row the
+    // sidechain, saturation and output stage.
+    constexpr float earWidth     = 34.0f;
     constexpr float headerBottom = 90.0f;
-
-    constexpr float columnLeft[] = { 46.0f, 646.0f };
-    constexpr float columnWidth  = 588.0f;
-    constexpr float columnSeam   = 640.0f;
-
-    constexpr float meterTop    = 100.0f;
-    constexpr float meterHeight = 118.0f;
+    constexpr float contentLeft  = 46.0f;
+    constexpr float contentRight = 1134.0f;
 
     constexpr float wellHeight = 196.0f;
-    constexpr float compTop    = 230.0f;
-    constexpr float sideTop    = compTop + wellHeight + 8.0f;
-    constexpr float outTop     = sideTop + wellHeight + 8.0f;
+    constexpr float topRow     = 100.0f;
+    constexpr float bottomRow  = topRow + wellHeight + 8.0f;
 
-    // Horizontal plan of the sections, from the column's left edge.
-    constexpr float scWidth   = 300.0f;
-    constexpr float satLeft   = 310.0f;
+    constexpr float compLeft = contentLeft, compWidth = 588.0f;
+    constexpr float meterLeft = compLeft + compWidth + 10.0f;
+
+    constexpr float scLeft  = contentLeft,           scWidth  = 320.0f;
+    constexpr float satLeft = scLeft + scWidth + 10.0f, satWidth = 300.0f;
+    constexpr float outLeft = satLeft + satWidth + 10.0f;
+    constexpr float outWidth = contentRight - outLeft;
 
     constexpr float largeSide = 156.0f;
     constexpr float smallSide = 112.0f;
@@ -116,39 +115,39 @@ void BeaconEditor::Follow::end()
 
 // ---------------------------------------------------------------------------
 
-BeaconEditor::Strip::Strip (BeaconProcessor& p, int index)
-    : input     (p.apvts, pid::forStrip (index, pid::input),     panel::trimAccent, Size::small, trimLegends()),
-      threshold (p.apvts, pid::forStrip (index, pid::threshold), panel::compAccent, Size::large,
+BeaconEditor::Controls::Controls (BeaconProcessor& p)
+    : input     (p.apvts, pid::input,     panel::trimAccent, Size::small, trimLegends()),
+      threshold (p.apvts, pid::threshold, panel::compAccent, Size::large,
                  { { -40.0f, "-40" }, { -30.0f, "-30" }, { -20.0f, "-20" }, { -10.0f, "-10" }, { 0.0f, "OFF" } }),
-      attack    (p.apvts, pid::forStrip (index, pid::attack),    panel::compAccent, Size::small,
+      attack    (p.apvts, pid::attack,    panel::compAccent, Size::small,
                  { { 0.5f, ".5" }, { 3.0f, "3" }, { 15.0f, "15" }, { 100.0f, "100" } }),
-      release   (p.apvts, pid::forStrip (index, pid::release),   panel::compAccent, Size::small,
+      release   (p.apvts, pid::release,   panel::compAccent, Size::small,
                  { { 0.1f, ".1" }, { 0.3f, ".3" }, { 1.0f, "1" }, { 3.0f, "3" } }),
-      hpf       (p.apvts, pid::forStrip (index, pid::hpf),       panel::scAccent,   Size::small,
+      hpf       (p.apvts, pid::hpf,       panel::scAccent,   Size::small,
                  { { 20.0f, "20" }, { 60.0f, "60" }, { 160.0f, "160" }, { 500.0f, "500" } }),
-      bell      (p.apvts, pid::forStrip (index, pid::bell),      panel::scAccent,   Size::small,
+      bell      (p.apvts, pid::bell,      panel::scAccent,   Size::small,
                  { { 2000.0f, "2k" }, { 4500.0f, "4.5k" }, { 9000.0f, "9k" }, { 20000.0f, "20k" } }),
-      thd       (p.apvts, pid::forStrip (index, pid::thd),       panel::heatAccent, Size::large,
+      thd       (p.apvts, pid::thd,       panel::heatAccent, Size::large,
                  { { 0.0f, "0" }, { 0.5f, ".5" }, { 1.0f, "1" }, { 2.0f, "2" }, { 4.0f, "4" }, { 8.0f, "8" } }),
-      tube      (p.apvts, pid::forStrip (index, pid::tube),      panel::heatAccent, Size::small, trimLegends()),
-      mix       (p.apvts, pid::forStrip (index, pid::mix),       panel::trimAccent, Size::small,
+      tube      (p.apvts, pid::tube,      panel::heatAccent, Size::small, trimLegends()),
+      mix       (p.apvts, pid::mix,       panel::trimAccent, Size::small,
                  { { 0.0f, "DRY" }, { 50.0f, "50" }, { 100.0f, "WET" } }),
-      output    (p.apvts, pid::forStrip (index, pid::output),    panel::trimAccent, Size::small, trimLegends()),
-      ironPad   (p.apvts, pid::forStrip (index, pid::ironPad),   panel::limitAccent, Size::small,
+      output    (p.apvts, pid::output,    panel::trimAccent, Size::small, trimLegends()),
+      ironPad   (p.apvts, pid::ironPad,   panel::limitAccent, Size::small,
                  { { 0.0f, "0" }, { 5.0f, "5" }, { 10.0f, "10" }, { 15.0f, "15" } }),
-      dynLink     (p.apvts, pid::forStrip (index, pid::dynLink),  panel::trimAccent,  "LINK"),
-      feedForward (p.apvts, pid::forStrip (index, pid::feedFwd),  panel::compAccent,  "FF"),
-      limit       (p.apvts, pid::forStrip (index, pid::limit),    panel::limitAccent, "LIMIT"),
-      hpfIn       (p.apvts, pid::forStrip (index, pid::hpfIn),    panel::scAccent,    "IN"),
-      bellIn      (p.apvts, pid::forStrip (index, pid::bellIn),   panel::scAccent,    "IN"),
-      listen      (p.apvts, pid::forStrip (index, pid::listen),   panel::scAccent,    "LISTEN"),
-      tubeIn      (p.apvts, pid::forStrip (index, pid::tubeIn),   panel::heatAccent,  "IN"),
-      iron        (p.apvts, pid::forStrip (index, pid::iron),     panel::limitAccent, "IRON"),
-      ironLink    (p.apvts, pid::forStrip (index, pid::ironLink), panel::limitAccent, "LINK"),
-      active      (p.apvts, pid::forStrip (index, pid::active),   panel::limitAccent, "IN"),
+      dynLink     (p.apvts, pid::dynLink,  panel::trimAccent,  "LINK"),
+      feedForward (p.apvts, pid::feedFwd,  panel::compAccent,  "FF"),
+      limit       (p.apvts, pid::limit,    panel::limitAccent, "LIMIT"),
+      hpfIn       (p.apvts, pid::hpfIn,    panel::scAccent,    "IN"),
+      bellIn      (p.apvts, pid::bellIn,   panel::scAccent,    "IN"),
+      listen      (p.apvts, pid::listen,   panel::scAccent,    "LISTEN"),
+      tubeIn      (p.apvts, pid::tubeIn,   panel::heatAccent,  "IN"),
+      iron        (p.apvts, pid::iron,     panel::limitAccent, "IRON"),
+      ironLink    (p.apvts, pid::ironLink, panel::limitAccent, "LINK"),
+      bypass      (p.apvts, pid::bypass,   panel::limitAccent, "BYPASS"),
       heat        (panel::heatAccent)
 {
-    const auto parameter = [&p, index] (const char* name) { return p.apvts.getParameter (pid::forStrip (index, name)); };
+    const auto parameter = [&p] (const char* name) { return p.apvts.getParameter (name); };
 
     links.push_back (std::make_unique<Follow> (input, parameter (pid::dynLink),
         std::vector<std::pair<juce::RangedAudioParameter*, float>> { { parameter (pid::threshold), 1.0f },
@@ -163,12 +162,12 @@ BeaconEditor::Strip::Strip (BeaconProcessor& p, int index)
         [ironParameter] { return ironParameter->getValue() >= 0.5f; }));
 }
 
-std::vector<juce::Component*> BeaconEditor::Strip::components()
+std::vector<juce::Component*> BeaconEditor::Controls::components()
 {
     // Lamps after knobs, so a button sitting in the open foot of a knob's scale
     // takes the click rather than the knob behind it.
     return { &input, &threshold, &attack, &release, &hpf, &bell, &thd, &tube, &mix, &output, &ironPad,
-             &dynLink, &feedForward, &limit, &hpfIn, &bellIn, &listen, &tubeIn, &iron, &ironLink, &active,
+             &dynLink, &feedForward, &limit, &hpfIn, &bellIn, &listen, &tubeIn, &iron, &ironLink, &bypass,
              &heat, &meter };
 }
 
@@ -176,15 +175,11 @@ std::vector<juce::Component*> BeaconEditor::Strip::components()
 
 BeaconEditor::Face::Face (BeaconProcessor& p)
     : processor (p),
+      controls (p),
       mode (p.apvts, pid::mode)
 {
-    for (int i = 0; i < numChannelStrips; ++i)
-    {
-        strips[(size_t) i] = std::make_unique<Strip> (p, i);
-
-        for (auto* child : strips[(size_t) i]->components())
-            addAndMakeVisible (child);
-    }
+    for (auto* child : controls.components())
+        addAndMakeVisible (child);
 
     addAndMakeVisible (mode);
     refresh();
@@ -192,97 +187,79 @@ BeaconEditor::Face::Face (BeaconProcessor& p)
 
 void BeaconEditor::Face::resized()
 {
-    for (int i = 0; i < numChannelStrips; ++i)
-        layoutStrip (*strips[(size_t) i], columnLeft[i]);
+    auto& c = controls;
 
-    mode.setBounds (420, 28, 440, 34);
+    mode.setBounds (380, 28, 440, 34);
+
+    c.input      .setBounds (square (compLeft + 72.0f,  topRow + smallKnobY, smallSide));
+    c.threshold  .setBounds (square (compLeft + 214.0f, topRow + largeKnobY, largeSide));
+    c.attack     .setBounds (square (compLeft + 364.0f, topRow + smallKnobY, smallSide));
+    c.release    .setBounds (square (compLeft + 506.0f, topRow + smallKnobY, smallSide));
+    c.dynLink    .setBounds (lampAt (compLeft + 72.0f,  topRow + lampY));
+    c.feedForward.setBounds (lampAt (compLeft + 364.0f, topRow + lampY));
+    c.limit      .setBounds (lampAt (compLeft + 506.0f, topRow + lampY));
+
+    c.meter .setBounds (juce::Rectangle<float> (meterLeft + 20.0f, topRow + 14.0f, 340.0f, wellHeight - 28.0f).toNearestInt());
+    c.bypass.setBounds (lampAt (meterLeft + 428.0f, topRow + wellHeight * 0.5f));
+
+    c.hpf   .setBounds (square (scLeft + 66.0f,  bottomRow + smallKnobY, smallSide));
+    c.bell  .setBounds (square (scLeft + 182.0f, bottomRow + smallKnobY, smallSide));
+    c.hpfIn .setBounds (lampAt (scLeft + 66.0f,  bottomRow + lampY));
+    c.bellIn.setBounds (lampAt (scLeft + 182.0f, bottomRow + lampY));
+    c.listen.setBounds (lampAt (scLeft + 274.0f, bottomRow + lampY));
+
+    c.thd   .setBounds (square (satLeft + 86.0f,  bottomRow + largeKnobY, largeSide));
+    c.tube  .setBounds (square (satLeft + 228.0f, bottomRow + smallKnobY, smallSide));
+    c.tubeIn.setBounds (lampAt (satLeft + 228.0f, bottomRow + lampY));
+    c.heat  .setBounds (juce::Rectangle<float> (24.0f, 24.0f)
+                            .withCentre ({ satLeft + satWidth - 20.0f, bottomRow + 18.0f }).toNearestInt());
+
+    const auto outStep = outWidth / 3.0f;
+    c.mix     .setBounds (square (outLeft + outStep * 0.5f, bottomRow + smallKnobY, smallSide));
+    c.output  .setBounds (square (outLeft + outStep * 1.5f, bottomRow + smallKnobY, smallSide));
+    c.ironPad .setBounds (square (outLeft + outStep * 2.5f, bottomRow + smallKnobY, smallSide));
+    c.iron    .setBounds (lampAt (outLeft + outStep * 1.5f, bottomRow + lampY));
+    c.ironLink.setBounds (lampAt (outLeft + outStep * 2.5f, bottomRow + lampY));
 }
 
 const float BeaconEditor::Face::heatScale
     = 0.5f / (level::nominalAmplitude() * tube::ThdCalibration::get().driveFor (1.0f));
 
-void BeaconEditor::Face::layoutStrip (Strip& s, float x)
-{
-    s.meter .setBounds (juce::Rectangle<float> (x + 150.0f, meterTop, 288.0f, meterHeight).toNearestInt());
-    s.active.setBounds (lampAt (x + 516.0f, meterTop + meterHeight * 0.5f));
-
-    s.input      .setBounds (square (x + 72.0f,  compTop + smallKnobY, smallSide));
-    s.threshold  .setBounds (square (x + 214.0f, compTop + largeKnobY, largeSide));
-    s.attack     .setBounds (square (x + 364.0f, compTop + smallKnobY, smallSide));
-    s.release    .setBounds (square (x + 506.0f, compTop + smallKnobY, smallSide));
-    s.dynLink    .setBounds (lampAt (x + 72.0f,  compTop + lampY));
-    s.feedForward.setBounds (lampAt (x + 364.0f, compTop + lampY));
-    s.limit      .setBounds (lampAt (x + 506.0f, compTop + lampY));
-
-    s.hpf   .setBounds (square (x + 64.0f,  sideTop + smallKnobY, smallSide));
-    s.bell  .setBounds (square (x + 176.0f, sideTop + smallKnobY, smallSide));
-    s.hpfIn .setBounds (lampAt (x + 64.0f,  sideTop + lampY));
-    s.bellIn.setBounds (lampAt (x + 176.0f, sideTop + lampY));
-    s.listen.setBounds (lampAt (x + 262.0f, sideTop + lampY));
-
-    s.thd   .setBounds (square (x + satLeft + 82.0f,  sideTop + largeKnobY, largeSide));
-    s.tube  .setBounds (square (x + satLeft + 212.0f, sideTop + smallKnobY, smallSide));
-    s.tubeIn.setBounds (lampAt (x + satLeft + 212.0f, sideTop + lampY));
-    s.heat  .setBounds (juce::Rectangle<float> (24.0f, 24.0f)
-                            .withCentre ({ x + columnWidth - 20.0f, sideTop + 18.0f }).toNearestInt());
-
-    s.mix     .setBounds (square (x + 110.0f, outTop + smallKnobY, smallSide));
-    s.output  .setBounds (square (x + 294.0f, outTop + smallKnobY, smallSide));
-    s.ironPad .setBounds (square (x + 478.0f, outTop + smallKnobY, smallSide));
-    s.iron    .setBounds (lampAt (x + 294.0f, outTop + lampY));
-    s.ironLink.setBounds (lampAt (x + 478.0f, outTop + lampY));
-}
-
 void BeaconEditor::Face::refresh()
 {
+    auto& c = controls;
+
+    // One meter: in dual mono and mid/side it shows whichever channel is
+    // being reduced more. The heater lamp follows how hard the THD stage is
+    // driven: just glowing at 1 % on the operating level, fully lit by 8 %.
+    float reduction = 0.0f, drive = 0.0f;
+
+    for (auto& channel : processor.meters.channels)
+    {
+        reduction = juce::jmax (reduction, MeterSource::take (channel.reductionDb));
+        drive     = juce::jmax (drive,     MeterSource::take (channel.thdDrive));
+    }
+
+    c.meter.push (reduction);
+    c.heat.push (drive * heatScale);
+
+    // The PAD and its link act only in RED mode.
+    const auto red = c.iron.getToggleState();
+
+    if (red != shownRed)
+    {
+        shownRed = red;
+        c.ironPad .setEnabled (red);
+        c.ironLink.setEnabled (red);
+    }
+
     const auto modeIndex = mode.getSelected();
-
-    for (int i = 0; i < numChannelStrips; ++i)
-    {
-        auto& s = *strips[(size_t) i];
-
-        auto& peaks = processor.meters.channels[(size_t) i];
-        s.meter.push (MeterSource::take (peaks.reductionDb));
-
-        // The heater lamp follows how hard the THD stage is driven: just
-        // glowing at 1 % on the operating level, fully lit by 8 %.
-        s.heat.push (MeterSource::take (peaks.thdDrive) * heatScale);
-    }
-
-    const auto stripMode = static_cast<StripMode> (modeIndex);
-
-    for (int i = 0; i < numChannelStrips; ++i)
-    {
-        auto& s = *strips[(size_t) i];
-
-        // In stereo mode strip A drives both channels, so B's controls would
-        // only be pretending. In stereo and mid/side the output transformers
-        // are wired left and right and both follow strip A, so B's output
-        // stage is A's. The PAD and its link act only in RED mode. All of it
-        // stays visible, greyed, and B's meter and lamp still show channel B.
-        const auto stripLive  = ! (stripMode == StripMode::stereo && i == 1);
-        const auto outputLive = stripMode == StripMode::dualMono || i == 0;
-        const auto red        = s.iron.getToggleState();
-
-        for (auto* child : s.components())
-            if (dynamic_cast<panel::VuMeter*> (child) == nullptr && dynamic_cast<panel::DriveLamp*> (child) == nullptr)
-                child->setEnabled (stripLive);
-
-        s.iron    .setEnabled (outputLive);
-        s.ironPad .setEnabled (outputLive && red);
-        s.ironLink.setEnabled (outputLive && red);
-    }
 
     if (modeIndex == shownMode)
         return;
 
     shownMode = modeIndex;
-
-    const auto midSide = stripMode == StripMode::midSide;
-    strips[0]->meter.setLegend (midSide ? "MID  GR" : "GAIN REDUCTION");
-    strips[1]->meter.setLegend (midSide ? "SIDE  GR" : "GAIN REDUCTION");
-
-    repaint();
+    c.meter.setLegend (static_cast<ChannelMode> (modeIndex) == ChannelMode::midSide ? "M / S  GR" : "GAIN REDUCTION");
 }
 
 void BeaconEditor::Face::paint (juce::Graphics& g)
@@ -318,42 +295,16 @@ void BeaconEditor::Face::paint (juce::Graphics& g)
     g.setColour (panel::heatAccent.withAlpha (0.8f));
     g.fillRect (juce::Rectangle<float> (58.0f, 78.0f, 96.0f, 2.0f));
 
-    panel::drawTrackedLabel (g, "MODE", { 340.0f, 28.0f, 70.0f, 34.0f }, panel::lampLegendHeight, 2.0f,
+    panel::drawTrackedLabel (g, "MODE", { 300.0f, 28.0f, 70.0f, 34.0f }, panel::lampLegendHeight, 2.0f,
                              juce::Justification::centredLeft, panel::engravingDim);
-    panel::drawTrackedLabel (g, "INDIEWAVE AUDIO", { 960.0f, 28.0f, 268.0f, 34.0f }, 12.0f, 3.0f,
+    panel::drawTrackedLabel (g, "INDIEWAVE AUDIO", { 860.0f, 28.0f, contentRight - 860.0f, 34.0f }, 12.0f, 3.0f,
                              juce::Justification::centredRight, panel::engravingDim);
 
-    // The seam under the header, and between the two columns.
-    const auto seams = [&g] (juce::Rectangle<float> line, bool vertical)
-    {
-        g.setColour (juce::Colours::black.withAlpha (0.5f));
-        g.fillRect (line);
-        g.setColour (juce::Colours::white.withAlpha (0.06f));
-        g.fillRect (vertical ? line.translated (line.getWidth(), 0.0f).withWidth (1.0f)
-                             : line.translated (0.0f, line.getHeight()).withHeight (1.0f));
-    };
-
-    seams ({ earWidth + 12.0f, headerBottom, bounds.getWidth() - 2.0f * (earWidth + 12.0f), 1.2f }, false);
-    seams ({ columnSeam - 0.75f, headerBottom + 10.0f, 1.5f, bounds.getHeight() - headerBottom - 20.0f }, true);
-
-    for (int i = 0; i < numChannelStrips; ++i)
-        paintStripLegends (g, i, columnLeft[i]);
-}
-
-void BeaconEditor::Face::paintStripLegends (juce::Graphics& g, int index, float x) const
-{
-    const auto stripMode = static_cast<StripMode> (juce::jmax (0, shownMode));
-    const auto linked    = stripMode == StripMode::stereo && index == 1;
-
-    const juce::String letter = stripMode == StripMode::midSide ? (index == 0 ? "M" : "S")
-                                                                : (index == 0 ? "A" : "B");
-
-    panel::drawTrackedLabel (g, letter, { x + 20.0f, meterTop + 20.0f, 80.0f, 56.0f }, 46.0f, 0.0f,
-                             juce::Justification::centred, linked ? panel::engravingDim : panel::engraving);
-
-    if (linked)
-        panel::drawTrackedLabel (g, "LINK A", { x + 10.0f, meterTop + 80.0f, 100.0f, 16.0f }, panel::lampLegendHeight, 1.4f,
-                                 juce::Justification::centred, panel::compAccent);
+    // The seam under the header.
+    g.setColour (juce::Colours::black.withAlpha (0.5f));
+    g.fillRect (juce::Rectangle<float> (contentLeft, headerBottom, contentRight - contentLeft, 1.2f));
+    g.setColour (juce::Colours::white.withAlpha (0.06f));
+    g.fillRect (juce::Rectangle<float> (contentLeft, headerBottom + 1.2f, contentRight - contentLeft, 1.0f));
 
     const auto label = [&g] (const char* text, float centreX, float y, bool primary = false)
     {
@@ -363,10 +314,10 @@ void BeaconEditor::Face::paintStripLegends (juce::Graphics& g, int index, float 
 
     struct Well { float left, top, width; const char* name; const char* subtitle; };
 
-    for (const auto& w : { Well { x,           compTop, columnWidth,           "COMPRESSOR", "VARI-MU" },
-                           Well { x,           sideTop, scWidth,               "SIDECHAIN",  "DETECTOR" },
-                           Well { x + satLeft, sideTop, columnWidth - satLeft, "SATURATION", "" },
-                           Well { x,           outTop,  columnWidth,           "OUTPUT",     "IRON = RED STAGE" } })
+    for (const auto& w : { Well { compLeft, topRow,    compWidth, "COMPRESSOR", "VARI-MU" },
+                           Well { scLeft,   bottomRow, scWidth,   "SIDECHAIN",  "DETECTOR" },
+                           Well { satLeft,  bottomRow, satWidth,  "SATURATION", "" },
+                           Well { outLeft,  bottomRow, outWidth,  "OUTPUT",     "IRON = RED STAGE" } })
     {
         panel::drawWell (g, { w.left, w.top, w.width, wellHeight });
         panel::drawTrackedLabel (g, w.name, { w.left + 14.0f, w.top + 9.0f, 180.0f, 19.0f }, panel::sectionLabel, 2.2f,
@@ -375,20 +326,21 @@ void BeaconEditor::Face::paintStripLegends (juce::Graphics& g, int index, float 
                                  juce::Justification::centredRight, panel::engravingDim);
     }
 
-    label ("INPUT",     x + 72.0f,  compTop + smallLabelY, true);
-    label ("THRESHOLD", x + 214.0f, compTop + largeLabelY, true);
-    label ("ATTACK",    x + 364.0f, compTop + smallLabelY);
-    label ("RELEASE",   x + 506.0f, compTop + smallLabelY);
+    label ("INPUT",     compLeft + 72.0f,  topRow + smallLabelY, true);
+    label ("THRESHOLD", compLeft + 214.0f, topRow + largeLabelY, true);
+    label ("ATTACK",    compLeft + 364.0f, topRow + smallLabelY);
+    label ("RELEASE",   compLeft + 506.0f, topRow + smallLabelY);
 
-    label ("HPF",  x + 64.0f,  sideTop + smallLabelY);
-    label ("BELL", x + 176.0f, sideTop + smallLabelY);
+    label ("HPF",  scLeft + 66.0f,  bottomRow + smallLabelY);
+    label ("BELL", scLeft + 182.0f, bottomRow + smallLabelY);
 
-    label ("THD",  x + satLeft + 82.0f,  sideTop + largeLabelY, true);
-    label ("TUBE", x + satLeft + 212.0f, sideTop + smallLabelY);
+    label ("THD",  satLeft + 86.0f,  bottomRow + largeLabelY, true);
+    label ("TUBE", satLeft + 228.0f, bottomRow + smallLabelY);
 
-    label ("MIX",    x + 110.0f, outTop + smallLabelY, true);
-    label ("OUTPUT", x + 294.0f, outTop + smallLabelY, true);
-    label ("PAD",    x + 478.0f, outTop + smallLabelY);
+    const auto outStep = outWidth / 3.0f;
+    label ("MIX",    outLeft + outStep * 0.5f, bottomRow + smallLabelY, true);
+    label ("OUTPUT", outLeft + outStep * 1.5f, bottomRow + smallLabelY, true);
+    label ("PAD",    outLeft + outStep * 2.5f, bottomRow + smallLabelY);
 }
 
 // ---------------------------------------------------------------------------

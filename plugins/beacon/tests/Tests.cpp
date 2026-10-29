@@ -128,7 +128,6 @@ double amplitudeAt (const juce::AudioBuffer<float>& buffer, int channel, double 
 
 double db (double gain) { return 20.0 * std::log10 (juce::jmax (gain, 1.0e-12)); }
 
-juce::String strip (int index, const char* name) { return beacon::pid::forStrip (index, name); }
 
 
 /** Settings with every switchable colour stage out: GREEN output, no THD,
@@ -137,9 +136,9 @@ Settings clean (Settings extra = {})
 {
     for (int s = 0; s < 2; ++s)
     {
-        extra.emplace (strip (s, beacon::pid::tubeIn), 0.0f);
-        extra.emplace (strip (s, beacon::pid::iron),   0.0f);
-        extra.emplace (strip (s, beacon::pid::thd),    0.0f);
+        extra.emplace (beacon::pid::tubeIn, 0.0f);
+        extra.emplace (beacon::pid::iron,   0.0f);
+        extra.emplace (beacon::pid::thd,    0.0f);
     }
 
     return extra;
@@ -275,7 +274,7 @@ void testTransparentWhenIdle()
 {
     section ("Idle: the response and distortion of the unit");
 
-    const Settings idle = clean ({ { strip (0, beacon::pid::threshold), 0.0f }, { strip (1, beacon::pid::threshold), 0.0f } });
+    const Settings idle = clean ({ { beacon::pid::threshold, 0.0f }, { beacon::pid::threshold, 0.0f } });
 
     for (double hz : { 50.0, 1000.0, 10000.0, 18000.0 })
     {
@@ -295,7 +294,7 @@ void testTransparentWhenIdle()
     // Specified: THD+N below 0.01 % at 1 kHz, 0 dBu, with the tube in circuit
     // as it always is on the unit.
     {
-        const Settings defaults { { strip (0, beacon::pid::threshold), 0.0f } };
+        const Settings defaults { { beacon::pid::threshold, 0.0f } };
         auto o = render (defaults, tone (1000.0, zeroDbu), 48000);
         const auto t = thdOf (o, 0, 1000.0, 24000, 24000);
         std::cout << "  THD at 1 kHz, 0 dBu, tube in: " << t << " %" << std::endl;
@@ -315,10 +314,10 @@ void testStaticCurve()
     {
         std::cout << "  " << (forward ? "feed-forward" : "feedback") << ", threshold -30 dBFS:" << std::endl;
 
-        const Settings base = clean ({ { strip (0, beacon::pid::threshold), th (-30.0f) },
-                                       { strip (0, beacon::pid::attack), 10.0f },
-                                       { strip (0, beacon::pid::release), 0.3f },
-                                       { strip (0, beacon::pid::feedFwd), forward ? 1.0f : 0.0f } });
+        const Settings base = clean ({ { beacon::pid::threshold, th (-30.0f) },
+                                       { beacon::pid::attack, 10.0f },
+                                       { beacon::pid::release, 0.3f },
+                                       { beacon::pid::feedFwd, forward ? 1.0f : 0.0f } });
 
         double previousOut = -200.0, previousIn = 0.0;
         std::vector<double> ratios;
@@ -351,9 +350,9 @@ void testStaticCurve()
     // Both topologies share one static curve.
     for (float level : { -24.0f, -18.0f, -9.0f })
     {
-        const Settings fb = clean ({ { strip (0, beacon::pid::threshold), th (-30.0f) }, { strip (0, beacon::pid::release), 0.3f } });
+        const Settings fb = clean ({ { beacon::pid::threshold, th (-30.0f) }, { beacon::pid::release, 0.3f } });
         auto ff = fb;
-        ff[strip (0, beacon::pid::feedFwd)] = 1.0f;
+        ff[beacon::pid::feedFwd] = 1.0f;
 
         const auto a = steadyReduction (fb, level), b = steadyReduction (ff, level);
         check (std::abs (a - b) < 1.5, "FF and FB agree within 1.5 dB at " + juce::String (level)
@@ -362,9 +361,9 @@ void testStaticCurve()
 
     // Limit is harder at every level past the threshold.
     {
-        const Settings comp = clean ({ { strip (0, beacon::pid::threshold), th (-30.0f) }, { strip (0, beacon::pid::release), 0.3f } });
+        const Settings comp = clean ({ { beacon::pid::threshold, th (-30.0f) }, { beacon::pid::release, 0.3f } });
         auto lim = comp;
-        lim[strip (0, beacon::pid::limit)] = 1.0f;
+        lim[beacon::pid::limit] = 1.0f;
 
         const auto a = steadyReduction (comp, -15.0f), b = steadyReduction (lim, -15.0f);
         const auto lo = steadyReduction (lim, -18.0f), hi = steadyReduction (lim, -6.0f);
@@ -394,9 +393,9 @@ void testTiming()
 
     auto attackHalf = [&] (float attackMs, bool forward)
     {
-        const auto trace = reductionTrace (clean ({ { strip (0, beacon::pid::threshold), th (-30.0f) },
-                                                    { strip (0, beacon::pid::attack), attackMs },
-                                                    { strip (0, beacon::pid::feedFwd), forward ? 1.0f : 0.0f } }),
+        const auto trace = reductionTrace (clean ({ { beacon::pid::threshold, th (-30.0f) },
+                                                    { beacon::pid::attack, attackMs },
+                                                    { beacon::pid::feedFwd, forward ? 1.0f : 0.0f } }),
                                            stepped (100, 100000), 1100);
         return halfwayTime (trace, 100, 1000);
     };
@@ -412,8 +411,8 @@ void testTiming()
 
     auto releaseHalf = [&] (float releaseSeconds)
     {
-        const auto trace = reductionTrace (clean ({ { strip (0, beacon::pid::threshold), th (-30.0f) },
-                                                    { strip (0, beacon::pid::release), releaseSeconds } }),
+        const auto trace = reductionTrace (clean ({ { beacon::pid::threshold, th (-30.0f) },
+                                                    { beacon::pid::release, releaseSeconds } }),
                                            stepped (0, 1000), 9000);
         return halfwayTime (trace, 1000, 8999);
     };
@@ -433,8 +432,8 @@ void testColour()
     // The THD knob reads what the stage does at the operating level.
     for (float percent : { 0.5f, 1.0f, 4.0f, 8.0f })
     {
-        Settings s = clean ({ { strip (0, beacon::pid::threshold), 0.0f } });
-        s[strip (0, beacon::pid::thd)] = percent;
+        Settings s = clean ({ { beacon::pid::threshold, 0.0f } });
+        s[beacon::pid::thd] = percent;
 
         auto out = render (s, tone (1000.0, nominal), 48000);
         const auto measured = thdOf (out, 0, 1000.0, 24000, 24000);
@@ -444,7 +443,7 @@ void testColour()
 
     // And louder material distorts more.
     {
-        Settings s = clean ({ { strip (0, beacon::pid::threshold), 0.0f }, { strip (0, beacon::pid::thd), 1.0f } });
+        Settings s = clean ({ { beacon::pid::threshold, 0.0f }, { beacon::pid::thd, 1.0f } });
         auto quiet = render (s, tone (1000.0, nominal * 0.25f), 48000);
         auto loud  = render (s, tone (1000.0, nominal * 2.0f), 48000);
         check (thdOf (loud, 0, 1000.0, 24000, 24000) > 3.0 * thdOf (quiet, 0, 1000.0, 24000, 24000),
@@ -454,10 +453,10 @@ void testColour()
     // TUBE drives the vari-mu tube harder without changing the level or the
     // amount of compression.
     {
-        Settings s { { strip (0, beacon::pid::threshold), 0.0f } };
-        s[strip (0, beacon::pid::tube)] = 0.0f;
+        Settings s { { beacon::pid::threshold, 0.0f } };
+        s[beacon::pid::tube] = 0.0f;
         auto plain = render (s, tone (1000.0, nominal), 48000);
-        s[strip (0, beacon::pid::tube)] = 15.0f;
+        s[beacon::pid::tube] = 15.0f;
         auto driven = render (s, tone (1000.0, nominal), 48000);
 
         const auto a = thdOf (plain, 0, 1000.0, 24000, 24000), b = thdOf (driven, 0, 1000.0, 24000, 24000);
@@ -468,18 +467,18 @@ void testColour()
         // promises the compression stays put, not the last half dB of level.
         check (std::abs (shift) < 0.6, "and keeps the level, got " + juce::String (shift, 3) + " dB");
 
-        Settings c { { strip (0, beacon::pid::threshold), th (-30.0f) }, { strip (0, beacon::pid::release), 0.3f } };
-        c[strip (0, beacon::pid::tube)] = -15.0f;
+        Settings c { { beacon::pid::threshold, th (-30.0f) }, { beacon::pid::release, 0.3f } };
+        c[beacon::pid::tube] = -15.0f;
         const auto low = steadyReduction (c, -12.0f);
-        c[strip (0, beacon::pid::tube)] = 15.0f;
+        c[beacon::pid::tube] = 15.0f;
         const auto high = steadyReduction (c, -12.0f);
         check (std::abs (low - high) < 0.5, "the amount of compression does not follow TUBE: "
                                                 + juce::String (low, 2) + " / " + juce::String (high, 2) + " dB");
     }
 
     // RED: the iron saturates on flux, so bass and not treble.
-    const Settings red { { strip (0, beacon::pid::threshold), 0.0f }, { strip (0, beacon::pid::iron), 1.0f },
-                         { strip (0, beacon::pid::tubeIn), 0.0f } };
+    const Settings red { { beacon::pid::threshold, 0.0f }, { beacon::pid::iron, 1.0f },
+                         { beacon::pid::tubeIn, 0.0f } };
 
     const auto loud = juce::Decibels::decibelsToGain (-2.0f);
     auto bass   = render (red, tone (30.0, loud), 96000);
@@ -487,8 +486,8 @@ void testColour()
 
     // Iron link: 10 dB more output into the iron, 10 dB more pad after it.
     auto linked = red;
-    linked[strip (0, beacon::pid::output)]  = 10.0f;
-    linked[strip (0, beacon::pid::ironPad)] = 10.0f;
+    linked[beacon::pid::output]  = 10.0f;
+    linked[beacon::pid::ironPad] = 10.0f;
     auto driven = render (linked, tone (30.0, loud), 96000);
 
     const auto bassThd   = thdOf (bass, 0, 30.0, 48000, 48000);
@@ -507,14 +506,14 @@ void testColour()
 
     {
         auto padded = red;
-        padded[strip (0, beacon::pid::ironPad)] = 7.0f;
+        padded[beacon::pid::ironPad] = 7.0f;
         auto a = render (red,    tone (1000.0, nominal), 48000);
         auto b = render (padded, tone (1000.0, nominal), 48000);
         const auto shift = db (amplitudeAt (b, 0, 1000.0, 24000, 24000) / amplitudeAt (a, 0, 1000.0, 24000, 24000));
         check (std::abs (shift + 7.0) < 0.05, "the pad is a plain attenuator, got " + juce::String (shift, 3) + " dB");
 
         auto green = padded;
-        green[strip (0, beacon::pid::iron)] = 0.0f;
+        green[beacon::pid::iron] = 0.0f;
         auto c = render (green, tone (1000.0, nominal), 48000);
         const auto greenShift = db (amplitudeAt (c, 0, 1000.0, 24000, 24000) / nominal);
         check (std::abs (greenShift) < 0.05, "and only in RED mode");
@@ -533,8 +532,8 @@ void testColour()
 
     // The gain cell: working hard it distorts more.
     {
-        const Settings s = clean ({ { strip (0, beacon::pid::threshold), th (-30.0f) }, { strip (0, beacon::pid::attack), 50.0f },
-                                    { strip (0, beacon::pid::release), 2.0f } });
+        const Settings s = clean ({ { beacon::pid::threshold, th (-30.0f) }, { beacon::pid::attack, 50.0f },
+                                    { beacon::pid::release, 2.0f } });
         auto light = render (s, tone (1000.0, juce::Decibels::decibelsToGain (-25.0f)), 96000);
         auto heavy = render (s, tone (1000.0, juce::Decibels::decibelsToGain (-3.0f)), 96000);
         const auto a = thdOf (light, 0, 1000.0, 72000, 24000), b = thdOf (heavy, 0, 1000.0, 72000, 24000);
@@ -547,12 +546,12 @@ void testSidechain()
 {
     section ("Sidechain");
 
-    const Settings base = clean ({ { strip (0, beacon::pid::threshold), th (-30.0f) } });
+    const Settings base = clean ({ { beacon::pid::threshold, th (-30.0f) } });
 
     {
         auto filtered = base;
-        filtered[strip (0, beacon::pid::hpfIn)] = 1.0f;
-        filtered[strip (0, beacon::pid::hpf)]   = 500.0f;
+        filtered[beacon::pid::hpfIn] = 1.0f;
+        filtered[beacon::pid::hpf]   = 500.0f;
         const auto open = steadyReduction (base, -10.0f);
 
         auto bassOpen = render (base, tone (50.0, 0.3f), 96000);
@@ -563,7 +562,7 @@ void testSidechain()
         check (b < 0.6 * a, "the HPF eases bass out of the detector");
 
         auto switchedOut = filtered;
-        switchedOut[strip (0, beacon::pid::hpfIn)] = 0.0f;
+        switchedOut[beacon::pid::hpfIn] = 0.0f;
         auto c = render (switchedOut, tone (50.0, 0.3f), 96000);
         check (std::abs (-db (amplitudeAt (c, 0, 50.0, 48000, 48000) / 0.3) - a) < 0.1, "and its switch takes it out");
         check (open > 1.0, "and 1 kHz still compresses");
@@ -571,8 +570,8 @@ void testSidechain()
 
     {
         auto shelf = base;
-        shelf[strip (0, beacon::pid::bellIn)] = 1.0f;
-        shelf[strip (0, beacon::pid::bell)]   = 10000.0f;
+        shelf[beacon::pid::bellIn] = 1.0f;
+        shelf[beacon::pid::bell]   = 10000.0f;
 
         auto plain = render (base,  tone (10000.0, 0.1f), 96000);
         auto boost = render (shelf, tone (10000.0, 0.1f), 96000);
@@ -583,9 +582,9 @@ void testSidechain()
 
     {
         auto listen = base;
-        listen[strip (0, beacon::pid::listen)] = 1.0f;
-        listen[strip (0, beacon::pid::hpfIn)]  = 1.0f;
-        listen[strip (0, beacon::pid::hpf)]    = 500.0f;
+        listen[beacon::pid::listen] = 1.0f;
+        listen[beacon::pid::hpfIn]  = 1.0f;
+        listen[beacon::pid::hpf]    = 500.0f;
 
         auto out = render (listen, tone (50.0, 0.3f), 48000);
         const auto g = db (amplitudeAt (out, 0, 50.0, 24000, 24000) / 0.3);
@@ -599,19 +598,12 @@ void testSwitching()
     section ("Switches null where they should");
 
     const Settings busy {
-        { strip (0, beacon::pid::input), 6.0f }, { strip (0, beacon::pid::threshold), th (-30.0f) },
-        { strip (0, beacon::pid::thd), 4.0f }, { strip (0, beacon::pid::tube), 9.0f },
-        { strip (0, beacon::pid::output), -3.0f }
+        { beacon::pid::input, 6.0f }, { beacon::pid::threshold, th (-30.0f) },
+        { beacon::pid::thd, 4.0f }, { beacon::pid::tube, 9.0f },
+        { beacon::pid::output, -3.0f }
     };
 
     const auto source = tone (220.0, 0.4f);
-
-    {
-        auto settings = busy;
-        settings[strip (0, beacon::pid::active)] = 0.0f;
-        const auto r = residualAgainst (render (settings, source, 24000), source);
-        check (r < -140.0, "strip IN off nulls against the input, got " + juce::String (r, 1) + " dB");
-    }
 
     {
         auto settings = busy;
@@ -623,7 +615,7 @@ void testSwitching()
     {
         // Mix fully dry leaves the trims.
         auto settings = busy;
-        settings[strip (0, beacon::pid::mix)] = 0.0f;
+        settings[beacon::pid::mix] = 0.0f;
         auto out = render (settings, source, 24000);
         const auto g = db (amplitudeAt (out, 0, 220.0, 12000, 12000) / 0.4);
         check (std::abs (g - 3.0) < 0.05, "mix at 0 % is the trimmed input, got " + juce::String (g, 3) + " dB");
@@ -639,11 +631,11 @@ void testSwitching()
             return std::pair { 0.5f * (float) std::sin (1000.0 * t), 0.01f * (float) std::sin (1500.0 * t) };
         };
 
-        auto settings = clean ({ { strip (0, beacon::pid::threshold), th (-30.0f) }, { strip (1, beacon::pid::threshold), th (-30.0f) } });
+        auto settings = clean ({ { beacon::pid::threshold, th (-30.0f) } });
 
-        settings[beacon::pid::mode] = (float) beacon::StripMode::stereo;
+        settings[beacon::pid::mode] = (float) beacon::ChannelMode::stereo;
         auto linked = render (settings, source2, 96000);
-        settings[beacon::pid::mode] = (float) beacon::StripMode::dualMono;
+        settings[beacon::pid::mode] = (float) beacon::ChannelMode::dualMono;
         auto dual = render (settings, source2, 96000);
 
         const auto leftGr  = -db (amplitudeAt (linked, 0, 1000.0, 48000, 48000) / 0.5);
@@ -657,69 +649,51 @@ void testSwitching()
     }
 
     {
-        // Stereo: strip B is ignored and both channels follow A.
-        auto settings = busy;
-        settings[beacon::pid::mode] = (float) beacon::StripMode::stereo;
-        settings[strip (1, beacon::pid::threshold)] = -40.0f;
-        settings[strip (1, beacon::pid::output)] = 20.0f;
+        // Mid/side: a mono source is all mid, so mid/side compresses it
+        // exactly as dual mono compresses each side of it.
+        const auto compressing = clean ({ { beacon::pid::threshold, th (-30.0f) } });
 
-        auto out = render (settings, source, 24000);
-        double difference = 0.0;
+        auto ms = compressing;
+        ms[beacon::pid::mode] = (float) beacon::ChannelMode::midSide;
+        auto dm = compressing;
+        dm[beacon::pid::mode] = (float) beacon::ChannelMode::dualMono;
 
-        for (int i = 0; i < out.getNumSamples(); ++i)
-            difference = juce::jmax (difference, (double) std::abs (out.getSample (0, i) - out.getSample (1, i)));
-
-        check (difference < 1.0e-6, "stereo mode: both channels follow strip A");
-    }
-
-    {
-        // Mid/side: a mono source has no side, so the S strip can do anything
-        // and the output must not change.
-        Settings plain = clean ({ { beacon::pid::mode, (float) beacon::StripMode::midSide },
-                                  { strip (0, beacon::pid::threshold), 0.0f } });
-        auto withSide = plain;
-        withSide[strip (1, beacon::pid::threshold)] = -40.0f;
-        withSide[strip (1, beacon::pid::output)]    = 12.0f;
-
-        auto a = render (plain, source, 24000);
-        auto b = render (withSide, source, 24000);
-
-        double difference = 0.0;
-        for (int ch = 0; ch < 2; ++ch)
-            for (int i = 0; i < a.getNumSamples(); ++i)
-                difference = juce::jmax (difference, (double) std::abs (a.getSample (ch, i) - b.getSample (ch, i)));
-
-        check (difference < 1.0e-5, "mid/side: the S strip does nothing to a mono source");
-
-        // Against dual mono through the same chain, so the input iron's own
-        // phase at low frequencies does not count against the matrix.
-        auto dualSettings = plain;
-        dualSettings[beacon::pid::mode] = (float) beacon::StripMode::dualMono;
-        dualSettings[strip (1, beacon::pid::threshold)] = 0.0f;
-        auto dual = render (dualSettings, source, 24000);
+        auto a = render (ms, source, 48000);
+        auto b = render (dm, source, 48000);
 
         double error = 0.0, signal = 0.0;
         for (int ch = 0; ch < 2; ++ch)
             for (int i = 4800; i < a.getNumSamples(); ++i)
             {
-                error  += std::pow (a.getSample (ch, i) - dual.getSample (ch, i), 2.0);
-                signal += std::pow (dual.getSample (ch, i), 2.0);
+                error  += std::pow (a.getSample (ch, i) - b.getSample (ch, i), 2.0);
+                signal += std::pow (b.getSample (ch, i), 2.0);
             }
 
         const auto r = 10.0 * std::log10 (error / signal + 1.0e-30);
-        check (r < -60.0, "mid/side matrix reconstructs, got " + juce::String (r, 1) + " dB");
+        check (r < -60.0, "mid/side matrix reconstructs around the compressor, got " + juce::String (r, 1) + " dB");
 
-        // The output transformers are wired left and right: in mid/side both
-        // follow strip A, whatever strip B says.
-        auto iron = plain;
-        iron[strip (0, beacon::pid::iron)]    = 1.0f;
-        iron[strip (0, beacon::pid::ironPad)] = 6.0f;
-        iron[strip (1, beacon::pid::iron)]    = 0.0f;
+        // And a side-only source is all side: the mid detector stays idle.
+        auto antiphase = [] (int n)
+        {
+            const auto v = 0.01f * (float) std::sin (juce::MathConstants<double>::twoPi * 330.0 * n / 48000.0);
+            return std::pair { v, -v };
+        };
+
+        auto quiet = render (ms, antiphase, 48000);
+        const auto g = db (amplitudeAt (quiet, 0, 330.0, 24000, 24000) / 0.01);
+        check (std::abs (g) < 0.1, "mid/side: a quiet side below the threshold is left alone, got " + juce::String (g, 3) + " dB");
+
+        // The output transformers are wired left and right, outside the
+        // mid/side matrix.
+        auto iron = ms;
+        iron[beacon::pid::threshold] = 0.0f;
+        iron[beacon::pid::iron]      = 1.0f;
+        iron[beacon::pid::ironPad]   = 6.0f;
         auto c = render (iron, source, 24000);
         const auto left  = db (amplitudeAt (c, 0, 220.0, 12000, 12000) / 0.4);
         const auto right = db (amplitudeAt (c, 1, 220.0, 12000, 12000) / 0.4);
         check (std::abs (left + 6.0) < 0.2 && std::abs (right + 6.0) < 0.2,
-               "mid/side: IRON and its pad follow strip A on both sides");
+               "mid/side: IRON and its pad act on left and right");
     }
 }
 
@@ -730,7 +704,7 @@ void testLatency()
     for (double rate : { 44100.0, 48000.0, 96000.0 })
     {
         int latency = 0;
-        auto out = render (clean ({ { strip (0, beacon::pid::threshold), 0.0f } }),
+        auto out = render (clean ({ { beacon::pid::threshold, 0.0f } }),
                            [] (int n) { return n == 1000 ? std::pair { 0.5f, 0.5f } : std::pair { 0.0f, 0.0f }; },
                            4000, rate, 256, &latency);
 
@@ -754,20 +728,20 @@ void testRobustness()
 
         for (int s = 0; s < 2; ++s)
         {
-            extreme[strip (s, beacon::pid::input)]     = 15.0f;
-            extreme[strip (s, beacon::pid::threshold)] = beacon::range::thresholdMin;
-            extreme[strip (s, beacon::pid::attack)]    = 0.5f;
-            extreme[strip (s, beacon::pid::release)]   = 0.1f;
-            extreme[strip (s, beacon::pid::limit)]     = 1.0f;
-            extreme[strip (s, beacon::pid::feedFwd)]   = forward ? 1.0f : 0.0f;
-            extreme[strip (s, beacon::pid::hpfIn)]     = 1.0f;
-            extreme[strip (s, beacon::pid::hpf)]       = 500.0f;
-            extreme[strip (s, beacon::pid::bellIn)]    = 1.0f;
-            extreme[strip (s, beacon::pid::bell)]      = 20000.0f;
-            extreme[strip (s, beacon::pid::thd)]       = 8.0f;
-            extreme[strip (s, beacon::pid::tube)]      = 15.0f;
-            extreme[strip (s, beacon::pid::iron)]      = 1.0f;
-            extreme[strip (s, beacon::pid::output)]    = 15.0f;
+            extreme[beacon::pid::input]     = 15.0f;
+            extreme[beacon::pid::threshold] = beacon::range::thresholdMin;
+            extreme[beacon::pid::attack]    = 0.5f;
+            extreme[beacon::pid::release]   = 0.1f;
+            extreme[beacon::pid::limit]     = 1.0f;
+            extreme[beacon::pid::feedFwd]   = forward ? 1.0f : 0.0f;
+            extreme[beacon::pid::hpfIn]     = 1.0f;
+            extreme[beacon::pid::hpf]       = 500.0f;
+            extreme[beacon::pid::bellIn]    = 1.0f;
+            extreme[beacon::pid::bell]      = 20000.0f;
+            extreme[beacon::pid::thd]       = 8.0f;
+            extreme[beacon::pid::tube]      = 15.0f;
+            extreme[beacon::pid::iron]      = 1.0f;
+            extreme[beacon::pid::output]    = 15.0f;
         }
 
         juce::Random random (1234);
@@ -796,8 +770,8 @@ void testState()
     section ("State survives a save");
 
     beacon::BeaconProcessor a;
-    a.apvts.getParameter (strip (1, beacon::pid::release))->setValueNotifyingHost (0.73f);
-    a.apvts.getParameter (strip (0, beacon::pid::ironPad))->setValueNotifyingHost (0.6f);
+    a.apvts.getParameter (beacon::pid::release)->setValueNotifyingHost (0.73f);
+    a.apvts.getParameter (beacon::pid::ironPad)->setValueNotifyingHost (0.6f);
     a.apvts.getParameter (beacon::pid::mode)->setValueNotifyingHost (1.0f);
 
     juce::MemoryBlock state;
@@ -806,8 +780,8 @@ void testState()
     beacon::BeaconProcessor b;
     b.setStateInformation (state.getData(), (int) state.getSize());
 
-    check (std::abs (b.apvts.getParameter (strip (1, beacon::pid::release))->getValue() - 0.73f) < 1.0e-4f, "release restored");
-    check (std::abs (b.apvts.getParameter (strip (0, beacon::pid::ironPad))->getValue() - 0.6f) < 1.0e-4f, "iron pad restored");
+    check (std::abs (b.apvts.getParameter (beacon::pid::release)->getValue() - 0.73f) < 1.0e-4f, "release restored");
+    check (std::abs (b.apvts.getParameter (beacon::pid::ironPad)->getValue() - 0.6f) < 1.0e-4f, "iron pad restored");
     check (b.apvts.getParameter (beacon::pid::mode)->getValue() > 0.99f, "mode restored");
 }
 

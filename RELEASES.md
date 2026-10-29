@@ -12,8 +12,9 @@ have their own folder under `plugins/` and their own workflow.
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.3.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.3.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
 
-All six build against JUCE 8.0.6 as VST3, AU and Standalone, and share the
-manufacturer code `Idwv`. The plugin code and bundle id never change once a
+All six build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
+and Standalone for macOS and a 64 bit VST3 and Standalone for Windows, and
+share the manufacturer code `Idwv`. The plugin code and bundle id never change once a
 plugin is public: hosts use them to find the plugin in saved sessions.
 
 ## Version numbers
@@ -53,14 +54,31 @@ Where each plugin starts reflects how settled it is:
      git tag beacon-v0.5.1 && git push origin beacon-v0.5.1
      ```
 
-The workflow builds, runs the offline checks, refuses a tag that disagrees
-with `CMakeLists.txt`, and publishes `Beacon-0.5.1-macOS.zip` on a release
-named "Beacon 0.5.1 beta".
+The workflow builds on macOS and Windows, runs the offline checks on both,
+refuses a tag that disagrees with `CMakeLists.txt`, and publishes
+`Beacon-0.5.1-macOS.zip` and `Beacon-0.5.1-Windows.zip` on a release named
+"Beacon 0.5.1 beta". The **Suite** workflow then rebuilds the bundles from the
+newest release of every plugin.
 
 Separately, every push to the default branch replaces the rolling
 `<plugin>-latest` pre-release with a fresh build. Pushes to other branches
 still build and test, but do not publish, so the latest link always carries
 the default branch's code.
+
+## Download links
+
+The repository is public, so release assets can be linked directly:
+
+- One plugin: `https://github.com/d2245g8wsj-star/Claude/releases/download/<plugin>-v<version>/<Plugin>-<version>-<macOS|Windows>.zip`
+- The whole suite, always the newest releases:
+  `https://github.com/d2245g8wsj-star/Claude/releases/download/suite-latest/IndieWave-Suite-<macOS|Windows>.zip`
+
+The suite links never change. A plugin link changes only in its version.
+
+## Removing releases
+
+Run the **Remove releases** workflow by hand with the tags to delete,
+separated by spaces. It deletes each release together with its tag.
 
 ## Changes
 

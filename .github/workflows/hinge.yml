@@ -131,3 +131,73 @@ jobs:
             gh release create hinge-latest --prerelease --target "$GITHUB_SHA" \
               --title "Hinge (latest build)" --notes "$notes" "$RUNNER_TEMP/Hinge-macOS.zip"
           fi
+
+  # VST3 and standalone for 64 bit Windows. Runs after the macOS job so the
+  # release it attaches to already exists.
+  windows:
+    name: Windows build
+    runs-on: windows-2022
+    needs: macos
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        working-directory: plugins/hinge
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DHINGE_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/hinge
+        run: cmake --build build --config Release --parallel
+
+      - name: Offline checks
+        working-directory: plugins/hinge
+        run: ./build/hinge_tests_artefacts/Release/hinge_tests.exe
+
+      - name: Package
+        working-directory: plugins/hinge
+        run: |
+          set -euo pipefail
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          staging="$tmp/Hinge"
+          mkdir -p "$staging"
+          cp -R build/Hinge_artefacts/Release/VST3/Hinge.vst3 "$staging/"
+          cp build/Hinge_artefacts/Release/Standalone/Hinge.exe "$staging/"
+          cp README.md "$staging/"
+          cat > "$staging/READ ME FIRST.txt" <<'NOTE'
+          Hinge for Windows 10 and 11, 64 bit.
+
+          Install by copying:
+
+              Hinge.vst3  ->  C:\Program Files\Common Files\VST3\
+              Hinge.exe   ->  anywhere you like (the standalone app, optional)
+
+          Then let your DAW rescan its plugins.
+
+          The files are not code signed. If Windows SmartScreen stops Hinge.exe,
+          choose "More info" and then "Run anyway".
+          NOTE
+          cd "$tmp"
+          7z a -tzip -bd Hinge-Windows.zip Hinge > /dev/null
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/') || github.ref_name == github.event.repository.default_branch || inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          set -euo pipefail
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          built="$(sed -nE 's/^project\(Hinge VERSION ([0-9.]+).*/\1/p' plugins/hinge/CMakeLists.txt)"
+          if [[ "$GITHUB_REF" == refs/tags/hinge-v* || "$RELEASE" == "true" ]]; then
+            asset="$tmp/Hinge-$built-Windows.zip"
+            mv "$tmp/Hinge-Windows.zip" "$asset"
+            gh release upload "hinge-v$built" "$asset" --clobber
+          else
+            gh release upload hinge-latest "$tmp/Hinge-Windows.zip" --clobber
+          fi

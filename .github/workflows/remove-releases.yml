@@ -1,0 +1,31 @@
+name: Remove releases
+
+# Deletes releases and their tags, for builds that should no longer be
+# offered (plugins renamed during development, superseded betas).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Tags of the releases to delete, separated by spaces"
+        required: true
+        default: "ember-latest kiln-latest zenith-latest"
+
+jobs:
+  remove:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Delete
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAGS: ${{ inputs.tags }}
+        run: |
+          set -euo pipefail
+          for tag in $TAGS; do
+            gh release delete "$tag" --yes --cleanup-tag
+            echo "Removed $tag"
+          done

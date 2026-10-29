@@ -24,6 +24,11 @@ on:
       - "CMakeLists.txt"
       - ".github/workflows/macos.yml"
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish this commit as a versioned release, tagged with the version in CMakeLists.txt"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -173,22 +178,24 @@ jobs:
             "$RUNNER_TEMP/Crest-macOS.zip"
 
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/crest-v')
+        # A crest-v* tag, or a run by hand with "release" ticked, which tags
+        # this commit itself.
+        if: startsWith(github.ref, 'refs/tags/crest-v') || inputs.release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#crest-v}"
-          built="$(sed -nE 's/^project\(Crest VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
-          if [ "$version" != "$built" ]; then
-            echo "::error::Tag says $version but CMakeLists.txt says $built"
+          version="$(sed -nE 's/^project\(Crest VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+          tag="crest-v$version"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$tag" ]]; then
+            echo "::error::Tag is $GITHUB_REF_NAME but CMakeLists.txt says $version"
             exit 1
           fi
           # Below 1.0 every release is a public beta.
           if [[ "$version" == 0.* ]]; then label="$version beta"; pre=--prerelease; else label="$version"; pre=; fi
           mv "$RUNNER_TEMP/Crest-macOS.zip" "$RUNNER_TEMP/Crest-$version-macOS.zip"
-          gh release create "$GITHUB_REF_NAME" $pre \
+          gh release create "$tag" $pre --target "$GITHUB_SHA" \
             --title "Crest $label" \
             --generate-notes \
             "$RUNNER_TEMP/Crest-$version-macOS.zip" \
-            || gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP/Crest-$version-macOS.zip" --clobber
+            || gh release upload "$tag" "$RUNNER_TEMP/Crest-$version-macOS.zip" --clobber

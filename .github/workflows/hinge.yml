@@ -13,6 +13,11 @@ on:
       - "plugins/hinge/**"
       - ".github/workflows/hinge.yml"
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish this commit as a versioned release, tagged with the version in CMakeLists.txt"
+        type: boolean
+        default: false
 
 jobs:
   checks:
@@ -96,26 +101,31 @@ jobs:
       # a versioned release; every other push replaces the rolling
       # "hinge-latest" pre-release, whose tag the workflow creates itself.
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/') || github.ref_name == github.event.repository.default_branch
+        if: startsWith(github.ref, 'refs/tags/') || github.ref_name == github.event.repository.default_branch || inputs.release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
         run: |
           set -euo pipefail
           notes="Universal (arm64 + x86_64) VST3, AU and standalone, signed ad-hoc, built from ${GITHUB_SHA::7}. Before installing: xattr -dr com.apple.quarantine Hinge.vst3 Hinge.component Hinge.app"
 
-          if [[ "$GITHUB_REF" == refs/tags/hinge-v* ]]; then
-            version="${GITHUB_REF_NAME#hinge-v}"
-            built="$(sed -nE 's/^project\(Hinge VERSION ([0-9.]+).*/\1/p' plugins/hinge/CMakeLists.txt)"
-            if [ "$version" != "$built" ]; then
-              echo "::error::Tag says $version but plugins/hinge/CMakeLists.txt says $built"
+          built="$(sed -nE 's/^project\(Hinge VERSION ([0-9.]+).*/\1/p' plugins/hinge/CMakeLists.txt)"
+
+          # A release comes from a hinge-v* tag, or from running the workflow by
+          # hand with "release" ticked, which tags this commit itself.
+          if [[ "$GITHUB_REF" == refs/tags/hinge-v* || "$RELEASE" == "true" ]]; then
+            tag="hinge-v$built"
+            if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$tag" ]]; then
+              echo "::error::Tag is $GITHUB_REF_NAME but plugins/hinge/CMakeLists.txt says $built"
               exit 1
             fi
+            version="$built"
             # Below 1.0 every release is a public beta.
             if [[ "$version" == 0.* ]]; then label="$version beta"; pre=--prerelease; else label="$version"; pre=; fi
             asset="$RUNNER_TEMP/Hinge-$version-macOS.zip"
             mv "$RUNNER_TEMP/Hinge-macOS.zip" "$asset"
-            gh release create "$GITHUB_REF_NAME" $pre --title "Hinge $label" --notes "$notes" "$asset" \
-              || gh release upload "$GITHUB_REF_NAME" "$asset" --clobber
+            gh release create "$tag" $pre --target "$GITHUB_SHA" --title "Hinge $label" --notes "$notes" "$asset" \
+              || gh release upload "$tag" "$asset" --clobber
           else
             gh release delete hinge-latest --yes --cleanup-tag || true
             gh release create hinge-latest --prerelease --target "$GITHUB_SHA" \

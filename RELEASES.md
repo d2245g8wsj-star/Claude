@@ -43,15 +43,19 @@ Where each plugin starts reflects how settled it is:
 1. Raise the version in the plugin's `CMakeLists.txt` and add a line to its
    section below.
 2. Merge to the default branch.
-3. Tag it, with the plugin's name in front:
+3. Release it, either way:
+   - On GitHub, open **Actions**, pick the plugin's workflow, choose **Run
+     workflow** on the default branch and tick **release**. The workflow
+     tags the commit itself.
+   - Or push a tag with the plugin's name in front:
 
-   ```bash
-   git tag beacon-v0.5.1 && git push origin beacon-v0.5.1
-   ```
+     ```bash
+     git tag beacon-v0.5.1 && git push origin beacon-v0.5.1
+     ```
 
-The workflow builds the tag, refuses it if the tag and `CMakeLists.txt`
-disagree, and publishes `Beacon-0.5.1-macOS.zip` on a release named
-"Beacon 0.5.1 beta".
+The workflow builds, runs the offline checks, refuses a tag that disagrees
+with `CMakeLists.txt`, and publishes `Beacon-0.5.1-macOS.zip` on a release
+named "Beacon 0.5.1 beta".
 
 Separately, every push to the default branch replaces the rolling
 `<plugin>-latest` pre-release with a fresh build. Pushes to other branches

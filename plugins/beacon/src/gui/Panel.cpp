@@ -1,6 +1,6 @@
 #include "Panel.h"
 
-namespace kiln::panel
+namespace beacon::panel
 {
 
 namespace
@@ -493,4 +493,4 @@ void VuMeter::paint (juce::Graphics& g)
     g.drawRoundedRectangle (face, 3.5f, 1.0f);
 }
 
-} // namespace kiln::panel
+} // namespace beacon::panel

@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace kiln
+namespace beacon
 {
 
 /** A Carnhill style audio transformer. The unit has four: one at each
@@ -179,4 +179,4 @@ private:
     float targetPad { 1.0f }, pad { 1.0f };
 };
 
-} // namespace kiln
+} // namespace beacon

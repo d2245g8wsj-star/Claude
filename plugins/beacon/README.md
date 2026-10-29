@@ -1,4 +1,4 @@
-# KILN — IndieWave Audio
+# BEACON — IndieWave Audio
 
 A two channel variable-mu tube compressor, modelled on a well known hardware
 unit with digital recall. No ratio knob: like the hardware, the ratio is a property of level,
@@ -7,7 +7,7 @@ vari-mu tube sit input transformers, a calibrated THD stage, a TUBE drive
 control, and a choice of output: RED (tube amplifier, transformer and IRON PAD)
 or GREEN (clean).
 
-![The Kiln editor](docs/ui.png)
+![The Beacon editor](docs/ui.png)
 
 Built with JUCE 8. Ships as **VST3** and **Standalone** on Windows, macOS and
 Linux, plus **AU** on macOS.
@@ -75,7 +75,7 @@ GR (dB) = K · (e + c · e²)
 ```
 
 which in the feedback loop gives the soft knee and rising ratio the manual
-describes. Measured (1 kHz, threshold −30 dBFS, from `kiln_tests`):
+describes. Measured (1 kHz, threshold −30 dBFS, from `beacon_tests`):
 
 | Input over threshold | 3 dB | 9 dB | 15 dB | 24 dB | 30 dB |
 | --- | --- | --- | --- | --- | --- |
@@ -113,7 +113,7 @@ Latency: 61 samples at every rate, reported to the host.
 
 ## What it is, and what it is not
 
-Kiln is modelled on a well known hardware vari-mu compressor as its user
+Beacon is modelled on a well known hardware vari-mu compressor as its user
 manual describes it: every control, range, switch and mode above, the order of
 the blocks, where the dry path and the IRON PAD sit, the transformers working
 in left/right in M/S mode, the linking features, and the specified THD+N,
@@ -144,7 +144,7 @@ level) and `src/dsp/OutputStage.h` (transformers, tube line amp, pad).
 Requires CMake 3.22+ and a C++20 compiler.
 
 ```bash
-cd plugins/kiln
+cd plugins/beacon
 cmake -B build -DCMAKE_BUILD_TYPE=Release          # fetches JUCE 8.0.6
 cmake --build build --parallel
 ```
@@ -154,10 +154,10 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 ### Offline checks and snapshot
 
 ```bash
-cmake -B build -DKILN_BUILD_TESTS=ON -DKILN_BUILD_TOOLS=ON
-cmake --build build --target kiln_tests kiln_shot --parallel
-./build/kiln_tests_artefacts/Release/kiln_tests
-./build/kiln_shot_artefacts/Release/kiln_shot docs/ui.png 1840
+cmake -B build -DBEACON_BUILD_TESTS=ON -DBEACON_BUILD_TOOLS=ON
+cmake --build build --target beacon_tests beacon_shot --parallel
+./build/beacon_tests_artefacts/Release/beacon_tests
+./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 1840
 ```
 
 The checks assert: the THD table inverts; the idle response is flat and the

@@ -3,7 +3,7 @@
 #include <array>
 #include <cmath>
 
-namespace kiln
+namespace beacon
 {
 
 /** Level reference used throughout: 0 dBu sits at -18 dBFS, so the hardware's
@@ -148,4 +148,4 @@ namespace tube
     };
 }
 
-} // namespace kiln
+} // namespace beacon

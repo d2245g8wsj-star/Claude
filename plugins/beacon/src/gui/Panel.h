@@ -2,7 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-namespace kiln::panel
+namespace beacon::panel
 {
 
 // The plate: dark anodised graphite with warm engraving, as on the rest of the
@@ -142,4 +142,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VuMeter)
 };
 
-} // namespace kiln::panel
+} // namespace beacon::panel

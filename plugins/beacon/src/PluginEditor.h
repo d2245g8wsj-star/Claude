@@ -3,19 +3,19 @@
 #include "PluginProcessor.h"
 #include "gui/Panel.h"
 
-namespace kiln
+namespace beacon
 {
 
 /** Every coordinate in the editor is in these units; the face is scaled as one. */
 inline constexpr int designWidth  = 1840;
 inline constexpr int designHeight = 340;
 
-class KilnEditor final : public juce::AudioProcessorEditor,
+class BeaconEditor final : public juce::AudioProcessorEditor,
                          private juce::Timer
 {
 public:
-    explicit KilnEditor (KilnProcessor&);
-    ~KilnEditor() override;
+    explicit BeaconEditor (BeaconProcessor&);
+    ~BeaconEditor() override;
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -54,7 +54,7 @@ private:
         stage, IN and the gain reduction meter. */
     struct Strip
     {
-        Strip (KilnProcessor&, int index);
+        Strip (BeaconProcessor&, int index);
 
         std::vector<juce::Component*> components();
 
@@ -72,7 +72,7 @@ private:
     class Face final : public juce::Component
     {
     public:
-        explicit Face (KilnProcessor&);
+        explicit Face (BeaconProcessor&);
 
         void paint (juce::Graphics&) override;
         void resized() override;
@@ -86,7 +86,7 @@ private:
         /** THD stage drive to heater lamp brightness. */
         static const float heatScale;
 
-        KilnProcessor& processor;
+        BeaconProcessor& processor;
         std::array<std::unique_ptr<Strip>, numChannelStrips> strips;
         panel::ModeSelector mode;
 
@@ -95,11 +95,11 @@ private:
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
     };
 
-    KilnProcessor&      processor;
+    BeaconProcessor&      processor;
     juce::TooltipWindow tooltips { this, 650 };
     Face                face;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (KilnEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BeaconEditor)
 };
 
-} // namespace kiln
+} // namespace beacon

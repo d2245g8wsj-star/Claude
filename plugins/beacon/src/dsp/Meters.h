@@ -3,7 +3,7 @@
 #include <array>
 #include <atomic>
 
-namespace kiln
+namespace beacon
 {
 
 /** What the audio thread tells the editor, per channel. Each field is written
@@ -34,4 +34,4 @@ struct MeterSource
     }
 };
 
-} // namespace kiln
+} // namespace beacon

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Kiln VERSION 1.0.0 LANGUAGES C CXX)
+project(Beacon VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,7 +16,7 @@ endif()
 # or let CMake fetch it.
 # ---------------------------------------------------------------------------
 if(DEFINED JUCE_PATH)
-    message(STATUS "Kiln: using local JUCE at ${JUCE_PATH}")
+    message(STATUS "Beacon: using local JUCE at ${JUCE_PATH}")
     add_subdirectory(${JUCE_PATH} ${CMAKE_BINARY_DIR}/JUCE EXCLUDE_FROM_ALL)
 else()
     include(FetchContent)
@@ -27,19 +27,19 @@ else()
     FetchContent_MakeAvailable(JUCE)
 endif()
 
-set(KILN_FORMATS VST3 Standalone)
+set(BEACON_FORMATS VST3 Standalone)
 if(APPLE)
-    list(APPEND KILN_FORMATS AU)
+    list(APPEND BEACON_FORMATS AU)
 endif()
 
-juce_add_plugin(Kiln
+juce_add_plugin(Beacon
     COMPANY_NAME                "IndieWave Audio"
     COMPANY_WEBSITE             "https://indiewave.audio"
-    BUNDLE_ID                   "audio.indiewave.kiln"
+    BUNDLE_ID                   "audio.indiewave.beacon"
     PLUGIN_MANUFACTURER_CODE    Idwv
-    PLUGIN_CODE                 Kiln
-    FORMATS                     ${KILN_FORMATS}
-    PRODUCT_NAME                "Kiln"
+    PLUGIN_CODE                 Bcon
+    FORMATS                     ${BEACON_FORMATS}
+    PRODUCT_NAME                "Beacon"
     DESCRIPTION                 "Vari-mu tube compressor"
     VST3_CATEGORIES             Fx Dynamics
     AU_MAIN_TYPE                kAudioUnitType_Effect
@@ -50,14 +50,14 @@ juce_add_plugin(Kiln
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD     FALSE)
 
-target_sources(Kiln PRIVATE
+target_sources(Beacon PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
     src/gui/Panel.cpp)
 
-target_include_directories(Kiln PRIVATE src)
+target_include_directories(Beacon PRIVATE src)
 
-target_compile_definitions(Kiln PUBLIC
+target_compile_definitions(Beacon PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
@@ -65,7 +65,7 @@ target_compile_definitions(Kiln PUBLIC
     JUCE_REPORT_APP_USAGE=0
     JUCE_STRICT_REFCOUNTEDPOINTER=1)
 
-target_link_libraries(Kiln PRIVATE
+target_link_libraries(Beacon PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp
     PUBLIC
@@ -74,36 +74,36 @@ target_link_libraries(Kiln PRIVATE
     juce::juce_recommended_warning_flags)
 
 # ---------------------------------------------------------------------------
-# Offline checks:  cmake -B build -DKILN_BUILD_TESTS=ON
+# Offline checks:  cmake -B build -DBEACON_BUILD_TESTS=ON
 # ---------------------------------------------------------------------------
-option(KILN_BUILD_TESTS "Build the Kiln offline checks" OFF)
+option(BEACON_BUILD_TESTS "Build the Beacon offline checks" OFF)
 
-if(KILN_BUILD_TESTS)
-    juce_add_console_app(kiln_tests PRODUCT_NAME "kiln_tests")
+if(BEACON_BUILD_TESTS)
+    juce_add_console_app(beacon_tests PRODUCT_NAME "beacon_tests")
 
-    target_sources(kiln_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(kiln_tests PRIVATE src)
-    target_link_libraries(kiln_tests PRIVATE
-        Kiln
+    target_sources(beacon_tests PRIVATE tests/Tests.cpp)
+    target_include_directories(beacon_tests PRIVATE src)
+    target_link_libraries(beacon_tests PRIVATE
+        Beacon
         juce::juce_audio_utils
         juce::juce_dsp)
 
     enable_testing()
-    add_test(NAME kiln_offline_checks COMMAND kiln_tests)
+    add_test(NAME beacon_offline_checks COMMAND beacon_tests)
 endif()
 
 # ---------------------------------------------------------------------------
-# Offscreen editor snapshot:  cmake -B build -DKILN_BUILD_TOOLS=ON
+# Offscreen editor snapshot:  cmake -B build -DBEACON_BUILD_TOOLS=ON
 # ---------------------------------------------------------------------------
-option(KILN_BUILD_TOOLS "Build the editor snapshot tool" OFF)
+option(BEACON_BUILD_TOOLS "Build the editor snapshot tool" OFF)
 
-if(KILN_BUILD_TOOLS)
-    juce_add_console_app(kiln_shot PRODUCT_NAME "kiln_shot")
+if(BEACON_BUILD_TOOLS)
+    juce_add_console_app(beacon_shot PRODUCT_NAME "beacon_shot")
 
-    target_sources(kiln_shot PRIVATE tools/Snapshot.cpp)
-    target_include_directories(kiln_shot PRIVATE src)
-    target_link_libraries(kiln_shot PRIVATE
-        Kiln
+    target_sources(beacon_shot PRIVATE tools/Snapshot.cpp)
+    target_include_directories(beacon_shot PRIVATE src)
+    target_link_libraries(beacon_shot PRIVATE
+        Beacon
         juce::juce_audio_utils
         juce::juce_dsp)
 endif()

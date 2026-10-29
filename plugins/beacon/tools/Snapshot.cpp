@@ -2,7 +2,7 @@
     Renders the editor to a PNG without opening a window, so the layout can be
     looked at from a terminal or in CI.
 
-    Usage:  kiln_shot <output.png> [width]
+    Usage:  beacon_shot <output.png> [width]
 */
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -19,11 +19,11 @@ int main (int argc, char* argv[])
 
     const juce::File output (argc > 1 ? juce::String (argv[1])
                                       : juce::File::getCurrentWorkingDirectory()
-                                            .getChildFile ("kiln.png").getFullPathName());
+                                            .getChildFile ("beacon.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : kiln::designWidth;
+    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : beacon::designWidth;
 
-    kiln::KilnProcessor processor;
+    beacon::BeaconProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
 
     auto set = [&processor] (const juce::String& id, float value)
@@ -33,29 +33,29 @@ int main (int argc, char* argv[])
     };
 
     // Settings that show the controls doing something, rather than all at rest.
-    using kiln::pid::forStrip;
-    set (kiln::pid::mode, (float) kiln::StripMode::dualMono);
-    set (forStrip (0, kiln::pid::input),     3.0f);
-    set (forStrip (0, kiln::pid::threshold), -30.0f);
-    set (forStrip (0, kiln::pid::attack),    8.0f);
-    set (forStrip (0, kiln::pid::release),   0.6f);
-    set (forStrip (0, kiln::pid::hpfIn),     1.0f);
-    set (forStrip (0, kiln::pid::hpf),       90.0f);
-    set (forStrip (0, kiln::pid::thd),       2.5f);
-    set (forStrip (0, kiln::pid::tube),      6.0f);
-    set (forStrip (0, kiln::pid::mix),       80.0f);
-    set (forStrip (0, kiln::pid::output),    2.0f);
-    set (forStrip (1, kiln::pid::threshold), -24.0f);
-    set (forStrip (1, kiln::pid::attack),    30.0f);
-    set (forStrip (1, kiln::pid::release),   1.2f);
-    set (forStrip (1, kiln::pid::feedFwd),   1.0f);
-    set (forStrip (1, kiln::pid::limit),     1.0f);
-    set (forStrip (1, kiln::pid::bellIn),    1.0f);
-    set (forStrip (1, kiln::pid::iron),      1.0f);
-    set (forStrip (1, kiln::pid::output),    6.0f);
-    set (forStrip (1, kiln::pid::ironPad),   6.0f);
-    set (forStrip (1, kiln::pid::ironLink),  1.0f);
-    set (forStrip (1, kiln::pid::thd),       0.8f);
+    using beacon::pid::forStrip;
+    set (beacon::pid::mode, (float) beacon::StripMode::dualMono);
+    set (forStrip (0, beacon::pid::input),     3.0f);
+    set (forStrip (0, beacon::pid::threshold), -30.0f);
+    set (forStrip (0, beacon::pid::attack),    8.0f);
+    set (forStrip (0, beacon::pid::release),   0.6f);
+    set (forStrip (0, beacon::pid::hpfIn),     1.0f);
+    set (forStrip (0, beacon::pid::hpf),       90.0f);
+    set (forStrip (0, beacon::pid::thd),       2.5f);
+    set (forStrip (0, beacon::pid::tube),      6.0f);
+    set (forStrip (0, beacon::pid::mix),       80.0f);
+    set (forStrip (0, beacon::pid::output),    2.0f);
+    set (forStrip (1, beacon::pid::threshold), -24.0f);
+    set (forStrip (1, beacon::pid::attack),    30.0f);
+    set (forStrip (1, beacon::pid::release),   1.2f);
+    set (forStrip (1, beacon::pid::feedFwd),   1.0f);
+    set (forStrip (1, beacon::pid::limit),     1.0f);
+    set (forStrip (1, beacon::pid::bellIn),    1.0f);
+    set (forStrip (1, beacon::pid::iron),      1.0f);
+    set (forStrip (1, beacon::pid::output),    6.0f);
+    set (forStrip (1, beacon::pid::ironPad),   6.0f);
+    set (forStrip (1, beacon::pid::ironLink),  1.0f);
+    set (forStrip (1, beacon::pid::thd),       0.8f);
 
     processor.prepareToPlay (48000.0, 512);
 
@@ -67,13 +67,13 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * kiln::designHeight / kiln::designWidth));
+    editor->setSize (width, juce::roundToInt ((double) width * beacon::designHeight / beacon::designWidth));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.
     struct Settle final : private juce::Timer
     {
-        Settle (kiln::KilnProcessor& p, int ticksToWait) : processor (p), remaining (ticksToWait)
+        Settle (beacon::BeaconProcessor& p, int ticksToWait) : processor (p), remaining (ticksToWait)
         {
             startTimerHz (30);
         }
@@ -103,7 +103,7 @@ int main (int argc, char* argv[])
             }
         }
 
-        kiln::KilnProcessor& processor;
+        beacon::BeaconProcessor& processor;
         int remaining;
         long long n { 0 };
     };

@@ -1,0 +1,116 @@
+name: Beacon
+
+on:
+  push:
+    branches: ["**"]
+    # Path filters do not apply to tag pushes, so a beacon-v* tag always builds.
+    tags: ["beacon-v*"]
+    paths:
+      - "plugins/beacon/**"
+      - ".github/workflows/beacon.yml"
+  pull_request:
+    paths:
+      - "plugins/beacon/**"
+      - ".github/workflows/beacon.yml"
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: Linux build and offline checks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libx11-dev libxext-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libfreetype-dev libfontconfig1-dev libasound2-dev
+
+      - name: Configure
+        working-directory: plugins/beacon
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBEACON_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/beacon
+        run: cmake --build build --parallel
+
+      - name: Offline checks
+        working-directory: plugins/beacon
+        run: ./build/beacon_tests_artefacts/Release/beacon_tests
+
+  macos:
+    name: macOS universal build
+    runs-on: macos-14
+    needs: checks
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        working-directory: plugins/beacon
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
+            -DBEACON_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/beacon
+        run: cmake --build build --parallel 3
+
+      - name: Offline checks
+        working-directory: plugins/beacon
+        run: ./build/beacon_tests_artefacts/Release/beacon_tests
+
+      - name: Sign ad-hoc and package
+        working-directory: plugins/beacon
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/Beacon"
+          mkdir -p "$staging"
+
+          for bundle in VST3/Beacon.vst3 AU/Beacon.component Standalone/Beacon.app; do
+            codesign --force --deep --sign - --timestamp=none "build/Beacon_artefacts/Release/$bundle"
+            cp -R "build/Beacon_artefacts/Release/$bundle" "$staging/"
+          done
+
+          cp README.md "$staging/"
+          ditto -c -k --sequesterRsrc --keepParent "$staging" "$RUNNER_TEMP/Beacon-macOS.zip"
+
+      # Run artifacts count against the account's Actions storage quota; when
+      # that is full the build itself is still good, so it does not fail the run.
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: Beacon-macOS-universal
+          path: ${{ runner.temp }}/Beacon-macOS.zip
+          if-no-files-found: error
+
+      # Release assets do not count against that quota. A beacon-v* tag makes
+      # a versioned release; every other push replaces the rolling
+      # "beacon-latest" pre-release, whose tag the workflow creates itself.
+      - name: Attach to release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          notes="Universal (arm64 + x86_64) VST3, AU and standalone, signed ad-hoc, built from ${GITHUB_SHA::7}. Before installing: xattr -dr com.apple.quarantine Beacon.vst3 Beacon.component Beacon.app"
+
+          if [[ "$GITHUB_REF" == refs/tags/beacon-v* ]]; then
+            version="${GITHUB_REF_NAME#beacon-v}"
+            asset="$RUNNER_TEMP/Beacon-$version-macOS.zip"
+            mv "$RUNNER_TEMP/Beacon-macOS.zip" "$asset"
+            gh release create "$GITHUB_REF_NAME" --title "Beacon $version" --notes "$notes" "$asset" \
+              || gh release upload "$GITHUB_REF_NAME" "$asset" --clobber
+          else
+            gh release delete beacon-latest --yes --cleanup-tag || true
+            gh release create beacon-latest --prerelease --target "$GITHUB_SHA" \
+              --title "Beacon (latest build)" --notes "$notes" "$RUNNER_TEMP/Beacon-macOS.zip"
+          fi

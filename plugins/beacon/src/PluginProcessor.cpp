@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-namespace kiln
+namespace beacon
 {
 
 namespace
@@ -68,7 +68,7 @@ namespace
     }
 }
 
-juce::AudioProcessorValueTreeState::ParameterLayout KilnProcessor::createParameterLayout()
+juce::AudioProcessorValueTreeState::ParameterLayout BeaconProcessor::createParameterLayout()
 {
     using Layout = juce::AudioProcessorValueTreeState::ParameterLayout;
     using FloatP = juce::AudioParameterFloat;
@@ -142,11 +142,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout KilnProcessor::createParamet
     return layout;
 }
 
-KilnProcessor::KilnProcessor()
+BeaconProcessor::BeaconProcessor()
     : juce::AudioProcessor (BusesProperties()
                                 .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                                 .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "KILN", createParameterLayout())
+      apvts (*this, nullptr, "BEACON", createParameterLayout())
 {
     for (int strip = 0; strip < numChannelStrips; ++strip)
     {
@@ -183,7 +183,7 @@ KilnProcessor::KilnProcessor()
     (void) varimu::ForwardTable::forLimit();
 }
 
-bool KilnProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool BeaconProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     const auto& out = layouts.getMainOutputChannelSet();
 
@@ -195,7 +195,7 @@ bool KilnProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 
 // ---------------------------------------------------------------------------
 
-void KilnProcessor::ChannelPath::prepare (double innerRate, double hostRate)
+void BeaconProcessor::ChannelPath::prepare (double innerRate, double hostRate)
 {
     inputIron.prepare (innerRate);
     thdStage.prepare (innerRate);
@@ -214,7 +214,7 @@ void KilnProcessor::ChannelPath::prepare (double innerRate, double hostRate)
     reset();
 }
 
-void KilnProcessor::ChannelPath::reset()
+void BeaconProcessor::ChannelPath::reset()
 {
     inputIron.reset();
     thdStage.reset();
@@ -225,7 +225,7 @@ void KilnProcessor::ChannelPath::reset()
     lastCellOutput = 0.0f;
 }
 
-void KilnProcessor::ChannelPath::setTargets (const StripParameters& p, const StripParameters& outputStrip, bool engagedNow)
+void BeaconProcessor::ChannelPath::setTargets (const StripParameters& p, const StripParameters& outputStrip, bool engagedNow)
 {
     const auto thresholdControl = p.threshold->get();
     compressing = thresholdControl < -0.05f;
@@ -248,7 +248,7 @@ void KilnProcessor::ChannelPath::setTargets (const StripParameters& p, const Str
     tubeOn      = p.tubeIn->get();
 }
 
-void KilnProcessor::ChannelPath::snapToTargets()
+void BeaconProcessor::ChannelPath::snapToTargets()
 {
     for (auto* v : { &inputGain, &outputGain, &tubeGain, &threshold })
         v->setCurrentAndTargetValue (v->getTargetValue());
@@ -259,7 +259,7 @@ void KilnProcessor::ChannelPath::snapToTargets()
     outputStage.snapToTargets();
 }
 
-void KilnProcessor::prepareToPlay (double sampleRate, int maximumExpectedSamplesPerBlock)
+void BeaconProcessor::prepareToPlay (double sampleRate, int maximumExpectedSamplesPerBlock)
 {
     oversampler = std::make_unique<juce::dsp::Oversampling<float>> (
         2, oversamplingStages,
@@ -290,7 +290,7 @@ void KilnProcessor::prepareToPlay (double sampleRate, int maximumExpectedSamples
     pathsSnapped = false;
 }
 
-void KilnProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void BeaconProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
 
@@ -467,27 +467,27 @@ void KilnProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBu
 
 // ---------------------------------------------------------------------------
 
-void KilnProcessor::getStateInformation (juce::MemoryBlock& destData)
+void BeaconProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     if (auto xml = apvts.copyState().createXml())
         copyXmlToBinary (*xml, destData);
 }
 
-void KilnProcessor::setStateInformation (const void* data, int sizeInBytes)
+void BeaconProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (auto xml = getXmlFromBinary (data, sizeInBytes))
         if (xml->hasTagName (apvts.state.getType()))
             apvts.replaceState (juce::ValueTree::fromXml (*xml));
 }
 
-juce::AudioProcessorEditor* KilnProcessor::createEditor()
+juce::AudioProcessorEditor* BeaconProcessor::createEditor()
 {
-    return new KilnEditor (*this);
+    return new BeaconEditor (*this);
 }
 
-} // namespace kiln
+} // namespace beacon
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new kiln::KilnProcessor();
+    return new beacon::BeaconProcessor();
 }

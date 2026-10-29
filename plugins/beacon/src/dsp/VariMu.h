@@ -4,7 +4,7 @@
 #include <array>
 #include <cmath>
 
-namespace kiln
+namespace beacon
 {
 
 /** The variable-mu gain law.
@@ -297,4 +297,4 @@ private:
     float h1 { 0.0f }, b1 { 0.0f }, b2 { 0.0f };
 };
 
-} // namespace kiln
+} // namespace beacon

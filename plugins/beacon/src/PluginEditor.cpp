@@ -1,6 +1,6 @@
 #include "PluginEditor.h"
 
-namespace kiln
+namespace beacon
 {
 
 namespace
@@ -50,7 +50,7 @@ namespace
 
 // ---------------------------------------------------------------------------
 
-KilnEditor::Follow::Follow (panel::Knob& knob, juce::RangedAudioParameter* enableParameter,
+BeaconEditor::Follow::Follow (panel::Knob& knob, juce::RangedAudioParameter* enableParameter,
                             std::vector<std::pair<juce::RangedAudioParameter*, float>> targets,
                             std::function<bool()> condition)
     : source (knob),
@@ -63,7 +63,7 @@ KilnEditor::Follow::Follow (panel::Knob& knob, juce::RangedAudioParameter* enabl
     source.onDragEnd     = [this] { end(); };
 }
 
-void KilnEditor::Follow::begin()
+void BeaconEditor::Follow::begin()
 {
     dragging = enable != nullptr && enable->getValue() >= 0.5f && (! extraCondition || extraCondition());
 
@@ -80,7 +80,7 @@ void KilnEditor::Follow::begin()
     }
 }
 
-void KilnEditor::Follow::update()
+void BeaconEditor::Follow::update()
 {
     if (! dragging)
         return;
@@ -95,7 +95,7 @@ void KilnEditor::Follow::update()
     }
 }
 
-void KilnEditor::Follow::end()
+void BeaconEditor::Follow::end()
 {
     if (! dragging)
         return;
@@ -108,7 +108,7 @@ void KilnEditor::Follow::end()
 
 // ---------------------------------------------------------------------------
 
-KilnEditor::Strip::Strip (KilnProcessor& p, int index)
+BeaconEditor::Strip::Strip (BeaconProcessor& p, int index)
     : input     (p.apvts, pid::forStrip (index, pid::input),     panel::trimAccent, Size::small, trimLegends()),
       threshold (p.apvts, pid::forStrip (index, pid::threshold), panel::compAccent, Size::large,
                  { { -40.0f, "-40" }, { -30.0f, "-30" }, { -20.0f, "-20" }, { -10.0f, "-10" }, { 0.0f, "OFF" } }),
@@ -155,7 +155,7 @@ KilnEditor::Strip::Strip (KilnProcessor& p, int index)
         [ironParameter] { return ironParameter->getValue() >= 0.5f; }));
 }
 
-std::vector<juce::Component*> KilnEditor::Strip::components()
+std::vector<juce::Component*> BeaconEditor::Strip::components()
 {
     // Lamps after knobs, so a button sitting in the open foot of a knob's scale
     // takes the click rather than the knob behind it.
@@ -166,7 +166,7 @@ std::vector<juce::Component*> KilnEditor::Strip::components()
 
 // ---------------------------------------------------------------------------
 
-KilnEditor::Face::Face (KilnProcessor& p)
+BeaconEditor::Face::Face (BeaconProcessor& p)
     : processor (p),
       mode (p.apvts, pid::mode)
 {
@@ -182,7 +182,7 @@ KilnEditor::Face::Face (KilnProcessor& p)
     refresh();
 }
 
-void KilnEditor::Face::resized()
+void BeaconEditor::Face::resized()
 {
     for (int i = 0; i < numChannelStrips; ++i)
         layoutStrip (*strips[(size_t) i], rowTop[i]);
@@ -190,10 +190,10 @@ void KilnEditor::Face::resized()
     mode.setBounds (64, 150, 160, 108);
 }
 
-const float KilnEditor::Face::heatScale
+const float BeaconEditor::Face::heatScale
     = 0.5f / (level::nominalAmplitude() * tube::ThdCalibration::get().driveFor (1.0f));
 
-void KilnEditor::Face::layoutStrip (Strip& s, float top)
+void BeaconEditor::Face::layoutStrip (Strip& s, float top)
 {
     s.input  .setBounds (square (inputCentre, top + smallKnobY, smallSide));
     s.dynLink.setBounds (lampAt (inputCentre, top + lampY));
@@ -225,7 +225,7 @@ void KilnEditor::Face::layoutStrip (Strip& s, float top)
     s.meter .setBounds (juce::Rectangle<float> (meterX, top + 16.0f, meterWidth, rowHeight - 32.0f).toNearestInt());
 }
 
-void KilnEditor::Face::refresh()
+void BeaconEditor::Face::refresh()
 {
     const auto modeIndex = mode.getSelected();
 
@@ -277,7 +277,7 @@ void KilnEditor::Face::refresh()
     repaint();
 }
 
-void KilnEditor::Face::paint (juce::Graphics& g)
+void BeaconEditor::Face::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
 
@@ -301,7 +301,7 @@ void KilnEditor::Face::paint (juce::Graphics& g)
     panel::drawRackEar (g, bounds.withLeft (bounds.getRight() - 44.0f));
 
     // Name block.
-    panel::drawTrackedLabel (g, "KILN", { 52.0f, 30.0f, 182.0f, 40.0f }, 34.0f, 11.0f);
+    panel::drawTrackedLabel (g, "BEACON", { 52.0f, 30.0f, 182.0f, 40.0f }, 32.0f, 6.0f);
     panel::drawTrackedLabel (g, "VARI-MU TUBE COMPRESSOR", { 52.0f, 74.0f, 182.0f, 14.0f }, 8.5f, 2.0f,
                              juce::Justification::centred, panel::engravingDim);
 
@@ -325,7 +325,7 @@ void KilnEditor::Face::paint (juce::Graphics& g)
         paintStripLegends (g, i, rowTop[i]);
 }
 
-void KilnEditor::Face::paintStripLegends (juce::Graphics& g, int index, float top) const
+void BeaconEditor::Face::paintStripLegends (juce::Graphics& g, int index, float top) const
 {
     const auto stripMode = static_cast<StripMode> (juce::jmax (0, shownMode));
     const auto linked    = stripMode == StripMode::stereo && index == 1;
@@ -380,7 +380,7 @@ void KilnEditor::Face::paintStripLegends (juce::Graphics& g, int index, float to
 
 // ---------------------------------------------------------------------------
 
-KilnEditor::KilnEditor (KilnProcessor& p)
+BeaconEditor::BeaconEditor (BeaconProcessor& p)
     : juce::AudioProcessorEditor (p),
       processor (p),
       face (p)
@@ -398,25 +398,25 @@ KilnEditor::KilnEditor (KilnProcessor& p)
     startTimerHz (30);
 }
 
-KilnEditor::~KilnEditor()
+BeaconEditor::~BeaconEditor()
 {
     stopTimer();
 }
 
-void KilnEditor::paint (juce::Graphics& g)
+void BeaconEditor::paint (juce::Graphics& g)
 {
     g.fillAll (panel::plateBottom);
 }
 
-void KilnEditor::resized()
+void BeaconEditor::resized()
 {
     face.setTransform (juce::AffineTransform::scale ((float) getWidth()  / designWidth,
                                                      (float) getHeight() / designHeight));
 }
 
-void KilnEditor::timerCallback()
+void BeaconEditor::timerCallback()
 {
     face.refresh();
 }
 
-} // namespace kiln
+} // namespace beacon

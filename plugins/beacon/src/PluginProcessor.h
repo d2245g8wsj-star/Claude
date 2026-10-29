@@ -8,7 +8,7 @@
 #include "dsp/Tube.h"
 #include "dsp/VariMu.h"
 
-namespace kiln
+namespace beacon
 {
 
 inline constexpr int numChannelStrips = 2;
@@ -73,11 +73,11 @@ namespace range
     gain cell, the THD stage and the iron all generate harmonics. */
 inline constexpr int oversamplingStages = 2;
 
-class KilnProcessor final : public juce::AudioProcessor
+class BeaconProcessor final : public juce::AudioProcessor
 {
 public:
-    KilnProcessor();
-    ~KilnProcessor() override = default;
+    BeaconProcessor();
+    ~BeaconProcessor() override = default;
 
     void prepareToPlay (double sampleRate, int maximumExpectedSamplesPerBlock) override;
     void releaseResources() override {}
@@ -185,7 +185,7 @@ private:
 
     bool pathsSnapped { false };
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (KilnProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BeaconProcessor)
 };
 
-} // namespace kiln
+} // namespace beacon

@@ -2,7 +2,10 @@
     Renders the editor to a PNG without opening a window, so the layout can be
     looked at from a terminal or in CI.
 
-    Usage:  beacon_shot <output.png> [width]
+    Usage:  beacon_shot <output.png> [width] [side]
+
+    With "side", the panel is shown in mid/side mode with the side's
+    controls on show.
 */
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -46,6 +49,15 @@ int main (int argc, char* argv[])
     set (beacon::pid::iron,      1.0f);
     set (beacon::pid::output,    4.0f);
     set (beacon::pid::ironPad,   3.0f);
+
+    if (argc > 3 && juce::String (argv[3]) == "side")
+    {
+        set (beacon::pid::mode, (float) beacon::ChannelMode::midSide);
+        set (beacon::pid::side (beacon::pid::threshold), -18.0f);
+        set (beacon::pid::side (beacon::pid::thd),       5.0f);
+        set (beacon::pid::side (beacon::pid::feedFwd),   1.0f);
+        processor.apvts.state.setProperty ("editorView", 1, nullptr);
+    }
 
     processor.prepareToPlay (48000.0, 512);
 

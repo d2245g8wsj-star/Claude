@@ -59,12 +59,16 @@ One set of controls drives both channels:
 three. **Stereo** (the default): one detector for both channels, so the image
 cannot shift. **Dual Mono**: each channel compresses on its own detector, which
 the hardware's manual calls its most common use on a stereo source.
-**Mid/Side**: mid and side each compress on their own detector. In Mid/Side
-the output transformers stay in left/right, outside the M/S matrix, as on the
-unit. For different settings per channel, use two instances on mono tracks.
+**Mid/Side**: mid and side each compress on their own detector, each with
+its own settings: an **EDIT MID | SIDE** switch appears beside the meter and
+turns the panel over to the other half, the section headings say which half is
+on show, and the meter follows it. The main settings are the mid's. IRON, PAD
+and the iron link stay single, because the output transformers work in
+left/right, outside the M/S matrix, as on the unit. For different settings per
+channel outside mid/side, use two instances on mono tracks.
 
 The moving coil gain reduction meter reads 0 to 16 dB like the unit's, and
-shows whichever channel is being reduced more. A heater lamp in the
+shows whichever channel is being reduced more (in mid/side, the half on show). A heater lamp in the
 SATURATION section glows as THD is driven.
 
 ## How it is modelled
@@ -133,8 +137,8 @@ descriptions and specifications:
 * the curves of the THD stage, the tube and the transformers;
 * the dry tap for the mix (after the input transformer, before THD).
 
-Features of the unit left out: separate settings for its two channels (one set
-of controls drives both here), the separate output values the unit keeps for
+Features of the unit left out: separate settings for its two channels outside
+mid/side (one set of controls drives both there), the separate output values the unit keeps for
 RED and GREEN, IRON PAD mix compensation, mute, and the A/B/C memories (a DAW
 does that job). The interface is an original design in the IndieWave style,
 and no name, logo or panel artwork of any other product is used.
@@ -172,8 +176,8 @@ reads true; TUBE saturates without changing the compression; the iron
 saturates on bass, Output up with PAD down drives it harder at the same level,
 and the PAD is a plain attenuator in RED only; the sidechain filters, their
 switches and listen work; bypass and mix at 0 % behave; stereo linking
-holds the image; the mid/side matrix reconstructs and the iron stays in
-left/right; reported latency; finite output at extreme settings across rates
+holds the image; the mid/side matrix reconstructs, the side follows its own
+controls in mid/side and only there, and the iron stays in left/right; reported latency; finite output at extreme settings across rates
 and block sizes; and state surviving a save.
 
 ## Source

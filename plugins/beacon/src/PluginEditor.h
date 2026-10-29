@@ -50,21 +50,21 @@ private:
         std::vector<float> followerStart;
     };
 
-    /** Every control on the face, and the gain reduction meter. */
-    struct Controls
+    /** The controls of one channel's signal path. There are two sets: the
+        main one, which is the mid in mid/side mode, and the side's, shown in
+        its place when the MID/SIDE switch is on SIDE. */
+    struct ChannelControls
     {
-        explicit Controls (BeaconProcessor&);
+        ChannelControls (BeaconProcessor&, bool side);
 
         std::vector<juce::Component*> components();
 
-        panel::Knob input, threshold, attack, release, hpf, bell, thd, tube, mix, output, ironPad;
-        panel::Lamp dynLink, feedForward, limit, hpfIn, bellIn, listen, tubeIn, iron, ironLink, bypass;
-        panel::DriveLamp heat;
-        panel::VuMeter meter;
+        panel::Knob input, threshold, attack, release, hpf, bell, thd, tube, mix, output;
+        panel::Lamp dynLink, feedForward, limit, hpfIn, bellIn, listen, tubeIn;
 
         /** Dynamic link: input and threshold move together and the output
-            the other way, so the drive changes and the level does not. Iron
-            link: output and pad move together in RED mode. */
+            the other way, so the drive changes and the level does not. On the
+            main set, iron link: output and pad move together in RED mode. */
         std::vector<std::unique_ptr<Follow>> links;
     };
 
@@ -79,16 +79,31 @@ private:
         void refresh();
 
     private:
+        void layoutChannel (ChannelControls&);
+        std::vector<juce::Component*> sharedComponents();
+
+        /** Shows the side's controls in place of the main ones, in mid/side
+            mode with the switch on SIDE. */
+        bool editingSide() const;
 
         /** THD stage drive to heater lamp brightness. */
         static const float heatScale;
 
         BeaconProcessor& processor;
-        Controls controls;
+        ChannelControls main, side;
+
+        // Shared by both channels: the output transformer works on left and
+        // right in every mode.
+        panel::Knob ironPad;
+        panel::Lamp iron, ironLink, bypass;
+        panel::DriveLamp heat;
+        panel::VuMeter meter;
+        panel::ViewSwitch view;
         panel::ModeSelector mode;
 
         int shownMode { -1 };
-        bool shownRed { true };   // so the first refresh sets the PAD up
+        bool shownSide { true };  // so the first refresh sets the visibility up
+        bool shownRed { true };   // and the PAD
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
     };

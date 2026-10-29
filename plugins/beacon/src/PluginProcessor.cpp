@@ -81,12 +81,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout BeaconProcessor::createParam
                                                               juce::StringArray { "Dual Mono", "Stereo", "Mid/Side" },
                                                               static_cast<int> (ChannelMode::stereo)));
 
-    {
-        const auto id   = [] (const char* name) { return juce::ParameterID { name, 1 }; };
-        const auto name = [] (const char* text) { return juce::String (text); };
+    // Quarter dB steps, as the encoders on the unit move.
+    const juce::NormalisableRange<float> trimRange (-range::trimDb, range::trimDb, 0.25f);
 
-        // Quarter dB steps, as the encoders on the unit move.
-        const juce::NormalisableRange<float> trimRange (-range::trimDb, range::trimDb, 0.25f);
+    for (const auto isSide : { false, true })
+    {
+        const auto id   = [isSide] (const char* name) { return juce::ParameterID { isSide ? pid::side (name) : juce::String (name), 1 }; };
+        const auto name = [isSide] (const char* text) { return juce::String (isSide ? "Side " : "") + text; };
 
         layout.add (std::make_unique<FloatP> (id (pid::input), name ("Input"), trimRange, 0.0f,
                                               Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
@@ -121,12 +122,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout BeaconProcessor::createParam
                                               Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
         layout.add (std::make_unique<BoolP>  (id (pid::tubeIn), name ("Tube In"), true));
 
-        layout.add (std::make_unique<BoolP>  (id (pid::iron), name ("Iron"), false));
-        layout.add (std::make_unique<FloatP> (id (pid::ironPad), name ("Iron Pad"),
-                                              juce::NormalisableRange<float> (0.0f, range::ironPadMax, 1.0f), 0.0f,
-                                              Attr().withLabel ("dB").withStringFromValueFunction (padString)));
-        layout.add (std::make_unique<BoolP>  (id (pid::ironLink), name ("Iron Link"), false));
-
         layout.add (std::make_unique<FloatP> (id (pid::mix), name ("Mix"),
                                               juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 100.0f,
                                               Attr().withLabel ("%").withStringFromValueFunction (percentString)));
@@ -134,6 +129,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout BeaconProcessor::createParam
                                               Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
         layout.add (std::make_unique<BoolP>  (id (pid::dynLink), name ("Dynamic Link"), false));
     }
+
+    // The output transformer works on left and right, so it has one set of
+    // controls in every mode.
+    layout.add (std::make_unique<BoolP>  (juce::ParameterID { pid::iron, 1 }, "Iron", false));
+    layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::ironPad, 1 }, "Iron Pad",
+                                          juce::NormalisableRange<float> (0.0f, range::ironPadMax, 1.0f), 0.0f,
+                                          Attr().withLabel ("dB").withStringFromValueFunction (padString)));
+    layout.add (std::make_unique<BoolP>  (juce::ParameterID { pid::ironLink, 1 }, "Iron Link", false));
 
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::bypass, 1 }, "Bypass", false));
 
@@ -146,9 +149,10 @@ BeaconProcessor::BeaconProcessor()
                                 .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
       apvts (*this, nullptr, "BEACON", createParameterLayout())
 {
+    for (const auto isSide : { false, true })
     {
-        auto& s = params;
-        const auto id = [] (const char* name) { return juce::String (name); };
+        auto& s = isSide ? sideParams : params;
+        const auto id = [isSide] (const char* name) { return isSide ? pid::side (name) : juce::String (name); };
 
         s.input     = findParameter<juce::AudioParameterFloat> (id (pid::input));
         s.threshold = findParameter<juce::AudioParameterFloat> (id (pid::threshold));
@@ -164,11 +168,12 @@ BeaconProcessor::BeaconProcessor()
         s.thd       = findParameter<juce::AudioParameterFloat> (id (pid::thd));
         s.tube      = findParameter<juce::AudioParameterFloat> (id (pid::tube));
         s.tubeIn    = findParameter<juce::AudioParameterBool>  (id (pid::tubeIn));
-        s.iron      = findParameter<juce::AudioParameterBool>  (id (pid::iron));
-        s.ironPad   = findParameter<juce::AudioParameterFloat> (id (pid::ironPad));
         s.mix       = findParameter<juce::AudioParameterFloat> (id (pid::mix));
         s.output    = findParameter<juce::AudioParameterFloat> (id (pid::output));
     }
+
+    ironParam    = findParameter<juce::AudioParameterBool>  (pid::iron);
+    ironPadParam = findParameter<juce::AudioParameterFloat> (pid::ironPad);
 
     modeParam       = findParameter<juce::AudioParameterChoice> (pid::mode);
     bypassParameter = findParameter<juce::AudioParameterBool>   (pid::bypass);
@@ -221,7 +226,7 @@ void BeaconProcessor::ChannelPath::reset()
     lastCellOutput = 0.0f;
 }
 
-void BeaconProcessor::ChannelPath::setTargets (const Parameters& p, bool engagedNow)
+void BeaconProcessor::ChannelPath::setTargets (const Parameters& p, bool ironOn, float ironPadDb, bool engagedNow)
 {
     const auto thresholdControl = p.threshold->get();
     compressing = thresholdControl < -0.05f;
@@ -236,7 +241,7 @@ void BeaconProcessor::ChannelPath::setTargets (const Parameters& p, bool engaged
 
     envelope.setTimes (p.attack->get() / 1000.0f, p.release->get());
     sidechain.setTargets (p.hpfIn->get(), p.hpf->get(), p.bellIn->get(), p.bell->get());
-    outputStage.setTargets (p.iron->get(), p.ironPad->get());
+    outputStage.setTargets (ironOn, ironPadDb);
 
     feedForward = p.feedFwd->get();
     limiting    = p.limit->get();
@@ -306,8 +311,10 @@ void BeaconProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     // cannot shift. In dual mono and mid/side the detectors are unlinked.
     const auto linked = mode == ChannelMode::stereo && numChannels == 2;
 
-    for (auto& path : paths)
-        path.setTargets (params, ! bypassed);
+    // In mid/side the second path is the side, with its own controls.
+    for (size_t ch = 0; ch < paths.size(); ++ch)
+        paths[ch].setTargets (midSide && ch == 1 ? sideParams : params,
+                              ironParam->get(), ironPadParam->get(), ! bypassed);
 
     if (! pathsSnapped)
     {

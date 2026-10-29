@@ -37,6 +37,11 @@ namespace pid
 
     inline constexpr const char* mode      = "mode";
     inline constexpr const char* bypass    = "bypass";
+
+    /** In mid/side mode the side channel has a set of controls of its own:
+        every one above except the output transformer's (IRON, PAD and its
+        link), which works on left and right. The main set is the mid. */
+    inline juce::String side (const char* name) { return juce::String ("side_") + name; }
 }
 
 /** How the controls are applied to the two channels. The settings are the
@@ -123,8 +128,6 @@ private:
         juce::AudioParameterFloat* thd       { nullptr };
         juce::AudioParameterFloat* tube      { nullptr };
         juce::AudioParameterBool*  tubeIn    { nullptr };
-        juce::AudioParameterBool*  iron      { nullptr };
-        juce::AudioParameterFloat* ironPad   { nullptr };
         juce::AudioParameterFloat* mix       { nullptr };
         juce::AudioParameterFloat* output    { nullptr };
     };
@@ -152,7 +155,7 @@ private:
         void prepare (double innerRate, double hostRate);
         void reset();
 
-        void setTargets (const Parameters&, bool engagedNow);
+        void setTargets (const Parameters&, bool ironOn, float ironPadDb, bool engagedNow);
         void snapToTargets();
     };
 
@@ -164,7 +167,9 @@ private:
         return p;
     }
 
-    Parameters params;
+    Parameters params, sideParams;
+    juce::AudioParameterBool*   ironParam       { nullptr };
+    juce::AudioParameterFloat*  ironPadParam    { nullptr };
     juce::AudioParameterChoice* modeParam       { nullptr };
     juce::AudioParameterBool*   bypassParameter { nullptr };
 

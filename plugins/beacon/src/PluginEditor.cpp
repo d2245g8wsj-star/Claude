@@ -49,6 +49,14 @@ namespace
         return juce::Rectangle<float> (64.0f, 40.0f).withCentre ({ centreX, centreY }).toNearestInt();
     }
 
+    const juce::Identifier viewProperty { "editorView" };
+
+    /** The parameter ID of a control in the main or the side set. */
+    juce::String controlId (const char* name, bool side)
+    {
+        return side ? pid::side (name) : juce::String (name);
+    }
+
     panel::Knob::Legends trimLegends()
     {
         return { { -15.0f, "-15" }, { -5.0f, "-5" }, { 0.0f, "0" }, { 5.0f, "+5" }, { 15.0f, "+15" } };
@@ -115,39 +123,33 @@ void BeaconEditor::Follow::end()
 
 // ---------------------------------------------------------------------------
 
-BeaconEditor::Controls::Controls (BeaconProcessor& p)
-    : input     (p.apvts, pid::input,     panel::trimAccent, Size::small, trimLegends()),
-      threshold (p.apvts, pid::threshold, panel::compAccent, Size::large,
+BeaconEditor::ChannelControls::ChannelControls (BeaconProcessor& p, bool isSide)
+    : input     (p.apvts, controlId (pid::input, isSide),     panel::trimAccent, Size::small, trimLegends()),
+      threshold (p.apvts, controlId (pid::threshold, isSide), panel::compAccent, Size::large,
                  { { -40.0f, "-40" }, { -30.0f, "-30" }, { -20.0f, "-20" }, { -10.0f, "-10" }, { 0.0f, "OFF" } }),
-      attack    (p.apvts, pid::attack,    panel::compAccent, Size::small,
+      attack    (p.apvts, controlId (pid::attack, isSide),    panel::compAccent, Size::small,
                  { { 0.5f, ".5" }, { 3.0f, "3" }, { 15.0f, "15" }, { 100.0f, "100" } }),
-      release   (p.apvts, pid::release,   panel::compAccent, Size::small,
+      release   (p.apvts, controlId (pid::release, isSide),   panel::compAccent, Size::small,
                  { { 0.1f, ".1" }, { 0.3f, ".3" }, { 1.0f, "1" }, { 3.0f, "3" } }),
-      hpf       (p.apvts, pid::hpf,       panel::scAccent,   Size::small,
+      hpf       (p.apvts, controlId (pid::hpf, isSide),       panel::scAccent,   Size::small,
                  { { 20.0f, "20" }, { 60.0f, "60" }, { 160.0f, "160" }, { 500.0f, "500" } }),
-      bell      (p.apvts, pid::bell,      panel::scAccent,   Size::small,
+      bell      (p.apvts, controlId (pid::bell, isSide),      panel::scAccent,   Size::small,
                  { { 2000.0f, "2k" }, { 4500.0f, "4.5k" }, { 9000.0f, "9k" }, { 20000.0f, "20k" } }),
-      thd       (p.apvts, pid::thd,       panel::heatAccent, Size::large,
+      thd       (p.apvts, controlId (pid::thd, isSide),       panel::heatAccent, Size::large,
                  { { 0.0f, "0" }, { 0.5f, ".5" }, { 1.0f, "1" }, { 2.0f, "2" }, { 4.0f, "4" }, { 8.0f, "8" } }),
-      tube      (p.apvts, pid::tube,      panel::heatAccent, Size::small, trimLegends()),
-      mix       (p.apvts, pid::mix,       panel::trimAccent, Size::small,
+      tube      (p.apvts, controlId (pid::tube, isSide),      panel::heatAccent, Size::small, trimLegends()),
+      mix       (p.apvts, controlId (pid::mix, isSide),       panel::trimAccent, Size::small,
                  { { 0.0f, "DRY" }, { 50.0f, "50" }, { 100.0f, "WET" } }),
-      output    (p.apvts, pid::output,    panel::trimAccent, Size::small, trimLegends()),
-      ironPad   (p.apvts, pid::ironPad,   panel::limitAccent, Size::small,
-                 { { 0.0f, "0" }, { 5.0f, "5" }, { 10.0f, "10" }, { 15.0f, "15" } }),
-      dynLink     (p.apvts, pid::dynLink,  panel::trimAccent,  "LINK"),
-      feedForward (p.apvts, pid::feedFwd,  panel::compAccent,  "FF"),
-      limit       (p.apvts, pid::limit,    panel::limitAccent, "LIMIT"),
-      hpfIn       (p.apvts, pid::hpfIn,    panel::scAccent,    "IN"),
-      bellIn      (p.apvts, pid::bellIn,   panel::scAccent,    "IN"),
-      listen      (p.apvts, pid::listen,   panel::scAccent,    "LISTEN"),
-      tubeIn      (p.apvts, pid::tubeIn,   panel::heatAccent,  "IN"),
-      iron        (p.apvts, pid::iron,     panel::limitAccent, "IRON"),
-      ironLink    (p.apvts, pid::ironLink, panel::limitAccent, "LINK"),
-      bypass      (p.apvts, pid::bypass,   panel::limitAccent, "BYPASS"),
-      heat        (panel::heatAccent)
+      output    (p.apvts, controlId (pid::output, isSide),    panel::trimAccent, Size::small, trimLegends()),
+      dynLink     (p.apvts, controlId (pid::dynLink, isSide),  panel::trimAccent,  "LINK"),
+      feedForward (p.apvts, controlId (pid::feedFwd, isSide),  panel::compAccent,  "FF"),
+      limit       (p.apvts, controlId (pid::limit, isSide),    panel::limitAccent, "LIMIT"),
+      hpfIn       (p.apvts, controlId (pid::hpfIn, isSide),    panel::scAccent,    "IN"),
+      bellIn      (p.apvts, controlId (pid::bellIn, isSide),   panel::scAccent,    "IN"),
+      listen      (p.apvts, controlId (pid::listen, isSide),   panel::scAccent,    "LISTEN"),
+      tubeIn      (p.apvts, controlId (pid::tubeIn, isSide),   panel::heatAccent,  "IN")
 {
-    const auto parameter = [&p] (const char* name) { return p.apvts.getParameter (name); };
+    const auto parameter = [&p, isSide] (const char* name) { return p.apvts.getParameter (controlId (name, isSide)); };
 
     links.push_back (std::make_unique<Follow> (input, parameter (pid::dynLink),
         std::vector<std::pair<juce::RangedAudioParameter*, float>> { { parameter (pid::threshold), 1.0f },
@@ -156,41 +158,94 @@ BeaconEditor::Controls::Controls (BeaconProcessor& p)
         std::vector<std::pair<juce::RangedAudioParameter*, float>> { { parameter (pid::input),   1.0f },
                                                                      { parameter (pid::output), -1.0f } }));
 
-    auto* ironParameter = parameter (pid::iron);
-    links.push_back (std::make_unique<Follow> (output, parameter (pid::ironLink),
-        std::vector<std::pair<juce::RangedAudioParameter*, float>> { { parameter (pid::ironPad), 1.0f } },
+    if (isSide)
+        return;
+
+    auto* ironParameter = p.apvts.getParameter (pid::iron);
+    links.push_back (std::make_unique<Follow> (output, p.apvts.getParameter (pid::ironLink),
+        std::vector<std::pair<juce::RangedAudioParameter*, float>> { { p.apvts.getParameter (pid::ironPad), 1.0f } },
         [ironParameter] { return ironParameter->getValue() >= 0.5f; }));
 }
 
-std::vector<juce::Component*> BeaconEditor::Controls::components()
+std::vector<juce::Component*> BeaconEditor::ChannelControls::components()
 {
     // Lamps after knobs, so a button sitting in the open foot of a knob's scale
     // takes the click rather than the knob behind it.
-    return { &input, &threshold, &attack, &release, &hpf, &bell, &thd, &tube, &mix, &output, &ironPad,
-             &dynLink, &feedForward, &limit, &hpfIn, &bellIn, &listen, &tubeIn, &iron, &ironLink, &bypass,
-             &heat, &meter };
+    return { &input, &threshold, &attack, &release, &hpf, &bell, &thd, &tube, &mix, &output,
+             &dynLink, &feedForward, &limit, &hpfIn, &bellIn, &listen, &tubeIn };
 }
 
 // ---------------------------------------------------------------------------
 
 BeaconEditor::Face::Face (BeaconProcessor& p)
     : processor (p),
-      controls (p),
-      mode (p.apvts, pid::mode)
+      main (p, false),
+      side (p, true),
+      ironPad  (p.apvts, pid::ironPad,  panel::limitAccent, panel::Knob::Size::small,
+                { { 0.0f, "0" }, { 5.0f, "5" }, { 10.0f, "10" }, { 15.0f, "15" } }),
+      iron     (p.apvts, pid::iron,     panel::limitAccent, "IRON"),
+      ironLink (p.apvts, pid::ironLink, panel::limitAccent, "LINK"),
+      bypass   (p.apvts, pid::bypass,   panel::limitAccent, "BYPASS"),
+      heat     (panel::heatAccent),
+      view     ({ "MID", "SIDE" }, panel::scAccent),
+      mode     (p.apvts, pid::mode)
 {
-    for (auto* child : controls.components())
+    for (auto* child : main.components())
         addAndMakeVisible (child);
 
+    for (auto* child : side.components())
+        addChildComponent (child);
+
+    for (auto* child : sharedComponents())
+        addAndMakeVisible (child);
+
+    addChildComponent (view);
     addAndMakeVisible (mode);
+
+    // Which half of a mid/side setting is on show is kept with the session,
+    // so the panel reopens where it was left.
+    view.setSelected ((int) processor.apvts.state.getProperty (viewProperty, 0));
+    view.onChange = [this] (int index)
+    {
+        processor.apvts.state.setProperty (viewProperty, index, nullptr);
+        refresh();
+    };
+
     refresh();
+}
+
+std::vector<juce::Component*> BeaconEditor::Face::sharedComponents()
+{
+    return { &ironPad, &iron, &ironLink, &bypass, &heat, &meter };
+}
+
+bool BeaconEditor::Face::editingSide() const
+{
+    return static_cast<ChannelMode> (mode.getSelected()) == ChannelMode::midSide && view.getSelected() == 1;
 }
 
 void BeaconEditor::Face::resized()
 {
-    auto& c = controls;
-
     mode.setBounds (380, 28, 440, 34);
 
+    layoutChannel (main);
+    layoutChannel (side);
+
+    meter.setBounds (juce::Rectangle<float> (meterLeft + 20.0f, topRow + 14.0f, 340.0f, wellHeight - 28.0f).toNearestInt());
+    view  .setBounds (juce::Rectangle<float> (112.0f, 34.0f).withCentre ({ meterLeft + 432.0f, topRow + 64.0f }).toNearestInt());
+    bypass.setBounds (lampAt (meterLeft + 432.0f, topRow + 146.0f));
+
+    heat.setBounds (juce::Rectangle<float> (24.0f, 24.0f)
+                        .withCentre ({ satLeft + satWidth - 20.0f, bottomRow + 18.0f }).toNearestInt());
+
+    const auto outStep = outWidth / 3.0f;
+    ironPad .setBounds (square (outLeft + outStep * 2.5f, bottomRow + smallKnobY, smallSide));
+    iron    .setBounds (lampAt (outLeft + outStep * 1.5f, bottomRow + lampY));
+    ironLink.setBounds (lampAt (outLeft + outStep * 2.5f, bottomRow + lampY));
+}
+
+void BeaconEditor::Face::layoutChannel (ChannelControls& c)
+{
     c.input      .setBounds (square (compLeft + 72.0f,  topRow + smallKnobY, smallSide));
     c.threshold  .setBounds (square (compLeft + 214.0f, topRow + largeKnobY, largeSide));
     c.attack     .setBounds (square (compLeft + 364.0f, topRow + smallKnobY, smallSide));
@@ -198,9 +253,6 @@ void BeaconEditor::Face::resized()
     c.dynLink    .setBounds (lampAt (compLeft + 72.0f,  topRow + lampY));
     c.feedForward.setBounds (lampAt (compLeft + 364.0f, topRow + lampY));
     c.limit      .setBounds (lampAt (compLeft + 506.0f, topRow + lampY));
-
-    c.meter .setBounds (juce::Rectangle<float> (meterLeft + 20.0f, topRow + 14.0f, 340.0f, wellHeight - 28.0f).toNearestInt());
-    c.bypass.setBounds (lampAt (meterLeft + 428.0f, topRow + wellHeight * 0.5f));
 
     c.hpf   .setBounds (square (scLeft + 66.0f,  bottomRow + smallKnobY, smallSide));
     c.bell  .setBounds (square (scLeft + 182.0f, bottomRow + smallKnobY, smallSide));
@@ -211,15 +263,10 @@ void BeaconEditor::Face::resized()
     c.thd   .setBounds (square (satLeft + 86.0f,  bottomRow + largeKnobY, largeSide));
     c.tube  .setBounds (square (satLeft + 228.0f, bottomRow + smallKnobY, smallSide));
     c.tubeIn.setBounds (lampAt (satLeft + 228.0f, bottomRow + lampY));
-    c.heat  .setBounds (juce::Rectangle<float> (24.0f, 24.0f)
-                            .withCentre ({ satLeft + satWidth - 20.0f, bottomRow + 18.0f }).toNearestInt());
 
     const auto outStep = outWidth / 3.0f;
-    c.mix     .setBounds (square (outLeft + outStep * 0.5f, bottomRow + smallKnobY, smallSide));
-    c.output  .setBounds (square (outLeft + outStep * 1.5f, bottomRow + smallKnobY, smallSide));
-    c.ironPad .setBounds (square (outLeft + outStep * 2.5f, bottomRow + smallKnobY, smallSide));
-    c.iron    .setBounds (lampAt (outLeft + outStep * 1.5f, bottomRow + lampY));
-    c.ironLink.setBounds (lampAt (outLeft + outStep * 2.5f, bottomRow + lampY));
+    c.mix   .setBounds (square (outLeft + outStep * 0.5f, bottomRow + smallKnobY, smallSide));
+    c.output.setBounds (square (outLeft + outStep * 1.5f, bottomRow + smallKnobY, smallSide));
 }
 
 const float BeaconEditor::Face::heatScale
@@ -227,39 +274,56 @@ const float BeaconEditor::Face::heatScale
 
 void BeaconEditor::Face::refresh()
 {
-    auto& c = controls;
+    const auto midSide = static_cast<ChannelMode> (mode.getSelected()) == ChannelMode::midSide;
+    const auto showSide = editingSide();
 
-    // One meter: in dual mono and mid/side it shows whichever channel is
-    // being reduced more. The heater lamp follows how hard the THD stage is
-    // driven: just glowing at 1 % on the operating level, fully lit by 8 %.
-    float reduction = 0.0f, drive = 0.0f;
+    // The meter and the heater lamp follow the channel on show in mid/side;
+    // otherwise they show whichever channel is working harder. The lamp is
+    // just glowing at 1 % THD on the operating level, fully lit by 8 %.
+    std::array<float, 2> reduction {}, drive {};
 
-    for (auto& channel : processor.meters.channels)
+    for (size_t ch = 0; ch < reduction.size(); ++ch)
     {
-        reduction = juce::jmax (reduction, MeterSource::take (channel.reductionDb));
-        drive     = juce::jmax (drive,     MeterSource::take (channel.thdDrive));
+        reduction[ch] = MeterSource::take (processor.meters.channels[ch].reductionDb);
+        drive[ch]     = MeterSource::take (processor.meters.channels[ch].thdDrive);
     }
 
-    c.meter.push (reduction);
-    c.heat.push (drive * heatScale);
+    const auto pick = [midSide, showSide] (const std::array<float, 2>& v)
+    {
+        return midSide ? v[showSide ? 1 : 0] : juce::jmax (v[0], v[1]);
+    };
+
+    meter.push (pick (reduction));
+    heat.push (pick (drive) * heatScale);
 
     // The PAD and its link act only in RED mode.
-    const auto red = c.iron.getToggleState();
+    const auto red = iron.getToggleState();
 
     if (red != shownRed)
     {
         shownRed = red;
-        c.ironPad .setEnabled (red);
-        c.ironLink.setEnabled (red);
+        ironPad .setEnabled (red);
+        ironLink.setEnabled (red);
     }
 
     const auto modeIndex = mode.getSelected();
 
-    if (modeIndex == shownMode)
+    if (modeIndex == shownMode && showSide == shownSide)
         return;
 
     shownMode = modeIndex;
-    c.meter.setLegend (static_cast<ChannelMode> (modeIndex) == ChannelMode::midSide ? "M / S  GR" : "GAIN REDUCTION");
+    shownSide = showSide;
+
+    view.setVisible (midSide);
+
+    for (auto* child : main.components())
+        child->setVisible (! showSide);
+
+    for (auto* child : side.components())
+        child->setVisible (showSide);
+
+    meter.setLegend (midSide ? (showSide ? "SIDE  GR" : "MID  GR") : "GAIN REDUCTION");
+    repaint();
 }
 
 void BeaconEditor::Face::paint (juce::Graphics& g)
@@ -312,19 +376,33 @@ void BeaconEditor::Face::paint (juce::Graphics& g)
                                  juce::Justification::centred, primary ? panel::engraving : panel::engravingDim);
     };
 
-    struct Well { float left, top, width; const char* name; const char* subtitle; };
+    // The saturation well keeps its top right corner for the heater lamp.
+    struct Well { float left, top, width; const char* name; const char* subtitle; float rightInset = 14.0f; };
+
+    // In mid/side, each section says whose controls are on show.
+    const auto midSide = static_cast<ChannelMode> (juce::jmax (0, shownMode)) == ChannelMode::midSide;
+    const juce::String tag = midSide ? (shownSide ? "SIDE" : "MID") : "";
 
     for (const auto& w : { Well { compLeft, topRow,    compWidth, "COMPRESSOR", "VARI-MU" },
                            Well { scLeft,   bottomRow, scWidth,   "SIDECHAIN",  "DETECTOR" },
-                           Well { satLeft,  bottomRow, satWidth,  "SATURATION", "" },
+                           Well { satLeft,  bottomRow, satWidth,  "SATURATION", "", 46.0f },
                            Well { outLeft,  bottomRow, outWidth,  "OUTPUT",     "IRON = RED STAGE" } })
     {
         panel::drawWell (g, { w.left, w.top, w.width, wellHeight });
         panel::drawTrackedLabel (g, w.name, { w.left + 14.0f, w.top + 9.0f, 180.0f, 19.0f }, panel::sectionLabel, 2.2f,
                                  juce::Justification::centredLeft);
-        panel::drawTrackedLabel (g, w.subtitle, { w.left + 14.0f, w.top + 9.0f, w.width - 28.0f, 19.0f }, 11.0f, 1.8f,
-                                 juce::Justification::centredRight, panel::engravingDim);
+
+        if (tag.isNotEmpty())
+            panel::drawTrackedLabel (g, tag, { w.left + 14.0f, w.top + 9.0f, w.width - 14.0f - w.rightInset, 19.0f }, panel::sectionLabel, 2.2f,
+                                     juce::Justification::centredRight, panel::scAccent);
+        else
+            panel::drawTrackedLabel (g, w.subtitle, { w.left + 14.0f, w.top + 9.0f, w.width - 28.0f, 19.0f }, 11.0f, 1.8f,
+                                     juce::Justification::centredRight, panel::engravingDim);
     }
+
+    if (midSide)
+        panel::drawTrackedLabel (g, "EDIT", { meterLeft + 376.0f, topRow + 24.0f, 112.0f, 16.0f }, panel::lampLegendHeight, 2.0f,
+                                 juce::Justification::centred, panel::engravingDim);
 
     label ("INPUT",     compLeft + 72.0f,  topRow + smallLabelY, true);
     label ("THRESHOLD", compLeft + 214.0f, topRow + largeLabelY, true);

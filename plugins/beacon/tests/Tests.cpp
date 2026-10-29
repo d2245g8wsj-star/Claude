@@ -683,6 +683,33 @@ void testSwitching()
         const auto g = db (amplitudeAt (quiet, 0, 330.0, 24000, 24000) / 0.01);
         check (std::abs (g) < 0.1, "mid/side: a quiet side below the threshold is left alone, got " + juce::String (g, 3) + " dB");
 
+        // The side has controls of its own in mid/side, and only there. With
+        // the mid's compressor off and the side's on, a mono source passes
+        // and a loud side-only one is compressed.
+        auto separate = clean ({ { beacon::pid::mode, (float) beacon::ChannelMode::midSide },
+                                 { beacon::pid::threshold, 0.0f },
+                                 { beacon::pid::side (beacon::pid::threshold), th (-30.0f) } });
+
+        auto loudSide = [] (int n)
+        {
+            const auto v = 0.4f * (float) std::sin (juce::MathConstants<double>::twoPi * 220.0 * n / 48000.0);
+            return std::pair { v, -v };
+        };
+
+        auto mono = render (separate, source, 48000);
+        auto sideOnly = render (separate, loudSide, 48000);
+        const auto monoGain = db (amplitudeAt (mono, 0, 220.0, 24000, 24000) / 0.4);
+        const auto sideGain = db (amplitudeAt (sideOnly, 0, 220.0, 24000, 24000) / 0.4);
+        std::cout << "  mid off, side on: mono " << monoGain << " dB, side only " << sideGain << " dB" << std::endl;
+        check (std::abs (monoGain) < 0.1, "mid/side: the mid follows the main controls");
+        check (sideGain < -3.0, "mid/side: the side follows its own controls");
+
+        auto outside = separate;
+        outside[beacon::pid::mode] = (float) beacon::ChannelMode::dualMono;
+        auto ignored = render (outside, loudSide, 48000);
+        check (std::abs (db (amplitudeAt (ignored, 0, 220.0, 24000, 24000) / 0.4)) < 0.1,
+               "outside mid/side the side's controls do nothing");
+
         // The output transformers are wired left and right, outside the
         // mid/side matrix.
         auto iron = ms;

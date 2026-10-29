@@ -328,6 +328,77 @@ void ModeSelector::mouseDown (const juce::MouseEvent& event)
 
 // ---------------------------------------------------------------------------
 
+ViewSwitch::ViewSwitch (juce::StringArray viewNames, juce::Colour lamp)
+    : names (std::move (viewNames)), lampColour (lamp)
+{
+}
+
+void ViewSwitch::setSelected (int index)
+{
+    index = juce::jlimit (0, juce::jmax (0, names.size() - 1), index);
+
+    if (index != selected)
+    {
+        selected = index;
+        repaint();
+    }
+}
+
+juce::Rectangle<float> ViewSwitch::buttonArea (int index) const
+{
+    const auto width = (float) getWidth() / (float) juce::jmax (1, names.size());
+    return { width * (float) index, 0.0f, width, (float) getHeight() };
+}
+
+void ViewSwitch::paint (juce::Graphics& g)
+{
+    // One bezel with the caps side by side, so it reads as a single switch.
+    g.setColour (recess);
+    g.fillRoundedRectangle (getLocalBounds().toFloat(), 5.0f);
+
+    for (int i = 0; i < names.size(); ++i)
+    {
+        const auto cap = buttonArea (i).reduced (3.0f);
+        const auto on  = i == selected && isEnabled();
+
+        if (on)
+        {
+            g.setGradientFill (juce::ColourGradient (lampColour.brighter (0.5f), cap.getCentreX(), cap.getY(),
+                                                     lampColour.darker (0.3f), cap.getCentreX(), cap.getBottom(), false));
+        }
+        else
+        {
+            g.setGradientFill (juce::ColourGradient (juce::Colour (0xff4a4c50), cap.getCentreX(), cap.getY(),
+                                                     juce::Colour (0xff2c2e31), cap.getCentreX(), cap.getBottom(), false));
+        }
+
+        g.fillRoundedRectangle (cap, 3.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.12f));
+        g.drawRoundedRectangle (cap.reduced (0.5f), 3.0f, 0.8f);
+
+        drawTrackedLabel (g, names[i], cap, lampLegendHeight + 0.5f, 1.4f, juce::Justification::centred,
+                          on ? juce::Colour (0xff1c1a17) : engravingDim);
+    }
+}
+
+void ViewSwitch::mouseDown (const juce::MouseEvent& event)
+{
+    for (int i = 0; i < names.size(); ++i)
+    {
+        if (buttonArea (i).contains (event.position))
+        {
+            setSelected (i);
+
+            if (onChange != nullptr)
+                onChange (i);
+
+            return;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+
 DriveLamp::DriveLamp (juce::Colour c) : colour (c)
 {
     setInterceptsMouseClicks (false, false);

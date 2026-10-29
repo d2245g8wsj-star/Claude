@@ -106,6 +106,32 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ModeSelector)
 };
 
+/** A row of latching caps that picks one of a few views of the panel. Unlike
+    ModeSelector it is not a parameter: what it selects is which controls are
+    on show, not how the audio is processed. */
+class ViewSwitch final : public juce::Component
+{
+public:
+    ViewSwitch (juce::StringArray names, juce::Colour lamp);
+
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+
+    int getSelected() const noexcept { return selected; }
+    void setSelected (int index);
+
+    std::function<void (int)> onChange;
+
+private:
+    juce::Rectangle<float> buttonArea (int index) const;
+
+    juce::StringArray names;
+    juce::Colour lampColour;
+    int selected { 0 };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ViewSwitch)
+};
+
 /** A round lamp whose brightness follows how hard a band's curve is driven. */
 class DriveLamp final : public juce::Component
 {

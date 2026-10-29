@@ -157,7 +157,7 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DBEACON_BUILD_TESTS=ON -DBEACON_BUILD_TOOLS=ON
 cmake --build build --target beacon_tests beacon_shot --parallel
 ./build/beacon_tests_artefacts/Release/beacon_tests
-./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 1840
+./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 1024
 ```
 
 The checks assert: the THD table inverts; the idle response is flat and the
@@ -181,7 +181,7 @@ src/dsp/OutputStage.h   transformers, tube line amp, RED/GREEN, iron pad
 src/dsp/Meters.h        audio thread to editor
 src/PluginProcessor.*   parameters, routing, linking, oversampling, the strips
 src/gui/Panel.*         knobs, lamps, mode buttons, VU meter, all drawn in code
-src/PluginEditor.*      layout, dynamic and iron links, scaled as a whole from one design size
+src/PluginEditor.*      two channel columns, dynamic and iron links, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render
 ```

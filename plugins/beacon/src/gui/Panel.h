@@ -21,6 +21,14 @@ inline const juce::Colour heatAccent  { 0xffe8663a };
 inline const juce::Colour trimAccent  { 0xffb9b3a6 };
 inline const juce::Colour limitAccent { 0xffff5a3c };
 
+// Text sizes, in design units. Chosen to read at the editor's default size,
+// which draws the face at 80 %.
+inline constexpr float legendHeightSmall = 11.5f;   ///< knob scale numbers
+inline constexpr float legendHeightLarge = 12.5f;
+inline constexpr float lampLegendHeight  = 11.5f;   ///< under buttons, beside mode buttons
+inline constexpr float controlLabel      = 12.5f;   ///< a control's name
+inline constexpr float sectionLabel      = 15.0f;   ///< a well's name
+
 juce::Font plateFont (float height, bool bold = true);
 
 void drawTrackedLabel (juce::Graphics&, const juce::String&, juce::Rectangle<float>,
@@ -76,7 +84,8 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Lamp)
 };
 
-/** The three mode buttons, which select one choice of a parameter. */
+/** The three mode buttons, which select one choice of a parameter. Laid out
+    in a row when wide, in a column when tall. */
 class ModeSelector final : public juce::Component
 {
 public:

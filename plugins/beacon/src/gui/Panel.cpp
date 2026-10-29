@@ -113,10 +113,10 @@ void Knob::paint (juce::Graphics& g)
     const auto centre = bounds.getCentre();
     const auto large  = size == Size::large;
 
-    const auto radius      = bounds.getWidth() * (large ? 0.30f : 0.28f);
-    const auto tickInner   = radius + 4.0f;
-    const auto tickOuter   = radius + (large ? 9.0f : 7.0f);
-    const auto legendRadius = radius + (large ? 18.0f : 14.5f);
+    const auto radius       = bounds.getWidth() * (large ? 0.30f : 0.28f);
+    const auto tickInner    = radius + 4.0f;
+    const auto tickOuter    = radius + (large ? 10.0f : 8.0f);
+    const auto legendRadius = radius + (large ? 22.0f : 18.0f);
 
     const auto proportion = (float) valueToProportionOfLength (getValue());
     const auto angle      = startAngle + proportion * (endAngle - startAngle);
@@ -141,8 +141,8 @@ void Knob::paint (juce::Graphics& g)
         g.drawLine ({ onCircle (centre, tickInner, a), onCircle (centre, tickOuter, a) }, 1.4f);
 
         const auto at = onCircle (centre, legendRadius, a);
-        const auto box = juce::Rectangle<float> (36.0f, 11.0f).withCentre (at);
-        drawTrackedLabel (g, text, box, large ? 8.5f : 7.5f, 0.3f);
+        const auto box = juce::Rectangle<float> (48.0f, 15.0f).withCentre (at);
+        drawTrackedLabel (g, text, box, large ? legendHeightLarge : legendHeightSmall, 0.3f);
     }
 
     // Shadow cast onto the plate.
@@ -217,8 +217,8 @@ void Lamp::paintButton (juce::Graphics& g, bool highlighted, bool down)
     const auto bounds = getLocalBounds().toFloat();
     const auto on     = getToggleState() && isEnabled();
 
-    auto capArea = bounds.withHeight (bounds.getHeight() * 0.56f)
-                         .withSizeKeepingCentre (juce::jmin (bounds.getWidth(), 30.0f), bounds.getHeight() * 0.56f);
+    auto capArea = bounds.withHeight (bounds.getHeight() * 0.54f)
+                         .withSizeKeepingCentre (juce::jmin (bounds.getWidth(), 36.0f), bounds.getHeight() * 0.54f);
 
     // The bezel the button sits in.
     g.setColour (recess);
@@ -247,7 +247,7 @@ void Lamp::paintButton (juce::Graphics& g, bool highlighted, bool down)
     g.drawRoundedRectangle (capArea.reduced (0.5f), 3.0f, 0.8f);
 
     drawTrackedLabel (g, getButtonText(),
-                      bounds.withTop (capArea.getBottom() + 3.0f), 8.0f, 1.0f,
+                      bounds.withTop (capArea.getBottom() + 4.0f), lampLegendHeight, 1.0f,
                       juce::Justification::centredTop);
 }
 
@@ -270,7 +270,16 @@ ModeSelector::ModeSelector (juce::AudioProcessorValueTreeState& state, const juc
 
 juce::Rectangle<float> ModeSelector::buttonArea (int index) const
 {
-    const auto rowHeight = (float) getHeight() / (float) juce::jmax (1, names.size());
+    const auto count = (float) juce::jmax (1, names.size());
+
+    // Laid out in a row when the component is wide, in a column otherwise.
+    if (getWidth() > getHeight() * 2)
+    {
+        const auto width = (float) getWidth() / count;
+        return { width * (float) index, 0.0f, width, (float) getHeight() };
+    }
+
+    const auto rowHeight = (float) getHeight() / count;
     return { 0.0f, rowHeight * (float) index, (float) getWidth(), rowHeight };
 }
 
@@ -279,7 +288,7 @@ void ModeSelector::paint (juce::Graphics& g)
     for (int i = 0; i < names.size(); ++i)
     {
         const auto row = buttonArea (i).reduced (0.0f, 4.0f);
-        const auto cap = row.withWidth (26.0f).withSizeKeepingCentre (26.0f, 16.0f).withX (row.getX());
+        const auto cap = row.withWidth (30.0f).withSizeKeepingCentre (30.0f, 19.0f).withX (row.getX());
         const auto on  = i == selected;
 
         g.setColour (recess);
@@ -300,7 +309,7 @@ void ModeSelector::paint (juce::Graphics& g)
 
         g.fillRoundedRectangle (cap, 3.0f);
 
-        drawTrackedLabel (g, names[i], row.withTrimmedLeft (36.0f), 9.0f, 1.2f,
+        drawTrackedLabel (g, names[i], row.withTrimmedLeft (40.0f), lampLegendHeight + 0.5f, 1.2f,
                           juce::Justification::centredLeft, on ? engraving : engravingDim);
     }
 }
@@ -428,9 +437,11 @@ void VuMeter::paint (juce::Graphics& g)
 
     const auto pivot  = juce::Point<float> (face.getCentreX(), face.getBottom() + face.getHeight() * 0.18f);
     const auto radius = face.getHeight() * 0.86f;
-    constexpr float sweep = 0.62f;   // radians either side of upright
+    // Radians either side of upright: as wide as the window allows, with
+    // room for the end numbers.
+    const auto sweep = juce::jmin (0.8f, std::asin (juce::jlimit (0.1f, 1.0f, (face.getWidth() * 0.5f - 18.0f) / (radius + 18.0f))));
 
-    const auto angleFor = [] (float proportion) { return sweep - 2.0f * sweep * proportion; };
+    const auto angleFor = [sweep] (float proportion) { return sweep - 2.0f * sweep * proportion; };
     const auto ink = juce::Colour (0xff2b2620);
 
     // The arc and its scale.
@@ -451,18 +462,18 @@ void VuMeter::paint (juce::Graphics& g)
 
         if (major)
         {
-            const auto at = onCircle (pivot, radius + 15.0f, a);
-            g.setFont (plateFont (8.5f));
-            g.drawText (juce::String (db), juce::Rectangle<float> (22.0f, 10.0f).withCentre (at),
+            const auto at = onCircle (pivot, radius + 18.0f, a);
+            g.setFont (plateFont (12.0f));
+            g.drawText (juce::String (db), juce::Rectangle<float> (28.0f, 14.0f).withCentre (at),
                         juce::Justification::centred);
         }
     }
 
     g.setColour (ink.withAlpha (0.8f));
-    g.setFont (plateFont (7.5f));
-    g.drawText (legend, face.withTrimmedTop (face.getHeight() * 0.56f).withHeight (11.0f), juce::Justification::centred);
-    g.setFont (plateFont (7.0f, false));
-    g.drawText ("dB", face.withTrimmedTop (face.getHeight() * 0.40f).withHeight (10.0f), juce::Justification::centred);
+    g.setFont (plateFont (10.5f));
+    g.drawText (legend, face.withTrimmedTop (face.getHeight() * 0.58f).withHeight (14.0f), juce::Justification::centred);
+    g.setFont (plateFont (10.0f, false));
+    g.drawText ("dB", face.withTrimmedTop (face.getHeight() * 0.42f).withHeight (13.0f), juce::Justification::centred);
 
     // The needle, with its shadow on the face.
     const auto angle = angleFor (proportionFor (shownDb));   // the rest pin stops it at 0

@@ -7,8 +7,8 @@ namespace beacon
 {
 
 /** Every coordinate in the editor is in these units; the face is scaled as one. */
-inline constexpr int designWidth  = 1840;
-inline constexpr int designHeight = 340;
+inline constexpr int designWidth  = 1280;
+inline constexpr int designHeight = 844;
 
 class BeaconEditor final : public juce::AudioProcessorEditor,
                          private juce::Timer
@@ -50,8 +50,8 @@ private:
         std::vector<float> followerStart;
     };
 
-    /** One channel's row: input, compressor, sidechain, saturation, output
-        stage, IN and the gain reduction meter. */
+    /** One channel: input, compressor, sidechain, saturation, output stage,
+        IN and the gain reduction meter. */
     struct Strip
     {
         Strip (BeaconProcessor&, int index);
@@ -80,8 +80,11 @@ private:
         void refresh();
 
     private:
-        void layoutStrip (Strip&, float top);
-        void paintStripLegends (juce::Graphics&, int index, float top) const;
+        /** Each channel is a column: its meter at the top, then the
+            compressor, sidechain and saturation, and output stage, one
+            section to a row. left is the column's left edge. */
+        void layoutStrip (Strip&, float left);
+        void paintStripLegends (juce::Graphics&, int index, float left) const;
 
         /** THD stage drive to heater lamp brightness. */
         static const float heatScale;

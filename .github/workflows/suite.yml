@@ -1,0 +1,129 @@
+name: Suite
+
+# Bundles the newest release of every plugin into one download per platform
+# and publishes them on the rolling "suite-latest" release, so the links
+# https://github.com/<owner>/<repo>/releases/download/suite-latest/IndieWave-Suite-macOS.zip
+# and ...-Windows.zip never change. Runs after any plugin is released, or by
+# hand.
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [macOS, Swell, Beacon, Breakwater, Hinge, Lacquer]
+    types: [completed]
+
+concurrency:
+  group: suite
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    name: Bundle the latest releases
+    runs-on: ubuntu-24.04
+    # A release is a run started by hand or by a <plugin>-v* tag.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       (github.event.workflow_run.event == 'workflow_dispatch' ||
+        contains(github.event.workflow_run.head_branch, '-v')))
+    permissions:
+      contents: write
+
+    steps:
+      - name: Collect and bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/suite"
+          mkdir -p "$work/dl" "$work/macOS/IndieWave-Suite" "$work/Windows/IndieWave-Suite"
+          tags="$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq '.[].tag_name')"
+          contents=""
+
+          for name in Crest Breakwater Beacon Swell Hinge Lacquer; do
+            id="${name,,}"
+            tag="$(grep -E "^${id}-v[0-9]+\.[0-9]+\.[0-9]+$" <<<"$tags" | sort -V | tail -1 || true)"
+            if [ -z "$tag" ]; then
+              echo "::warning::$name has no release yet"
+              continue
+            fi
+            version="${tag#${id}-v}"
+            contents+="  $(printf '%-11s' "$name") $version"$'\n'
+
+            for os in macOS Windows; do
+              file="$name-$version-$os.zip"
+              asset="$(gh api "repos/$GH_REPO/releases/tags/$tag" \
+                --jq ".assets[] | select(.name == \"$file\") | .id")"
+              if [ -n "$asset" ]; then
+                gh api -H "Accept: application/octet-stream" \
+                  "repos/$GH_REPO/releases/assets/$asset" > "$work/dl/$file"
+                unzip -q "$work/dl/$file" -d "$work/$os/IndieWave-Suite"
+              elif [ "$os" = macOS ]; then
+                echo "::error::$tag has no macOS build"
+                exit 1
+              else
+                echo "::warning::$tag has no Windows build yet; the Windows suite leaves $name out"
+              fi
+            done
+          done
+
+          printf '%s' "$contents" > "$work/contents.txt"
+
+          cat > "$work/macOS/IndieWave-Suite/READ ME FIRST.txt" <<NOTE
+          IndieWave Audio plugin suite for macOS - public beta
+
+          $contents
+          Universal builds (Apple silicon and Intel), macOS 10.13 or newer.
+
+          Install by copying, from each plugin's folder:
+
+              <Name>.component  ->  ~/Library/Audio/Plug-Ins/Components/
+              <Name>.vst3       ->  ~/Library/Audio/Plug-Ins/VST3/
+              <Name>.app        ->  /Applications/  (optional, standalone)
+
+          The plugins are not registered with Apple, so macOS asks for
+          permission once: open your DAW, then System Settings -> Privacy &
+          Security, and click Allow Anyway. If a plugin still does not load,
+          run this in Terminal and restart the DAW:
+
+              xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components ~/Library/Audio/Plug-Ins/VST3
+          NOTE
+
+          cat > "$work/Windows/IndieWave-Suite/READ ME FIRST.txt" <<NOTE
+          IndieWave Audio plugin suite for Windows - public beta
+
+          $contents
+          Windows 10 and 11, 64 bit.
+
+          Install by copying, from each plugin's folder:
+
+              <Name>.vst3  ->  C:\\Program Files\\Common Files\\VST3\\
+              <Name>.exe   ->  anywhere you like (standalone, optional)
+
+          Then let your DAW rescan its plugins. The files are not code
+          signed; if SmartScreen stops an .exe, choose "More info" and then
+          "Run anyway".
+          NOTE
+
+          for os in macOS Windows; do
+            # A platform none of the plugins has been released for yet is left out.
+            if [ "$(ls "$work/$os/IndieWave-Suite" | wc -l)" -gt 1 ]; then
+              (cd "$work/$os" && zip -qry "$work/IndieWave-Suite-$os.zip" IndieWave-Suite)
+            fi
+          done
+          ls -la "$work"/*.zip
+
+      - name: Publish suite-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/suite"
+          notes="$(printf 'All six plugins in one download, public beta:\n\n```\n%s```\n' "$(cat "$work/contents.txt")")"
+          gh release delete suite-latest --yes --cleanup-tag || true
+          gh release create suite-latest --prerelease \
+            --target "${{ github.event.repository.default_branch }}" \
+            --title "IndieWave suite (latest releases)" --notes "$notes" \
+            "$work"/IndieWave-Suite-*.zip

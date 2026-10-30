@@ -310,11 +310,13 @@ checks, and uploads an installable zip. Open the run under the repository's
 the bottom. Run artifacts expire after 90 days and can only be downloaded by
 someone signed in to GitHub with access to the repository.
 
-**Tag a version for a public release.** Pushing a `v*` tag attaches the same
-zip to a GitHub release, which anyone can download without an account:
+**Tag a version for a release.** Pushing a `crest-v*` tag attaches the same
+zip to a GitHub release. The tag must match the version in `CMakeLists.txt`,
+and anything below 1.0 is published as a beta; see [RELEASES.md](RELEASES.md)
+for how the suite is versioned.
 
 ```bash
-git tag v1.0.0 && git push origin v1.0.0
+git tag crest-v0.9.0 && git push origin crest-v0.9.0
 ```
 
 ### Installing on macOS

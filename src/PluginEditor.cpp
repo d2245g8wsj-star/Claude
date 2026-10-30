@@ -342,6 +342,9 @@ void CrestEditor::timerCallback()
 
     status << "    .    CREST v" << JucePlugin_VersionString;
 
+    if (JucePlugin_VersionCode < 0x10000)
+        status << " BETA";
+
     face.setStatusText (status);
 
     const auto removed = juce::jlimit (0.0f, 0.999f, processor.meters.reduction.take());

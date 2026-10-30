@@ -13,6 +13,11 @@ on:
       - "plugins/swell/**"
       - ".github/workflows/swell.yml"
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish this commit as a versioned release, tagged with the version in CMakeLists.txt"
+        type: boolean
+        default: false
 
 jobs:
   checks:
@@ -96,21 +101,103 @@ jobs:
       # a versioned release; every other push replaces the rolling
       # "swell-latest" pre-release, whose tag the workflow creates itself.
       - name: Attach to release
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/') || github.ref_name == github.event.repository.default_branch || inputs.release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
         run: |
           set -euo pipefail
           notes="Universal (arm64 + x86_64) VST3, AU and standalone, signed ad-hoc, built from ${GITHUB_SHA::7}. Before installing: xattr -dr com.apple.quarantine Swell.vst3 Swell.component Swell.app"
 
-          if [[ "$GITHUB_REF" == refs/tags/swell-v* ]]; then
-            version="${GITHUB_REF_NAME#swell-v}"
+          built="$(sed -nE 's/^project\(Swell VERSION ([0-9.]+).*/\1/p' plugins/swell/CMakeLists.txt)"
+
+          # A release comes from a swell-v* tag, or from running the workflow by
+          # hand with "release" ticked, which tags this commit itself.
+          if [[ "$GITHUB_REF" == refs/tags/swell-v* || "$RELEASE" == "true" ]]; then
+            tag="swell-v$built"
+            if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$tag" ]]; then
+              echo "::error::Tag is $GITHUB_REF_NAME but plugins/swell/CMakeLists.txt says $built"
+              exit 1
+            fi
+            version="$built"
+            # Below 1.0 every release is a public beta.
+            if [[ "$version" == 0.* ]]; then label="$version beta"; pre=--prerelease; else label="$version"; pre=; fi
             asset="$RUNNER_TEMP/Swell-$version-macOS.zip"
             mv "$RUNNER_TEMP/Swell-macOS.zip" "$asset"
-            gh release create "$GITHUB_REF_NAME" --title "Swell $version" --notes "$notes" "$asset" \
-              || gh release upload "$GITHUB_REF_NAME" "$asset" --clobber
+            gh release create "$tag" $pre --target "$GITHUB_SHA" --title "Swell $label" --notes "$notes" "$asset" \
+              || gh release upload "$tag" "$asset" --clobber
           else
             gh release delete swell-latest --yes --cleanup-tag || true
             gh release create swell-latest --prerelease --target "$GITHUB_SHA" \
               --title "Swell (latest build)" --notes "$notes" "$RUNNER_TEMP/Swell-macOS.zip"
+          fi
+
+  # VST3 and standalone for 64 bit Windows. Runs after the macOS job so the
+  # release it attaches to already exists.
+  windows:
+    name: Windows build
+    runs-on: windows-2022
+    needs: macos
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        working-directory: plugins/swell
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DSWELL_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/swell
+        run: cmake --build build --config Release --parallel
+
+      - name: Offline checks
+        working-directory: plugins/swell
+        run: ./build/swell_tests_artefacts/Release/swell_tests.exe
+
+      - name: Package
+        working-directory: plugins/swell
+        run: |
+          set -euo pipefail
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          staging="$tmp/Swell"
+          mkdir -p "$staging"
+          cp -R build/Swell_artefacts/Release/VST3/Swell.vst3 "$staging/"
+          cp build/Swell_artefacts/Release/Standalone/Swell.exe "$staging/"
+          cp README.md "$staging/"
+          cat > "$staging/READ ME FIRST.txt" <<'NOTE'
+          Swell for Windows 10 and 11, 64 bit.
+
+          Install by copying:
+
+              Swell.vst3  ->  C:\Program Files\Common Files\VST3\
+              Swell.exe   ->  anywhere you like (the standalone app, optional)
+
+          Then let your DAW rescan its plugins.
+
+          The files are not code signed. If Windows SmartScreen stops Swell.exe,
+          choose "More info" and then "Run anyway".
+          NOTE
+          cd "$tmp"
+          7z a -tzip -bd Swell-Windows.zip Swell > /dev/null
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/') || github.ref_name == github.event.repository.default_branch || inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          set -euo pipefail
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          built="$(sed -nE 's/^project\(Swell VERSION ([0-9.]+).*/\1/p' plugins/swell/CMakeLists.txt)"
+          if [[ "$GITHUB_REF" == refs/tags/swell-v* || "$RELEASE" == "true" ]]; then
+            asset="$tmp/Swell-$built-Windows.zip"
+            mv "$tmp/Swell-Windows.zip" "$asset"
+            gh release upload "swell-v$built" "$asset" --clobber
+          else
+            gh release upload swell-latest "$tmp/Swell-Windows.zip" --clobber
           fi

@@ -3,23 +3,32 @@ name: macOS
 on:
   push:
     branches: ["**"]
-    tags: ["v*"]
-    # macOS runners bill at ten times the rate of Linux ones, so a change that
-    # cannot affect the binary does not start one.
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - "LICENSE"
-      - "plugins/**"
-      - ".github/workflows/swell.yml"
+    # Path filters do not apply to tag pushes, so a crest-v* tag always builds.
+    tags: ["crest-v*"]
+    # macOS runners bill at ten times the rate of Linux ones, so only a change
+    # to Crest itself starts one. The other plugins live under plugins/ and
+    # have their own workflows.
+    paths:
+      - "src/**"
+      - "resources/**"
+      - "tests/**"
+      - "tools/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/macos.yml"
   pull_request:
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - "LICENSE"
-      - "plugins/**"
-      - ".github/workflows/swell.yml"
+    paths:
+      - "src/**"
+      - "resources/**"
+      - "tests/**"
+      - "tools/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/macos.yml"
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish this commit as a versioned release, tagged with the version in CMakeLists.txt"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -153,10 +162,11 @@ jobs:
           path: ${{ runner.temp }}/Crest-macOS.zip
           if-no-files-found: error
 
-      # Every branch push replaces the rolling "crest-latest" pre-release, which
-      # does not count against that quota and gives a stable download link.
+      # Every push to the default branch replaces the rolling "crest-latest"
+      # pre-release, which does not count against that quota and gives a stable
+      # download link. Other branches do not, so the link always has main's code.
       - name: Publish crest-latest
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -168,14 +178,90 @@ jobs:
             "$RUNNER_TEMP/Crest-macOS.zip"
 
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
+        # A crest-v* tag, or a run by hand with "release" ticked, which tags
+        # this commit itself.
+        if: startsWith(github.ref, 'refs/tags/crest-v') || inputs.release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          set -euo pipefail
+          version="$(sed -nE 's/^project\(Crest VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+          tag="crest-v$version"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$tag" ]]; then
+            echo "::error::Tag is $GITHUB_REF_NAME but CMakeLists.txt says $version"
+            exit 1
+          fi
+          # Below 1.0 every release is a public beta.
+          if [[ "$version" == 0.* ]]; then label="$version beta"; pre=--prerelease; else label="$version"; pre=; fi
           mv "$RUNNER_TEMP/Crest-macOS.zip" "$RUNNER_TEMP/Crest-$version-macOS.zip"
-          gh release create "$GITHUB_REF_NAME" \
-            --title "Crest $version" \
+          gh release create "$tag" $pre --target "$GITHUB_SHA" \
+            --title "Crest $label" \
             --generate-notes \
             "$RUNNER_TEMP/Crest-$version-macOS.zip" \
-            || gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP/Crest-$version-macOS.zip" --clobber
+            || gh release upload "$tag" "$RUNNER_TEMP/Crest-$version-macOS.zip" --clobber
+
+  # VST3 and standalone for 64 bit Windows. Runs after the macOS job so the
+  # release it attaches to already exists.
+  windows:
+    name: Windows build
+    runs-on: windows-2022
+    needs: build
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DCREST_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Offline checks
+        run: ./build/crest_tests_artefacts/Release/crest_tests.exe
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          staging="$tmp/Crest"
+          mkdir -p "$staging"
+          cp -R build/Crest_artefacts/Release/VST3/Crest.vst3 "$staging/"
+          cp build/Crest_artefacts/Release/Standalone/Crest.exe "$staging/"
+          cp README.md LICENSE NOTICE.md "$staging/"
+          cat > "$staging/READ ME FIRST.txt" <<'NOTE'
+          Crest for Windows 10 and 11, 64 bit.
+
+          Install by copying:
+
+              Crest.vst3  ->  C:\Program Files\Common Files\VST3\
+              Crest.exe   ->  anywhere you like (the standalone app, optional)
+
+          Then let your DAW rescan its plugins.
+
+          The files are not code signed. If Windows SmartScreen stops Crest.exe,
+          choose "More info" and then "Run anyway".
+          NOTE
+          cd "$tmp"
+          7z a -tzip -bd Crest-Windows.zip Crest > /dev/null
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/crest-v') || inputs.release || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          set -euo pipefail
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          built="$(sed -nE 's/^project\(Crest VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+          if [[ "$GITHUB_REF" == refs/tags/crest-v* || "$RELEASE" == "true" ]]; then
+            asset="$tmp/Crest-$built-Windows.zip"
+            mv "$tmp/Crest-Windows.zip" "$asset"
+            gh release upload "crest-v$built" "$asset" --clobber
+          else
+            gh release upload crest-latest "$tmp/Crest-Windows.zip" --clobber
+          fi

@@ -1,0 +1,203 @@
+name: Lacquer
+
+on:
+  push:
+    branches: ["**"]
+    # Path filters do not apply to tag pushes, so an lacquer-v* tag always builds.
+    tags: ["lacquer-v*"]
+    paths:
+      - "plugins/lacquer/**"
+      - ".github/workflows/lacquer.yml"
+  pull_request:
+    paths:
+      - "plugins/lacquer/**"
+      - ".github/workflows/lacquer.yml"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish this commit as a versioned release, tagged with the version in CMakeLists.txt"
+        type: boolean
+        default: false
+
+jobs:
+  checks:
+    name: Linux build and offline checks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libx11-dev libxext-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libfreetype-dev libfontconfig1-dev libasound2-dev
+
+      - name: Configure
+        working-directory: plugins/lacquer
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLACQUER_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/lacquer
+        run: cmake --build build --parallel
+
+      - name: Offline checks
+        working-directory: plugins/lacquer
+        run: ./build/lacquer_tests_artefacts/Release/lacquer_tests
+
+  macos:
+    name: macOS universal build
+    runs-on: macos-14
+    needs: checks
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        working-directory: plugins/lacquer
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
+            -DLACQUER_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/lacquer
+        run: cmake --build build --parallel 3
+
+      - name: Offline checks
+        working-directory: plugins/lacquer
+        run: ./build/lacquer_tests_artefacts/Release/lacquer_tests
+
+      - name: Sign ad-hoc and package
+        working-directory: plugins/lacquer
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/Lacquer"
+          mkdir -p "$staging"
+
+          for bundle in VST3/Lacquer.vst3 AU/Lacquer.component Standalone/Lacquer.app; do
+            codesign --force --deep --sign - --timestamp=none "build/Lacquer_artefacts/Release/$bundle"
+            cp -R "build/Lacquer_artefacts/Release/$bundle" "$staging/"
+          done
+
+          cp README.md "$staging/"
+          ditto -c -k --sequesterRsrc --keepParent "$staging" "$RUNNER_TEMP/Lacquer-macOS.zip"
+
+      # Run artifacts count against the account's Actions storage quota; when
+      # that is full the build itself is still good, so it does not fail the run.
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: Lacquer-macOS-universal
+          path: ${{ runner.temp }}/Lacquer-macOS.zip
+          if-no-files-found: error
+
+      # Release assets do not count against that quota. An lacquer-v* tag makes
+      # a versioned release; every other push replaces the rolling
+      # "lacquer-latest" pre-release, whose tag the workflow creates itself.
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/') || github.ref_name == github.event.repository.default_branch || inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          set -euo pipefail
+          notes="Universal (arm64 + x86_64) VST3, AU and standalone, signed ad-hoc, built from ${GITHUB_SHA::7}. Before installing: xattr -dr com.apple.quarantine Lacquer.vst3 Lacquer.component Lacquer.app"
+
+          built="$(sed -nE 's/^project\(Lacquer VERSION ([0-9.]+).*/\1/p' plugins/lacquer/CMakeLists.txt)"
+
+          # A release comes from a lacquer-v* tag, or from running the workflow by
+          # hand with "release" ticked, which tags this commit itself.
+          if [[ "$GITHUB_REF" == refs/tags/lacquer-v* || "$RELEASE" == "true" ]]; then
+            tag="lacquer-v$built"
+            if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$tag" ]]; then
+              echo "::error::Tag is $GITHUB_REF_NAME but plugins/lacquer/CMakeLists.txt says $built"
+              exit 1
+            fi
+            version="$built"
+            # Below 1.0 every release is a public beta.
+            if [[ "$version" == 0.* ]]; then label="$version beta"; pre=--prerelease; else label="$version"; pre=; fi
+            asset="$RUNNER_TEMP/Lacquer-$version-macOS.zip"
+            mv "$RUNNER_TEMP/Lacquer-macOS.zip" "$asset"
+            gh release create "$tag" $pre --target "$GITHUB_SHA" --title "Lacquer $label" --notes "$notes" "$asset" \
+              || gh release upload "$tag" "$asset" --clobber
+          else
+            gh release delete lacquer-latest --yes --cleanup-tag || true
+            gh release create lacquer-latest --prerelease --target "$GITHUB_SHA" \
+              --title "Lacquer (latest build)" --notes "$notes" "$RUNNER_TEMP/Lacquer-macOS.zip"
+          fi
+
+  # VST3 and standalone for 64 bit Windows. Runs after the macOS job so the
+  # release it attaches to already exists.
+  windows:
+    name: Windows build
+    runs-on: windows-2022
+    needs: macos
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        working-directory: plugins/lacquer
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DLACQUER_BUILD_TESTS=ON
+
+      - name: Build
+        working-directory: plugins/lacquer
+        run: cmake --build build --config Release --parallel
+
+      - name: Offline checks
+        working-directory: plugins/lacquer
+        run: ./build/lacquer_tests_artefacts/Release/lacquer_tests.exe
+
+      - name: Package
+        working-directory: plugins/lacquer
+        run: |
+          set -euo pipefail
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          staging="$tmp/Lacquer"
+          mkdir -p "$staging"
+          cp -R build/Lacquer_artefacts/Release/VST3/Lacquer.vst3 "$staging/"
+          cp build/Lacquer_artefacts/Release/Standalone/Lacquer.exe "$staging/"
+          cp README.md "$staging/"
+          cat > "$staging/READ ME FIRST.txt" <<'NOTE'
+          Lacquer for Windows 10 and 11, 64 bit.
+
+          Install by copying:
+
+              Lacquer.vst3  ->  C:\Program Files\Common Files\VST3\
+              Lacquer.exe   ->  anywhere you like (the standalone app, optional)
+
+          Then let your DAW rescan its plugins.
+
+          The files are not code signed. If Windows SmartScreen stops Lacquer.exe,
+          choose "More info" and then "Run anyway".
+          NOTE
+          cd "$tmp"
+          7z a -tzip -bd Lacquer-Windows.zip Lacquer > /dev/null
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/') || github.ref_name == github.event.repository.default_branch || inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          set -euo pipefail
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          built="$(sed -nE 's/^project\(Lacquer VERSION ([0-9.]+).*/\1/p' plugins/lacquer/CMakeLists.txt)"
+          if [[ "$GITHUB_REF" == refs/tags/lacquer-v* || "$RELEASE" == "true" ]]; then
+            asset="$tmp/Lacquer-$built-Windows.zip"
+            mv "$tmp/Lacquer-Windows.zip" "$asset"
+            gh release upload "lacquer-v$built" "$asset" --clobber
+          else
+            gh release upload lacquer-latest "$tmp/Lacquer-Windows.zip" --clobber
+          fi

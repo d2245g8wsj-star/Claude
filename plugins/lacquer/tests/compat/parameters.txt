@@ -1,0 +1,37 @@
+bypass | bool | default 0
+c1_buffer | bool | default 1
+c1_eq_in | bool | default 1
+c1_lb_amount | int | 0..20 step 1 skew 1 | default 0
+c1_lb_freq | choice | 47 Hz;70 Hz;100 Hz;160 Hz;200 Hz;340 Hz | default 2
+c1_lc_amount | int | 0..20 step 1 skew 1 | default 0
+c1_lc_freq | choice | 27 Hz;50 Hz;80 Hz;140 Hz;220 Hz;480 Hz | default 1
+c1_mb_amount | int | 0..20 step 1 skew 1 | default 0
+c1_mb_freq | choice | 310 Hz;470 Hz;680 Hz;820 Hz;1 kHz;1.8 kHz;2.5 kHz;3 kHz;4 kHz;6.3 kHz;8.2 kHz | default 4
+c1_mc_amount | int | 0..20 step 1 skew 1 | default 0
+c1_mc_freq | choice | Out;260 Hz;470 Hz;820 Hz;1 kHz;1.3 kHz;2.1 kHz;3 kHz;4.5 kHz;6.3 kHz;9.3 kHz | default 0
+c1_shift | bool | default 0
+c1_tb_amount | int | 0..20 step 1 skew 1 | default 0
+c1_tb_freq | choice | 2.5 kHz bell;4.2 kHz bell;8 kHz bell;10 kHz bell (low L);10 kHz bell (high L);13.9 kHz bell;18 kHz bell;18 kHz shelf;15 kHz shelf;10 kHz shelf;6 kHz shelf;1 kHz shelf | default 3
+c1_tb_q | int | 0..10 step 1 skew 1 | default 5
+c1_tc_amount | int | 0..20 step 1 skew 1 | default 0
+c1_tc_freq | choice | 4 kHz;6 kHz;10 kHz;12 kHz;18 kHz;24 kHz | default 3
+c1_transformer | bool | default 1
+c2_buffer | bool | default 1
+c2_eq_in | bool | default 1
+c2_lb_amount | int | 0..20 step 1 skew 1 | default 0
+c2_lb_freq | choice | 47 Hz;70 Hz;100 Hz;160 Hz;200 Hz;340 Hz | default 2
+c2_lc_amount | int | 0..20 step 1 skew 1 | default 0
+c2_lc_freq | choice | 27 Hz;50 Hz;80 Hz;140 Hz;220 Hz;480 Hz | default 1
+c2_mb_amount | int | 0..20 step 1 skew 1 | default 0
+c2_mb_freq | choice | 310 Hz;470 Hz;680 Hz;820 Hz;1 kHz;1.8 kHz;2.5 kHz;3 kHz;4 kHz;6.3 kHz;8.2 kHz | default 4
+c2_mc_amount | int | 0..20 step 1 skew 1 | default 0
+c2_mc_freq | choice | Out;260 Hz;470 Hz;820 Hz;1 kHz;1.3 kHz;2.1 kHz;3 kHz;4.5 kHz;6.3 kHz;9.3 kHz | default 0
+c2_shift | bool | default 0
+c2_tb_amount | int | 0..20 step 1 skew 1 | default 0
+c2_tb_freq | choice | 2.5 kHz bell;4.2 kHz bell;8 kHz bell;10 kHz bell (low L);10 kHz bell (high L);13.9 kHz bell;18 kHz bell;18 kHz shelf;15 kHz shelf;10 kHz shelf;6 kHz shelf;1 kHz shelf | default 3
+c2_tb_q | int | 0..10 step 1 skew 1 | default 5
+c2_tc_amount | int | 0..20 step 1 skew 1 | default 0
+c2_tc_freq | choice | 4 kHz;6 kHz;10 kHz;12 kHz;18 kHz;24 kHz | default 3
+c2_transformer | bool | default 1
+link | bool | default 1
+output | float | -12..12 step 0.1 skew 1 | default 0

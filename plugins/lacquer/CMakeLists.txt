@@ -82,7 +82,10 @@ if(LACQUER_BUILD_TESTS)
     juce_add_console_app(lacquer_tests PRODUCT_NAME "lacquer_tests")
 
     target_sources(lacquer_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(lacquer_tests PRIVATE src)
+    target_include_directories(lacquer_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(lacquer_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(lacquer_tests PRIVATE
         Lacquer
         juce::juce_audio_utils

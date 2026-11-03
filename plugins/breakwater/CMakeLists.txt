@@ -83,7 +83,10 @@ if(BREAKWATER_BUILD_TESTS)
     juce_add_console_app(breakwater_tests PRODUCT_NAME "breakwater_tests")
 
     target_sources(breakwater_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(breakwater_tests PRIVATE src)
+    target_include_directories(breakwater_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(breakwater_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(breakwater_tests PRIVATE
         Breakwater
         juce::juce_audio_utils

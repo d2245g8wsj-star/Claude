@@ -82,7 +82,10 @@ if(SWELL_BUILD_TESTS)
     juce_add_console_app(swell_tests PRODUCT_NAME "swell_tests")
 
     target_sources(swell_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(swell_tests PRIVATE src)
+    target_include_directories(swell_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(swell_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(swell_tests PRIVATE
         Swell
         juce::juce_audio_utils

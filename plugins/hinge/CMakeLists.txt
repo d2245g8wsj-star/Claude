@@ -89,7 +89,10 @@ if(HINGE_BUILD_TESTS)
     juce_add_console_app(hinge_tests PRODUCT_NAME "hinge_tests")
 
     target_sources(hinge_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(hinge_tests PRIVATE src)
+    target_include_directories(hinge_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(hinge_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(hinge_tests PRIVATE
         Hinge
         juce::juce_audio_utils

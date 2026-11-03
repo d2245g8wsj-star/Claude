@@ -11,6 +11,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "PluginProcessor.h"
+#include "indiewave/SessionCompat.h"
 #include "dsp/PeakLimiter.h"
 #include "dsp/SoftClipper.h"
 #include "dsp/TruePeak.h"
@@ -1161,6 +1162,10 @@ int main()
     testPerformance();
     testEditorSize();
     testState();
+
+    section ("Sessions saved by released versions open unchanged");
+    indiewave::compat::run ([] { return std::make_unique<breakwater::BreakwaterProcessor>(); },
+                            juce::File (INDIEWAVE_COMPAT_DIR), INDIEWAVE_VERSION, check);
 
     std::cout << "\n" << (checks - failures) << " / " << checks << " checks passed" << std::endl;
     return failures == 0 ? 0 : 1;

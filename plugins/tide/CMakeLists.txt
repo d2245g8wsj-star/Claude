@@ -82,7 +82,10 @@ if(TIDE_BUILD_TESTS)
     juce_add_console_app(tide_tests PRODUCT_NAME "tide_tests")
 
     target_sources(tide_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(tide_tests PRIVATE src)
+    target_include_directories(tide_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(tide_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(tide_tests PRIVATE
         Tide
         juce::juce_audio_utils

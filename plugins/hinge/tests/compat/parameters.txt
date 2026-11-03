@@ -1,0 +1,25 @@
+a_dyn_threshold | float | -48..0 step 0.5 skew 1 | default -24
+a_engage | bool | default 1
+a_hi_cut | choice | Out;70 kHz;28 kHz;18 kHz;12.6 kHz;11.1 kHz;9 kHz;7.5 kHz | default 0
+a_hi_dyn | float | -5..5 step 0.1 skew 1 | default 0
+a_hi_level | float | -5..5 step 0.5 skew 1 | default 0
+a_hi_shelf | choice | 18 kHz;7.1 kHz;4.8 kHz;3.4 kHz;2.5 kHz;2.1 kHz;1.8 kHz;1.6 kHz | default 2
+a_lo_cut | choice | Out;12 Hz;18 Hz;24 Hz;30 Hz;36 Hz;43 Hz;54 Hz | default 0
+a_lo_dyn | float | -5..5 step 0.1 skew 1 | default 0
+a_lo_level | float | -5..5 step 0.5 skew 1 | default 0
+a_lo_shelf | choice | 74 Hz;84 Hz;98 Hz;116 Hz;131 Hz;166 Hz;230 Hz;361 Hz | default 2
+a_output | int | -10..10 step 1 skew 1 | default 0
+b_dyn_threshold | float | -48..0 step 0.5 skew 1 | default -24
+b_engage | bool | default 1
+b_hi_cut | choice | Out;70 kHz;28 kHz;18 kHz;12.6 kHz;11.1 kHz;9 kHz;7.5 kHz | default 0
+b_hi_dyn | float | -5..5 step 0.1 skew 1 | default 0
+b_hi_level | float | -5..5 step 0.5 skew 1 | default 0
+b_hi_shelf | choice | 18 kHz;7.1 kHz;4.8 kHz;3.4 kHz;2.5 kHz;2.1 kHz;1.8 kHz;1.6 kHz | default 2
+b_lo_cut | choice | Out;12 Hz;18 Hz;24 Hz;30 Hz;36 Hz;43 Hz;54 Hz | default 0
+b_lo_dyn | float | -5..5 step 0.1 skew 1 | default 0
+b_lo_level | float | -5..5 step 0.5 skew 1 | default 0
+b_lo_shelf | choice | 74 Hz;84 Hz;98 Hz;116 Hz;131 Hz;166 Hz;230 Hz;361 Hz | default 2
+b_output | int | -10..10 step 1 skew 1 | default 0
+bypass | bool | default 0
+link | bool | default 1
+mid_side | bool | default 0

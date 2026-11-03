@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Lacquer VERSION 0.3.0 LANGUAGES C CXX)
+project(Lacquer VERSION 0.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -53,9 +53,10 @@ juce_add_plugin(Lacquer
 target_sources(Lacquer PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
-    src/gui/Panel.cpp)
+    src/gui/Panel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp)
 
-target_include_directories(Lacquer PRIVATE src)
+target_include_directories(Lacquer PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
 
 target_compile_definitions(Lacquer PUBLIC
     JUCE_WEB_BROWSER=0
@@ -82,7 +83,10 @@ if(LACQUER_BUILD_TESTS)
     juce_add_console_app(lacquer_tests PRODUCT_NAME "lacquer_tests")
 
     target_sources(lacquer_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(lacquer_tests PRIVATE src)
+    target_include_directories(lacquer_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(lacquer_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(lacquer_tests PRIVATE
         Lacquer
         juce::juce_audio_utils
@@ -101,7 +105,7 @@ if(LACQUER_BUILD_TOOLS)
     juce_add_console_app(lacquer_shot PRODUCT_NAME "lacquer_shot")
 
     target_sources(lacquer_shot PRIVATE tools/Snapshot.cpp)
-    target_include_directories(lacquer_shot PRIVATE src)
+    target_include_directories(lacquer_shot PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
     target_link_libraries(lacquer_shot PRIVATE
         Lacquer
         juce::juce_audio_utils

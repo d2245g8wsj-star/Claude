@@ -21,7 +21,8 @@ int main (int argc, char* argv[])
                                       : juce::File::getCurrentWorkingDirectory()
                                             .getChildFile ("hinge.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : hinge::designWidth;
+    const auto scale = argc > 2 ? juce::String (argv[2]).getFloatValue() : 1.0f;
+    const auto view  = argc > 3 ? juce::String (argv[3]) : juce::String ("ms");
 
     hinge::HingeProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
@@ -34,7 +35,8 @@ int main (int argc, char* argv[])
 
     // Settings that show the controls doing something, rather than all at zero.
     using hinge::pid::forStrip;
-    set (hinge::pid::link, 0.0f);
+    set (hinge::pid::link, view == "stereo" ? 1.0f : 0.0f);
+    set (hinge::pid::midSide, view == "ms" ? 1.0f : 0.0f);
     set (forStrip (0, hinge::pid::lowCut),    2.0f);
     set (forStrip (0, hinge::pid::lowShelf),  1.0f);
     set (forStrip (0, hinge::pid::lowLevel),  3.5f);
@@ -59,7 +61,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * hinge::designHeight / hinge::designWidth));
+    editor->setSize (juce::roundToInt (hinge::designWidth * scale), juce::roundToInt (editor->getHeight() / 0.8f * scale));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.

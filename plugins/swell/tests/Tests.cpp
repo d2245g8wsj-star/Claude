@@ -10,6 +10,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "PluginProcessor.h"
+#include "indiewave/SessionCompat.h"
 #include "dsp/HarmonicBand.h"
 #include "dsp/Saturation.h"
 
@@ -521,6 +522,10 @@ int main()
     testLatency();
     testRobustness();
     testState();
+
+    section ("Sessions saved by released versions open unchanged");
+    indiewave::compat::run ([] { return std::make_unique<swell::SwellProcessor>(); },
+                            juce::File (INDIEWAVE_COMPAT_DIR), INDIEWAVE_VERSION, check);
 
     std::cout << "\n" << (checks - failures) << " / " << checks << " checks passed" << std::endl;
     return failures == 0 ? 0 : 1;

@@ -21,7 +21,7 @@ int main (int argc, char* argv[])
                                       : juce::File::getCurrentWorkingDirectory()
                                             .getChildFile ("breakwater.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : breakwater::designWidth;
+    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : breakwater::panelWidth;
 
     breakwater::BreakwaterProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);

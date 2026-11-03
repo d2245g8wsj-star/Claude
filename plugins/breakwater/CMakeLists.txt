@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Breakwater VERSION 0.5.0 LANGUAGES C CXX)
+project(Breakwater VERSION 0.6.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -54,9 +54,10 @@ target_sources(Breakwater PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
     src/gui/Panel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp
     src/gui/Display.cpp)
 
-target_include_directories(Breakwater PRIVATE src)
+target_include_directories(Breakwater PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
 
 target_compile_definitions(Breakwater PUBLIC
     JUCE_WEB_BROWSER=0
@@ -83,7 +84,10 @@ if(BREAKWATER_BUILD_TESTS)
     juce_add_console_app(breakwater_tests PRODUCT_NAME "breakwater_tests")
 
     target_sources(breakwater_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(breakwater_tests PRIVATE src)
+    target_include_directories(breakwater_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(breakwater_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(breakwater_tests PRIVATE
         Breakwater
         juce::juce_audio_utils
@@ -102,7 +106,7 @@ if(BREAKWATER_BUILD_TOOLS)
     juce_add_console_app(breakwater_shot PRODUCT_NAME "breakwater_shot")
 
     target_sources(breakwater_shot PRIVATE tools/Snapshot.cpp)
-    target_include_directories(breakwater_shot PRIVATE src)
+    target_include_directories(breakwater_shot PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
     target_link_libraries(breakwater_shot PRIVATE
         Breakwater
         juce::juce_audio_utils

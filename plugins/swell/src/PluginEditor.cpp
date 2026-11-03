@@ -3,232 +3,287 @@
 namespace swell
 {
 
+namespace ui = indiewave::ui;
+namespace colour = modern::colour;
+
 namespace
 {
-    constexpr float rowTop[]  = { 20.0f, 182.0f };
-    constexpr float rowHeight = 138.0f;
+    constexpr float earWidth = 64.0f;
+    constexpr float rowCentres[] = { 102.0f, 272.0f };
 
     // Horizontal plan of a row, left to right.
-    constexpr float letterCentre = 266.0f;
-    constexpr float inputCentre  = 330.0f;
-    constexpr float bandX[]      = { 384.0f, 644.0f, 904.0f };
-    constexpr float bandWidth    = 250.0f;
-    constexpr float outputCentre = 1206.0f;
-    constexpr float activeCentre = 1262.0f;
-    constexpr float meterX       = 1290.0f;
-    constexpr float meterWidth   = 130.0f;
-    constexpr float meterHeight  = 88.0f;
+    constexpr float letterX = 282.0f, inputX = 340.0f;
+    constexpr float bandX[] = { 394.0f, 660.0f, 926.0f };
+    constexpr float bandWidth = 252.0f, bandHeight = 158.0f;
+    constexpr float outputX = 1236.0f, meterX = 1300.0f, meterWidth = 250.0f;
 
-    constexpr float earWidth = 44.0f;
-
-    juce::Rectangle<int> square (float centreX, float centreY, float side)
+    juce::String signedDb (double v, int decimals)
     {
-        return juce::Rectangle<float> (side, side).withCentre ({ centreX, centreY }).toNearestInt();
+        const auto shown = std::abs (v) < 0.5 * std::pow (10.0, -decimals) ? 0.0 : v;
+        return (shown > 0.0 ? "+" : "") + juce::String (shown, decimals);
     }
 
-    panel::Knob::Legends gainLegends()
+    juce::String hertz (double hz)
     {
-        return { { -10.0f, "-10" }, { -5.0f, "-5" }, { 0.0f, "0" }, { 5.0f, "+5" }, { 10.0f, "+10" } };
+        if (hz < 1000.0)
+            return juce::String (juce::roundToInt (hz)) + " Hz";
+
+        return juce::String (hz / 1000.0, hz < 10000.0 ? 2 : 1).trimCharactersAtEnd ("0").trimCharactersAtEnd (".") + " kHz";
     }
 
-    panel::Knob::Legends trimLegends()
+    modern::ArcKnob::Style trim (const char* name)
     {
-        return { { -20.0f, "-20" }, { 0.0f, "0" }, { 20.0f, "+20" } };
+        return { 26.0f, colour::ink, true, name, [] (double v) { return signedDb (v, 0) + " dB"; } };
     }
 
-    constexpr const char* bandTitle[] = { "LO  SHELF", "MID  PEAK", "HI  SHELF" };
-
-    const char* channelLetter (StripMode mode, int strip)
+    modern::ArcKnob::Style level (juce::Colour c)
     {
-        switch (mode)
-        {
-            case StripMode::midSide: return strip == 0 ? "M" : "S";
-            case StripMode::stereo:  return strip == 0 ? "L" : "R";
-            case StripMode::dualMono: break;
-        }
+        return { 28.0f, c, true, "LEVEL", [] (double v) { return signedDb (v, 1); } };
+    }
 
-        return strip == 0 ? "A" : "B";
+    modern::ArcKnob::Style frequency (juce::Colour c)
+    {
+        return { 19.0f, c, false, "FREQ", [] (double v) { return hertz (v); } };
+    }
+
+    constexpr const char* bandTitle[] = { "LO SHELF", "MID PEAK", "HI SHELF" };
+    const juce::Colour bandColour[] = { colour::lo, colour::mid, colour::hi };
+
+    // The switch shows STEREO, DUAL, M/S; the parameter's order is dual, stereo, M/S.
+    StripMode modeAt (int segment)
+    {
+        return segment == 0 ? StripMode::stereo : segment == 1 ? StripMode::dualMono : StripMode::midSide;
+    }
+
+    int segmentOf (StripMode mode)
+    {
+        return mode == StripMode::stereo ? 0 : mode == StripMode::dualMono ? 1 : 2;
     }
 }
 
 // ---------------------------------------------------------------------------
 
 SwellEditor::Strip::Strip (SwellProcessor& p, int index)
-    : input    (p.apvts, pid::forStrip (index, pid::input),   panel::capTrim, 52.0f, trimLegends()),
-      loLevel  (p.apvts, pid::forStrip (index, pid::loGain),  panel::capLo,   62.0f, gainLegends()),
-      loFreq   (p.apvts, pid::forStrip (index, pid::loFreq),  panel::capLo,   42.0f,
-                { { 20.0f, "20" }, { 60.0f, "60" }, { 140.0f, "140" }, { 420.0f, "420" } }),
-      midLevel (p.apvts, pid::forStrip (index, pid::midGain), panel::capMid,  62.0f, gainLegends()),
-      midFreq  (p.apvts, pid::forStrip (index, pid::midFreq), panel::capMid,  42.0f,
-                { { 200.0f, ".2k" }, { 600.0f, ".6k" }, { 1800.0f, "1.8k" }, { 6200.0f, "6.2k" } }),
-      hiLevel  (p.apvts, pid::forStrip (index, pid::hiGain),  panel::capHi,   62.0f, gainLegends()),
-      hiFreq   (p.apvts, pid::forStrip (index, pid::hiFreq),  panel::capHi,   42.0f,
-                { { 5000.0f, "5k" }, { 8000.0f, "8k" }, { 14000.0f, "14k" }, { 25000.0f, "25k" } }),
-      output   (p.apvts, pid::forStrip (index, pid::output),  panel::capTrim, 52.0f, trimLegends()),
-      loIn     (p.apvts, pid::forStrip (index, pid::loIn)),
-      midIn    (p.apvts, pid::forStrip (index, pid::midIn)),
-      hiIn     (p.apvts, pid::forStrip (index, pid::hiIn)),
-      active   (p.apvts, pid::forStrip (index, pid::active))
+    : input    (p.apvts, pid::forStrip (index, pid::input),   trim ("INPUT")),
+      loLevel  (p.apvts, pid::forStrip (index, pid::loGain),  level (colour::lo)),
+      loFreq   (p.apvts, pid::forStrip (index, pid::loFreq),  frequency (colour::lo)),
+      midLevel (p.apvts, pid::forStrip (index, pid::midGain), level (colour::mid)),
+      midFreq  (p.apvts, pid::forStrip (index, pid::midFreq), frequency (colour::mid)),
+      hiLevel  (p.apvts, pid::forStrip (index, pid::hiGain),  level (colour::hi)),
+      hiFreq   (p.apvts, pid::forStrip (index, pid::hiFreq),  frequency (colour::hi)),
+      output   (p.apvts, pid::forStrip (index, pid::output),  trim ("OUTPUT")),
+      loIn     (p.apvts, pid::forStrip (index, pid::loIn),    colour::lo,  "IN"),
+      midIn    (p.apvts, pid::forStrip (index, pid::midIn),   colour::mid, "IN"),
+      hiIn     (p.apvts, pid::forStrip (index, pid::hiIn),    colour::hi,  "IN"),
+      active   (p.apvts, pid::forStrip (index, pid::active),  colour::ink, "IN"),
+      loDrive  (colour::lo),
+      midDrive (colour::mid),
+      hiDrive  (colour::hi)
 {
 }
 
-std::vector<juce::Component*> SwellEditor::Strip::controls()
+std::vector<juce::Component*> SwellEditor::Strip::components()
 {
     return { &input, &loLevel, &loFreq, &midLevel, &midFreq, &hiLevel, &hiFreq, &output,
              &loIn, &midIn, &hiIn, &active, &loDrive, &midDrive, &hiDrive, &meter };
+}
+
+void SwellEditor::Strip::layout (float y)
+{
+    using K = modern::ArcKnob;
+    input .setBounds (K::boundsAt ({ inputX,  y + 6.0f }, 26.0f));
+    output.setBounds (K::boundsAt ({ outputX, y + 6.0f }, 26.0f));
+
+    const std::array<std::tuple<K*, K*, modern::Pill*, modern::DriveLed*>, 3> bands {
+        std::make_tuple (&loLevel,  &loFreq,  &loIn,  &loDrive),
+        std::make_tuple (&midLevel, &midFreq, &midIn, &midDrive),
+        std::make_tuple (&hiLevel,  &hiFreq,  &hiIn,  &hiDrive)
+    };
+
+    for (size_t b = 0; b < bands.size(); ++b)
+    {
+        const auto x = bandX[b];
+        auto [gain, freq, in, drive] = bands[b];
+        gain ->setBounds (K::boundsAt ({ x + 66.0f,  y + 6.0f },  28.0f));
+        freq ->setBounds (K::boundsAt ({ x + 160.0f, y + 10.0f }, 19.0f));
+        in   ->setBounds (juce::Rectangle<float> (36.0f, 20.0f).withCentre ({ x + 222.0f, y + 10.0f }).toNearestInt());
+        drive->setBounds (juce::Rectangle<float> (18.0f, 18.0f).withCentre ({ x + 214.0f, y - 64.0f }).toNearestInt());
+    }
+
+    active.setBounds (juce::Rectangle<float> (36.0f, 18.0f).withCentre ({ meterX + meterWidth - 20.0f, y - 44.0f }).toNearestInt());
+    meter .setBounds (juce::Rectangle<float> (meterX, y - 26.0f, meterWidth, 74.0f).toNearestInt());
 }
 
 // ---------------------------------------------------------------------------
 
 SwellEditor::Face::Face (SwellProcessor& p)
     : processor (p),
-      mode (p.apvts, pid::mode, { "DUAL", "STEREO", "M-S" })
+      fold (ui::FoldTab::Edge::bottom, colour::ink, juce::Colour (0xff2b2f34))
 {
-    // Rendered at twice the design size, so it stays sharp at the largest
-    // editor size the resize limits allow.
-    enamel = panel::renderPaint (designWidth * 2, designHeight * 2);
-
     for (int i = 0; i < numChannelStrips; ++i)
     {
         strips[(size_t) i] = std::make_unique<Strip> (p, i);
 
-        for (auto* child : strips[(size_t) i]->controls())
-            addAndMakeVisible (child);
+        for (auto* child : strips[(size_t) i]->components())
+            i == 0 ? addAndMakeVisible (child) : addChildComponent (child);
     }
 
-    addAndMakeVisible (mode);
+    addAndMakeVisible (modeSwitch);
+    modeSwitch.onChange = [this] (int segment) { setMode (modeAt (segment)); };
+
+    addAndMakeVisible (fold);
+    fold.onClick = [this]
+    {
+        // Folding is stereo, one strip for both channels; unfolding goes back
+        // to the two strip mode last used, dual unless it was mid/side.
+        setMode (open ? StripMode::stereo : lastOpenMode);
+    };
+
     refresh();
+}
+
+void SwellEditor::Face::setMode (StripMode mode)
+{
+    auto* parameter = processor.apvts.getParameter (pid::mode);
+    parameter->beginChangeGesture();
+    parameter->setValueNotifyingHost (parameter->convertTo0to1 ((float) static_cast<int> (mode)));
+    parameter->endChangeGesture();
 }
 
 void SwellEditor::Face::resized()
 {
     for (int i = 0; i < numChannelStrips; ++i)
-        layoutStrip (*strips[(size_t) i], rowTop[i]);
+        strips[(size_t) i]->layout (rowCentres[i]);
 
-    mode.setBounds (54, 176, 170, 104);
-}
+    modeSwitch.setBounds (86, 148, 144, 24);
 
-void SwellEditor::Face::layoutStrip (Strip& s, float top)
-{
-    const auto middle = top + rowHeight * 0.5f + 4.0f;
-
-    s.input.setBounds (square (inputCentre, middle, 110.0f));
-
-    const std::array<std::tuple<panel::Knob*, panel::Knob*, panel::Toggle*, panel::JewelLamp*>, 3> bands {
-        std::make_tuple (&s.loLevel,  &s.loFreq,  &s.loIn,  &s.loDrive),
-        std::make_tuple (&s.midLevel, &s.midFreq, &s.midIn, &s.midDrive),
-        std::make_tuple (&s.hiLevel,  &s.hiFreq,  &s.hiIn,  &s.hiDrive)
-    };
-
-    for (size_t b = 0; b < bands.size(); ++b)
-    {
-        const auto x = bandX[b];
-        auto [level, frequency, in, drive] = bands[b];
-
-        level    ->setBounds (square (x + 66.0f,  middle, 120.0f));
-        frequency->setBounds (square (x + 160.0f, middle - 6.0f, 96.0f));
-        in       ->setBounds (juce::Rectangle<float> (30.0f, 70.0f).withCentre ({ x + 223.0f, middle }).toNearestInt());
-        drive    ->setBounds (juce::Rectangle<float> (16.0f, 16.0f).withCentre ({ x + bandWidth - 18.0f, top + 14.0f }).toNearestInt());
-    }
-
-    s.output.setBounds (square (outputCentre, middle, 110.0f));
-    s.active.setBounds (juce::Rectangle<float> (30.0f, 70.0f).withCentre ({ activeCentre, middle }).toNearestInt());
-    s.meter .setBounds (juce::Rectangle<float> (meterX, middle - meterHeight * 0.5f, meterWidth, meterHeight).toNearestInt());
+    const auto height = (float) (open ? designHeightOpen : designHeightFolded);
+    fold.setBounds (juce::Rectangle<float> (760.0f, height - 22.0f, 120.0f, 17.0f).toNearestInt());
 }
 
 void SwellEditor::Face::refresh()
 {
-    for (int i = 0; i < numChannelStrips; ++i)
-    {
-        auto& s = *strips[(size_t) i];
-        auto& source = processor.meters.channels[(size_t) i];
+    auto& a = processor.meters.channels[0];
+    auto& b = processor.meters.channels[1];
+    const float peaks[2] = { MeterSource::take (a.outputPeak), MeterSource::take (b.outputPeak) };
+    float drives[2][3];
 
-        s.meter   .push (MeterSource::take (source.outputPeak));
-        s.loDrive .push (MeterSource::take (source.bandDrive[0]));
-        s.midDrive.push (MeterSource::take (source.bandDrive[1]));
-        s.hiDrive .push (MeterSource::take (source.bandDrive[2]));
+    for (size_t band = 0; band < 3; ++band)
+    {
+        drives[0][band] = MeterSource::take (a.bandDrive[band]);
+        drives[1][band] = MeterSource::take (b.bandDrive[band]);
     }
 
-    const auto modeIndex = mode.getSelected();
+    // Folded, the one row carries both channels: both bars, and each band's
+    // drive lamp shows the harder working side.
+    if (open)
+    {
+        strips[0]->meter.push ({ peaks[0] });
+        strips[1]->meter.push ({ peaks[1] });
+    }
+    else
+    {
+        strips[0]->meter.push ({ peaks[0], peaks[1] });
+    }
+
+    for (int row = 0; row < 2; ++row)
+    {
+        auto& s = *strips[(size_t) row];
+        const auto drive = [&] (int band)
+        {
+            return open ? drives[row][band] : juce::jmax (drives[0][band], drives[1][band]);
+        };
+        s.loDrive .push (drive (0));
+        s.midDrive.push (drive (1));
+        s.hiDrive .push (drive (2));
+    }
+
+    const auto mode = static_cast<StripMode> (juce::jlimit (0, 2, (int) processor.apvts.getRawParameterValue (pid::mode)->load()));
+    const auto modeIndex = static_cast<int> (mode);
+    modeSwitch.setSelected (segmentOf (mode));
+
+    if (mode != StripMode::stereo)
+        lastOpenMode = mode;
 
     if (modeIndex == shownMode)
         return;
 
+    const auto shouldOpen = mode != StripMode::stereo;
+    const auto changed = shouldOpen != open;
     shownMode = modeIndex;
+    open = shouldOpen;
 
-    const auto stripMode = static_cast<StripMode> (modeIndex);
+    for (auto* child : strips[1]->components())
+        child->setVisible (open);
 
-    for (int i = 0; i < numChannelStrips; ++i)
-        strips[(size_t) i]->meter.setCaption (channelLetter (stripMode, i));
+    // Each strip's meter reads its own output, before mid/side goes back to
+    // left and right; folded, the one meter shows both channels.
+    const auto midSide = mode == StripMode::midSide;
+    strips[0]->meter.setChannels (open ? juce::StringArray { midSide ? "M" : "L" } : juce::StringArray { "L", "R" });
+    strips[1]->meter.setChannels ({ midSide ? "S" : "R" });
 
-    // In stereo mode strip A drives both channels, so B's controls would only be
-    // pretending. They stay in place, faded; B's lamps and meter still show the
-    // right hand channel.
-    const auto linked = stripMode == StripMode::stereo;
+    fold.setCaption (lastOpenMode == StripMode::midSide ? juce::String (juce::CharPointer_UTF8 ("SPLIT M · S"))
+                                                        : juce::String (juce::CharPointer_UTF8 ("DUAL L · R")),
+                     "FOLD");
+    fold.setOpen (open);
 
-    for (auto* child : strips[1]->controls())
-    {
-        if (dynamic_cast<panel::JewelLamp*> (child) != nullptr || dynamic_cast<panel::VuMeter*> (child) != nullptr)
-            continue;
-
-        child->setEnabled (! linked);
-        child->setAlpha (linked ? 0.35f : 1.0f);
-    }
-
+    resized();
     repaint();
+
+    if (changed && onFoldChanged)
+        onFoldChanged();
 }
 
 void SwellEditor::Face::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
 
-    g.drawImage (enamel, bounds, juce::RectanglePlacement::stretchToFit);
-
-    panel::drawRackEar (g, bounds.withWidth (earWidth));
-    panel::drawRackEar (g, bounds.withLeft (bounds.getRight() - earWidth));
+    ui::drawPlate (g, bounds, colour::plateTop, colour::plateBottom, 0x53574c);
+    ui::drawRackEar (g, bounds.withWidth (earWidth), true);
+    ui::drawRackEar (g, bounds.withLeft (bounds.getRight() - earWidth), false);
 
     // Name block.
-    panel::drawNameplate (g, { 62.0f, 26.0f, 154.0f, 62.0f });
-    panel::drawLegend (g, "MODE", { 62.0f, 150.0f, 154.0f, 14.0f }, 11.0f, 2.4f);
-    panel::drawLegend (g, "INDIEWAVE AUDIO", { 52.0f, 300.0f, 174.0f, 14.0f }, 9.5f, 2.6f,
-                       juce::Justification::centred, panel::silkDim);
+    ui::drawLogo (g, { 158.0f, 44.0f }, 0.85f, colour::ink, colour::dim);
+    modern::drawText (g, "Swell", { 78.0f, 84.0f, 160.0f, 32.0f }, modern::sans (28.0f, false), colour::ink);
+    modern::drawText (g, "HARMONIC EQUALISER", { 68.0f, 116.0f, 180.0f, 11.0f }, modern::sans (7.5f), colour::dim,
+                      juce::Justification::centred, 2.0f);
 
-    // The rule between the name block and the strips.
-    g.setColour (panel::silk.withAlpha (0.3f));
-    g.drawVerticalLine (236, 20.0f, bounds.getBottom() - 20.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.07f));
+    g.fillRect (252.0f, 22.0f, 1.0f, bounds.getHeight() - 48.0f);
 
-    for (int i = 0; i < numChannelStrips; ++i)
-        paintStrip (g, i, rowTop[i]);
+    paintRow (g, 0, rowCentres[0]);
+
+    if (open)
+        paintRow (g, 1, rowCentres[1]);
 }
 
-void SwellEditor::Face::paintStrip (juce::Graphics& g, int index, float top) const
+void SwellEditor::Face::paintRow (juce::Graphics& g, int index, float y) const
 {
-    const auto stripMode = static_cast<StripMode> (juce::jmax (0, shownMode));
-    const auto linked    = stripMode == StripMode::stereo && index == 1;
-    const auto middle    = top + rowHeight * 0.5f + 4.0f;
+    const auto mode = static_cast<StripMode> (juce::jmax (0, shownMode));
 
-    panel::drawLegend (g, channelLetter (stripMode, index), { letterCentre - 20.0f, middle - 22.0f, 40.0f, 40.0f },
-                       34.0f, 0.0f, juce::Justification::centred, linked ? panel::silkDim : panel::silk);
-
-    if (linked)
-        panel::drawLegend (g, "LINKED", { letterCentre - 26.0f, middle + 20.0f, 52.0f, 12.0f }, 8.5f, 1.4f,
-                           juce::Justification::centred, panel::capMid);
-
-    panel::drawLegend (g, "INPUT",  { inputCentre - 40.0f,  top + 2.0f, 80.0f, 14.0f }, 10.0f, 1.8f);
-    panel::drawLegend (g, "OUTPUT", { outputCentre - 40.0f, top + 2.0f, 80.0f, 14.0f }, 10.0f, 1.8f);
+    if (open)
+    {
+        const auto letter = mode == StripMode::midSide ? (index == 0 ? "M" : "S") : (index == 0 ? "L" : "R");
+        modern::drawText (g, letter, { letterX - 20.0f, y - 18.0f, 40.0f, 36.0f }, modern::sans (26.0f, false), colour::ink);
+    }
 
     for (int b = 0; b < 3; ++b)
     {
         const auto x = bandX[b];
-        panel::drawSection (g, { x, top + 8.0f, bandWidth, rowHeight - 8.0f }, bandTitle[b]);
+        modern::drawSection (g, { x, y - 82.0f, bandWidth, bandHeight });
 
-        panel::drawLegend (g, "LEVEL", { x + 36.0f, top + rowHeight - 18.0f, 60.0f, 12.0f }, 9.0f, 1.6f,
-                           juce::Justification::centred, panel::silkDim);
-        panel::drawLegend (g, "FREQ",  { x + 130.0f, top + rowHeight - 18.0f, 60.0f, 12.0f }, 9.0f, 1.6f,
-                           juce::Justification::centred, panel::silkDim);
-        panel::drawLegend (g, "DRIVE", { x + bandWidth - 78.0f, top + 8.0f, 50.0f, 12.0f }, 8.0f, 1.2f,
-                           juce::Justification::centredRight, panel::silkDim);
+        g.setColour (bandColour[b]);
+        g.fillEllipse (juce::Rectangle<float> (8.0f, 8.0f).withCentre ({ x + 18.0f, y - 64.0f }));
+        modern::drawText (g, bandTitle[b], { x + 30.0f, y - 70.0f, 120.0f, 12.0f }, modern::sans (9.0f), colour::ink,
+                          juce::Justification::centredLeft, 1.4f);
+        modern::drawText (g, "DRIVE", { x + 146.0f, y - 70.0f, 56.0f, 12.0f }, modern::sans (7.0f), colour::dim,
+                          juce::Justification::centredRight, 1.0f);
     }
+
+    modern::drawText (g, "METER", { meterX, y - 50.0f, 80.0f, 12.0f }, modern::sans (8.0f), colour::dim,
+                      juce::Justification::centredLeft, 1.4f);
+    modern::drawText (g, "STRIP", { meterX + meterWidth - 100.0f, y - 50.0f, 58.0f, 12.0f }, modern::sans (7.0f),
+                      colour::dim, juce::Justification::centredRight, 1.0f);
 }
 
 // ---------------------------------------------------------------------------
@@ -239,15 +294,16 @@ SwellEditor::SwellEditor (SwellProcessor& p)
       face (p)
 {
     addAndMakeVisible (face);
-    face.setBounds (0, 0, designWidth, designHeight);
+    face.onFoldChanged = [this] { applyFold(); };
 
     setResizable (true, true);
-    setResizeLimits (designWidth / 2, designHeight / 2, designWidth * 2, designHeight * 2);
+    const auto height = face.isOpen() ? designHeightOpen : designHeightFolded;
+    setResizeLimits (designWidth / 2, height / 2, designWidth * 8 / 5, height * 8 / 5);
 
     if (auto* sizeLimits = getConstrainer())
-        sizeLimits->setFixedAspectRatio ((double) designWidth / designHeight);
+        sizeLimits->setFixedAspectRatio ((double) designWidth / height);
 
-    setSize (designWidth * 4 / 5, designHeight * 4 / 5);
+    setSize (designWidth * 4 / 5, height * 4 / 5);
     startTimerHz (30);
 }
 
@@ -256,15 +312,31 @@ SwellEditor::~SwellEditor()
     stopTimer();
 }
 
+void SwellEditor::applyFold()
+{
+    // Keep the scale the panel is drawn at; only the height changes.
+    const auto scale  = (double) getWidth() / designWidth;
+    const auto height = face.isOpen() ? designHeightOpen : designHeightFolded;
+
+    setResizeLimits (designWidth / 2, height / 2, designWidth * 8 / 5, height * 8 / 5);
+
+    if (auto* sizeLimits = getConstrainer())
+        sizeLimits->setFixedAspectRatio ((double) designWidth / height);
+
+    setSize (getWidth(), juce::roundToInt (height * scale));
+}
+
 void SwellEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (panel::paint);
+    g.fillAll (colour::plateBottom);
 }
 
 void SwellEditor::resized()
 {
-    face.setTransform (juce::AffineTransform::scale ((float) getWidth()  / designWidth,
-                                                     (float) getHeight() / designHeight));
+    const auto height = face.isOpen() ? designHeightOpen : designHeightFolded;
+    face.setBounds (0, 0, designWidth, height);
+    face.setTransform (juce::AffineTransform::scale ((float) getWidth()  / (float) designWidth,
+                                                     (float) getHeight() / (float) height));
 }
 
 void SwellEditor::timerCallback()

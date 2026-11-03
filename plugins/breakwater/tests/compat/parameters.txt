@@ -1,0 +1,33 @@
+adaptive_link | bool | default 0
+attack | float | 0.01..10 step 0 skew 1 | default 1.5
+balance | float | -100..100 step 1 skew 1 | default 0
+bypass | bool | default 0
+ceiling | float | -24..0 step 0.1 skew 1 | default -1
+clip | float | 0..100 step 1 skew 1 | default 0
+comp_attack | float | 0.1..100 step 0 skew 1 | default 10
+comp_highpass | float | 20..300 step 0 skew 1 | default 20
+comp_mode | choice | Stereo;Mid/Side | default 0
+comp_on | bool | default 0
+comp_ratio | float | 1..10 step 0 skew 1 | default 2
+comp_release | float | 10..2000 step 0 skew 1 | default 150
+comp_threshold | float | -30..6 step 0.1 skew 1 | default -6
+dc_filter | bool | default 0
+delta | bool | default 0
+detail | float | 0..100 step 1 skew 1 | default 0
+dither | choice | None;TPDF;Shaped | default 2
+engine | choice | Modern;Analog | default 0
+gain | float | -12..30 step 0.1 skew 0.81807 | default 0
+link_release | float | 0..100 step 1 skew 1 | default 100
+link_transients | float | 0..100 step 1 skew 1 | default 75
+lookahead | float | 0..10 step 0.1 skew 0.6 | default 2
+low_punch | float | -100..100 step 1 skew 1 | default 0
+match | bool | default 0
+oversampling | choice | Off;2x;4x;8x;16x;32x | default 2
+release | float | 1..1000 step 0 skew 1 | default 80
+sidechain | bool | default 0
+style | choice | Clean;Punch;Open;Loud;Balanced;Glue;Safe;Smooth | default 4
+target | choice | Off;-9 LUFS Club;-11 LUFS CD;-14 LUFS Streaming;-16 LUFS Apple Music;-18 LUFS Podcast;-23 LUFS EBU R128;-24 LKFS ATSC A/85 | default 3
+transients | float | -100..100 step 1 skew 1 | default 0
+true_peak | bool | default 1
+window | choice | Off;C4;C3;C2;C1;C0 | default 0
+word_length | choice | Off;24 bit;20 bit;16 bit | default 0

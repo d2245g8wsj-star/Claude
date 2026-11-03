@@ -4,7 +4,8 @@ A two channel harmonic equaliser. Three bands per channel, each of which boosts
 or cuts by saturating the frequencies it covers rather than only changing their
 level, so a band driven harder turns its boost into harmonics.
 
-![The Swell editor](docs/ui.png)
+![The Swell editor, stereo](docs/ui.png)
+![The Swell editor, folded out for mid/side](docs/ui-ms.png)
 
 Built with JUCE 8. Ships as **VST3** and **Standalone** on Windows, macOS and
 Linux, plus **AU** on macOS.
@@ -32,13 +33,16 @@ Global:
 
 | Control | What it does |
 | --- | --- |
-| **Dual Mono** | Strip A on the left channel, strip B on the right. |
-| **Stereo** | Strip A on both channels. Strip B is greyed out and ignored, so the two sides cannot drift apart. |
-| **Mid/Side** | Strip A on the mid, strip B on the side. The strip letters change to **M** and **S**. |
+| **STEREO** | One strip on both channels, so the two sides cannot drift apart. The unit folds to a single row. |
+| **DUAL** | Strip A on the left channel, strip B on the right; the second strip folds out underneath. |
+| **M/S** | Strip A on the mid, strip B on the side. The strip letters change to **M** and **S**. |
 
-Each band has a lamp that lights as its curve starts to bend, and each strip
-has a twelve segment peak meter with a clip lamp at the head (in Mid/Side mode
-the meters read M and S).
+The tab under the panel folds to stereo and back out to the two strip mode
+last used. Strip B's settings are kept while it is folded away.
+
+Each band has a DRIVE lamp that lights as its curve starts to bend, and each
+strip has an LED bar meter with a held peak readout (in M/S mode the meters
+read M and S; folded, one meter shows left and right).
 
 ## How a band works
 
@@ -83,7 +87,7 @@ mid/side operation.
 
 It is **not** a measured model of that unit. No hardware was measured, so the
 shapes of the curves, the drive calibration and the exact Q are this project's
-own choices. The interface is in the IndieWave house style shared with Crest, and no name, logo or panel
+own choices. The interface is a modern take on the IndieWave house style, and no name, logo or panel
 artwork of any other product is used.
 
 ## Building
@@ -104,7 +108,8 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DSWELL_BUILD_TESTS=ON -DSWELL_BUILD_TOOLS=ON
 cmake --build build --target swell_tests swell_shot --parallel
 ./build/swell_tests_artefacts/Release/swell_tests
-./build/swell_shot_artefacts/Release/swell_shot docs/ui.png 1400
+./build/swell_shot_artefacts/Release/swell_shot docs/ui.png 1640 stereo
+./build/swell_shot_artefacts/Release/swell_shot docs/ui-ms.png 1640 ms
 ```
 
 The checks assert: unity slope and monotonic curves, a null against the input
@@ -120,7 +125,8 @@ src/dsp/Saturation.h    the three curves
 src/dsp/HarmonicBand.h  one band: filter, curve, smoothing, drive meter
 src/dsp/Meters.h        audio thread to editor
 src/PluginProcessor.*   parameters, routing, oversampling, the strips
-src/gui/Panel.*         the plate, wells, switches and meters, in the house style; knob and LED art shared with Crest
+src/gui/Modern.*        aluminium knobs with value arcs, pill switches, LED bar meters
+../../shared/indiewave  the IndieWave mark, plate, rack ears and fold tab; the session checks
 src/PluginEditor.*      layout, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render

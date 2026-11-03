@@ -318,15 +318,8 @@ void BreakwaterEditor::Face::paint (juce::Graphics& g)
     g.setColour (juce::Colours::white.withAlpha (0.05f));
     g.fillRect (0.0f, headerHeight, bounds.getWidth(), 1.0f);
 
-    // Wordmark: a swell running into a wall.
-    juce::Path wave;
-    wave.startNewSubPath (margin - 2.0f, 38.0f);
-    wave.cubicTo (margin + 4.0f, 22.0f, margin + 12.0f, 20.0f, margin + 18.0f, 30.0f);
-    wave.cubicTo (margin + 20.0f, 34.0f, margin + 15.0f, 36.0f, margin + 14.0f, 31.0f);
-    g.setColour (panel::accent);
-    g.strokePath (wave, juce::PathStrokeType (2.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-    g.fillRect (margin + 22.0f, 14.0f, 4.0f, 30.0f);
-    g.fillRect (margin - 4.0f, 42.0f, 30.0f, 2.0f);
+    // The maker's mark.
+    indiewave::ui::drawLogo (g, { margin + 12.0f, 29.0f }, 0.52f, panel::accent, panel::textDim, false);
 
     panel::drawLabel (g, "BREAKWATER", { margin + 38.0f, 10.0f, 300.0f, 28.0f }, 24.0f, panel::text,
                       juce::Justification::centredLeft, true, 5.0f);
@@ -401,6 +394,7 @@ BreakwaterEditor::BreakwaterEditor (BreakwaterProcessor& p)
 {
     addAndMakeVisible (face);
     face.setBounds (0, 0, designWidth, designHeight);
+    setOpaque (true);
 
     face.advanced.onClick = [this] { setAdvanced (face.advanced.getToggleState()); };
 
@@ -414,7 +408,7 @@ BreakwaterEditor::BreakwaterEditor (BreakwaterProcessor& p)
     scale = juce::jlimit (minimumScale, maximumScale, scale);
 
     setResizable (true, true);
-    setSize (juce::roundToInt (designWidth * scale), juce::roundToInt (designHeight * scale));
+    setSize (juce::roundToInt (panelWidth * scale), juce::roundToInt (designHeight * scale));
     setAdvanced (processor.apvts.state.getProperty (advancedProperty, false));
 
     sizeRestored = true;
@@ -434,16 +428,16 @@ void BreakwaterEditor::setAdvanced (bool shouldShow)
 {
     processor.apvts.state.setProperty (advancedProperty, shouldShow, nullptr);
 
-    const auto scale = (double) getWidth() / designWidth;
+    const auto scale = (double) getWidth() / panelWidth;
     const auto height = shouldShow ? designHeightAdvanced : designHeight;
 
     face.showAdvanced (shouldShow);
 
-    setResizeLimits (juce::roundToInt (designWidth * minimumScale), juce::roundToInt (height * minimumScale),
-                     juce::roundToInt (designWidth * maximumScale), juce::roundToInt (height * maximumScale));
+    setResizeLimits (juce::roundToInt (panelWidth * minimumScale), juce::roundToInt (height * minimumScale),
+                     juce::roundToInt (panelWidth * maximumScale), juce::roundToInt (height * maximumScale));
 
     if (auto* sizeLimits = getConstrainer())
-        sizeLimits->setFixedAspectRatio ((double) designWidth / height);
+        sizeLimits->setFixedAspectRatio ((double) panelWidth / height);
 
     setSize (getWidth(), juce::roundToInt (scale * height));
     resized();
@@ -451,19 +445,28 @@ void BreakwaterEditor::setAdvanced (bool shouldShow)
 
 void BreakwaterEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (panel::faceBottom);
+    // The rack ears either side of the face, drawn at the face's scale.
+    const auto scale = (float) getWidth() / (float) panelWidth;
+    const auto height = (float) face.getHeight();
+    g.addTransform (juce::AffineTransform::scale (scale, (float) getHeight() / height));
+
+    const juce::Rectangle<float> unit (0.0f, 0.0f, (float) panelWidth, height);
+    indiewave::ui::drawPlate (g, unit, panel::faceTop, panel::faceBottom, 0x42574b);
+    indiewave::ui::drawRackEar (g, unit.withWidth ((float) earWidth), true);
+    indiewave::ui::drawRackEar (g, unit.withLeft ((float) (panelWidth - earWidth)), false);
 }
 
 void BreakwaterEditor::resized()
 {
-    face.setTransform (juce::AffineTransform::scale ((float) getWidth()  / (float) designWidth,
-                                                     (float) getHeight() / (float) face.getHeight()));
+    const auto scaleX = (float) getWidth()  / (float) panelWidth;
+    const auto scaleY = (float) getHeight() / (float) face.getHeight();
+    face.setTransform (juce::AffineTransform::scale (scaleX, scaleY).translated ((float) earWidth * scaleX, 0.0f));
 
     // Remember the size, but not the default the constructor passes through
     // on its way to the stored one.
     if (sizeRestored)
     {
-        const auto scale = (double) getWidth() / designWidth;
+        const auto scale = (double) getWidth() / panelWidth;
         processor.apvts.state.setProperty (scaleProperty, scale, nullptr);
 
         if (userSettings != nullptr)

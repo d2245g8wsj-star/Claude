@@ -10,6 +10,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "PluginProcessor.h"
+#include "indiewave/SessionCompat.h"
 #include "dsp/Band.h"
 #include "dsp/Colour.h"
 #include "dsp/Voicing.h"
@@ -545,6 +546,40 @@ void testState()
 
 } // namespace
 
+void testMidSide()
+{
+    section ("Mid/side");
+
+    using namespace lacquer;
+
+    auto settings = clean();
+    settings[strip (1, pid::midBoostAmount)] = (float) voicing::amountSteps;    // the side only
+    settings[strip (1, pid::midBoostFreq)]   = 4.0f;
+    settings[pid::link]    = 0.0f;
+    settings[pid::midSide] = 1.0f;
+
+    const int n = 48000, length = 24000;
+    const auto amplitude = 0.01f;
+    const auto gainDb = [&] (const juce::AudioBuffer<float>& out, int channel)
+    {
+        return db (amplitudeAt (out, channel, 1000.0, n - length, length) / amplitude);
+    };
+
+    // A centred (mono) source is all mid: the side's boost does not touch it.
+    const auto centred = render (settings, tone (1000.0, amplitude), n);
+    check (std::abs (gainDb (centred, 0)) < 0.3 && std::abs (gainDb (centred, 1)) < 0.3,
+           "a centred source passes the side's boost untouched");
+
+    // Opposite polarity is all side: both channels carry the boost.
+    const auto wide = render (settings, [&] (int i) { auto [l, r] = tone (1000.0, amplitude) (i); return std::pair { l, -r }; }, n);
+    check (gainDb (wide, 0) > voicing::midBoostMaxDb - 0.5 && gainDb (wide, 1) > voicing::midBoostMaxDb - 0.5,
+           "a side only source takes the side's boost on both channels");
+
+    // Off by default, so a session from before mid/side keeps left and right.
+    LacquerProcessor fresh;
+    check (fresh.apvts.getRawParameterValue (pid::midSide)->load() < 0.5f, "mid/side is off by default");
+}
+
 int main()
 {
     juce::ScopedJuceInitialiser_GUI juceInitialiser;
@@ -555,9 +590,14 @@ int main()
     testBandResponse();
     testColour();
     testLinkAndBypass();
+    testMidSide();
     testLatency();
     testRobustness();
     testState();
+
+    section ("Sessions saved by released versions open unchanged");
+    indiewave::compat::run ([] { return std::make_unique<lacquer::LacquerProcessor>(); },
+                            juce::File (INDIEWAVE_COMPAT_DIR), INDIEWAVE_VERSION, check);
 
     std::cout << "\n" << (checks - failures) << " / " << checks << " checks passed" << std::endl;
     return failures == 0 ? 0 : 1;

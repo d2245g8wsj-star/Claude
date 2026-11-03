@@ -1,285 +1,390 @@
 #include "PluginEditor.h"
-#include "BinaryData.h"
 
 namespace crest
 {
 
+namespace ui = indiewave::ui;
+
 namespace
 {
-    /** Centres a square control on a point from the art, drawn larger than the
-        control's nominal diameter because each filmstrip frame carries its own
-        shadow and highlight outside the knob body. */
-    /** The art places its labels assuming the filmstrip frame is drawn at exactly
-        the diameter in controls.json, so that is what happens here. Anything
-        larger runs the frame into the label above it. */
-    juce::Rectangle<int> place (float centreX, float centreY, float diameter, float scale = 1.0f)
-    {
-        const auto side = diameter * scale;
+    // Brushed champagne aluminium, black screen printing, amber light.
+    const juce::Colour plateTop    { 0xffddd7ca };
+    const juce::Colour plateBottom { 0xffbfb7a7 };
+    const juce::Colour ink         { 0xff26231f };
+    const juce::Colour dim         { 0xff615a50 };
+    const juce::Colour lit         { 0xffe9873d };
+    const juce::Colour glow        { 0xffffb46a };
+    const juce::Colour screen      { 0xff0d0a08 };
 
-        return juce::Rectangle<float> (side, side).withCentre ({ centreX, centreY }).toNearestInt();
+    constexpr float earWidth = 64.0f;
+    constexpr float leftMarginX = 121.0f, rightMarginX = 1521.0f;
+
+    const juce::Rectangle<float> clipSection   { 178.0f, 26.0f, 270.0f, 326.0f };
+    const juce::Rectangle<float> toneSection   { 1028.0f, 26.0f, 252.0f, 326.0f };
+    const juce::Rectangle<float> outputSection { 1298.0f, 26.0f, 168.0f, 326.0f };
+    const juce::Rectangle<float> display       { 466.0f, 40.0f, 544.0f, 260.0f };
+    const juce::Rectangle<float> transferInset { 870.0f, 160.0f, 132.0f, 132.0f };
+
+    constexpr float readoutY = 328.0f, readoutPitch = 139.0f, readoutWidth = 128.0f;
+    constexpr float keyRowY = 382.0f;
+
+    // The LED column sits 6 units in from the ladder's edge, its scale beyond
+    // the dark strip behind it.
+    const juce::Rectangle<float> inScreen  { leftMarginX  - 6.0f, 180.0f, 12.0f, 186.0f };
+    const juce::Rectangle<float> outScreen { rightMarginX - 6.0f, 180.0f, 12.0f, 186.0f };
+
+    using Legends = std::vector<std::pair<float, juce::String>>;
+
+    ui::BakeliteKnob::Style knob (float radius, int dots, Legends legends, juce::String name)
+    {
+        ui::BakeliteKnob::Style s;
+        s.radius = radius;
+        s.dots = dots;
+        s.dotColour = ink;
+        s.ink = ink;
+        s.dim = dim;
+        s.legends = std::move (legends);
+        s.legendHeight = radius > 30.0f ? 8.5f : 7.5f;
+        s.name = std::move (name);
+        s.nameHeight = 9.0f;
+        return s;
     }
+
+    std::vector<float> ladderSteps()
+    {
+        return { -48.0f, -36.0f, -24.0f, -18.0f, -12.0f, -9.0f, -6.0f, -4.0f, -3.0f, -2.0f, -1.0f, -0.1f };
+    }
+
+    juce::StringArray ladderLabels() { return { "48", "", "24", "", "12", "", "6", "", "3", "", "", "0" }; }
+
+    ui::Key::Style keyStyle (juce::String label, float width)
+    {
+        ui::Key::Style s;
+        s.kind = ui::Key::Kind::white;
+        s.lit = lit;
+        s.ink = ink;
+        s.dim = dim;
+        s.capSize = 20.0f;
+        s.capWidth = width - 6.0f;
+        s.capLabel = std::move (label);
+        s.capLabelOn = juce::Colour (0xff2a1405);
+        s.capLabelOff = juce::Colour (0xff3a342d);
+        return s;
+    }
+
+    juce::String figure (float value, float floorDb)
+    {
+        return value <= floorDb ? juce::String ("-inf") : juce::String (value, 1);
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+CrestEditor::KeyRow::KeyRow (juce::AudioProcessorValueTreeState& state, const juce::String& parameterID, float width)
+    : keyWidth (width),
+      parameter (*state.getParameter (parameterID))
+{
+    const auto choices = parameter.getAllValueStrings();
+
+    for (int i = 0; i < choices.size(); ++i)
+    {
+        auto key = std::make_unique<Key> (keyStyle (choices[i], keyWidth));
+        key->setTooltip (parameter.getName (64) + ": " + choices[i]);
+        key->onClick = [this, i]
+        {
+            parameter.beginChangeGesture();
+            parameter.setValueNotifyingHost (parameter.convertTo0to1 ((float) i));
+            parameter.endChangeGesture();
+            refresh();
+        };
+        addAndMakeVisible (*key);
+        keys.push_back (std::move (key));
+    }
+
+    refresh();
+}
+
+void CrestEditor::KeyRow::resized()
+{
+    for (size_t i = 0; i < keys.size(); ++i)
+        keys[i]->setBounds (juce::Rectangle<float> (keyWidth * (float) i, 0.0f, keyWidth, (float) getHeight()).toNearestInt());
+}
+
+void CrestEditor::KeyRow::refresh()
+{
+    const auto selected = juce::roundToInt (parameter.convertFrom0to1 (parameter.getValue()));
+
+    for (size_t i = 0; i < keys.size(); ++i)
+        keys[i]->setToggleState ((int) i == selected, juce::dontSendNotification);
 }
 
 // ---------------------------------------------------------------------------
 
 CrestEditor::Face::Face (CrestProcessor& p)
     : processor (p),
-      largeStrip     (BinaryData::knob_large_png,           BinaryData::knob_large_pngSize),
-      smallStrip     (BinaryData::knob_small_png,           BinaryData::knob_small_pngSize),
-      characterStrip (BinaryData::character_selector_4_png, BinaryData::character_selector_4_pngSize),
-      inputKnob     (p.apvts, pid::input,     largeStrip),
-      kneeKnob      (p.apvts, pid::knee,      smallStrip),
-      adaptKnob     (p.apvts, pid::adapt,     smallStrip),
-      biasKnob      (p.apvts, pid::bias,      smallStrip),
-      colourKnob    (p.apvts, pid::colour,    smallStrip),
-      harmonicsKnob (p.apvts, pid::harmonics, smallStrip),
-      seriesKnob    (p.apvts, pid::series,    smallStrip),
-      sidechainKnob (p.apvts, pid::sidechain, smallStrip),
-      mixKnob       (p.apvts, pid::mix,       smallStrip),
-      ceilingKnob   (p.apvts, pid::ceiling,   largeStrip),
-      outputKnob    (p.apvts, pid::output,    largeStrip),
-      characterSwitch (p.apvts, pid::mode,    characterStrip),
-      inputMeter  (p.meters, false, ledOff, ledGreen, ledAmber, ledRed),
-      outputMeter (p.meters, true,  ledOff, ledGreen, ledAmber, ledRed),
+      inputKnob     (p.apvts, pid::input,     knob (36.0f, 31, { { -12.0f, "-12" }, { 0.0f, "0" }, { 18.0f, "+18" } }, "INPUT")),
+      characterKnob (p.apvts, pid::mode,      knob (26.0f, 0, { { 0.0f, "GLASS" }, { 1.0f, "EDGE" }, { 2.0f, "SILK" }, { 3.0f, "TUBE" } },
+                                                    "CHARACTER")),
+      kneeKnob      (p.apvts, pid::knee,      knob (24.0f, 11, { { 0.0f, "0" }, { 24.0f, "24" } }, "KNEE")),
+      adaptKnob     (p.apvts, pid::adapt,     knob (24.0f, 11, { { 0.0f, "0" }, { 100.0f, "100" } }, "ADAPT")),
+      biasKnob      (p.apvts, pid::bias,      knob (24.0f, 11, { { -100.0f, "-" }, { 0.0f, "0" }, { 100.0f, "+" } }, "BIAS")),
+      colourKnob    (p.apvts, pid::colour,    knob (24.0f, 11, { { 0.0f, "0" }, { 100.0f, "100" } }, "COLOUR")),
+      harmonicsKnob (p.apvts, pid::harmonics, knob (24.0f, 11, { { 0.0f, "0" }, { 100.0f, "100" } }, "HARMONICS")),
+      seriesKnob    (p.apvts, pid::series,    knob (26.0f, 11, { { -100.0f, "EVEN" }, { 100.0f, "ODD" } }, "SERIES")),
+      sidechainKnob (p.apvts, pid::sidechain, knob (22.0f, 11, { { 15.0f, "OFF" }, { 800.0f, "800" } }, "SC LPF")),
+      mixKnob       (p.apvts, pid::mix,       knob (22.0f, 11, { { 0.0f, "0" }, { 100.0f, "100" } }, "MIX")),
+      ceilingKnob   (p.apvts, pid::ceiling,   knob (34.0f, 25, { { -24.0f, "-24" }, { -12.0f, "-12" }, { 0.0f, "0" } }, "CEILING")),
+      outputKnob    (p.apvts, pid::output,    knob (34.0f, 37, { { -24.0f, "-24" }, { 0.0f, "0" }, { 12.0f, "+12" } }, "OUTPUT")),
+      inputMeter  (ladderSteps(), ladderLabels(), true,  ink),
+      outputMeter (ladderSteps(), ladderLabels(), false, ink),
       waveform    (p.waveform),
       scope       (p.apvts, p.meters, p.displayKnee),
-      osBank      (p.apvts, pid::os,       "OVERSAMPLING"),
-      wordBank    (p.apvts, pid::word,     "WORD"),
-      ditherBank  (p.apvts, pid::dither,   "DITHER"),
-      autoSwitch  (p.apvts, pid::autoGain, "AUTO"),
-      tpSafeSwitch(p.apvts, pid::tpSafe,   "TP SAFE"),
-      deltaSwitch (p.apvts, pid::delta,    "DELTA"),
-      linkSwitch  (p.apvts, pid::link,     "LINK"),
-      bypassSwitch(p.apvts, pid::bypass,   "BYPASS"),
-      inputPeak  ("IN"),
-      outputPeak ("OUT"),
-      clipAmount ("CLIP dB"),
-      momentary  ("MOMENTARY"),
-      shortTerm  ("SHORT TERM"),
-      integrated ("INTEGRATED")
+      osKeys      (p.apvts, pid::os,     40.0f),
+      wordKeys    (p.apvts, pid::word,   40.0f),
+      ditherKeys  (p.apvts, pid::dither, 52.0f),
+      autoKey     (p.apvts, pid::autoGain, keyStyle ("AUTO",    62.0f)),
+      tpSafeKey   (p.apvts, pid::tpSafe,   keyStyle ("TP SAFE", 62.0f)),
+      deltaKey    (p.apvts, pid::delta,    keyStyle ("DELTA",   62.0f)),
+      linkKey     (p.apvts, pid::link,     keyStyle ("LINK",    62.0f)),
+      bypassKey   (p.apvts, pid::bypass,   keyStyle ("BYPASS",  62.0f))
 {
-    plate    = juce::ImageCache::getFromMemory (BinaryData::plate_png,     BinaryData::plate_pngSize);
-    ledOff   = juce::ImageCache::getFromMemory (BinaryData::led_off_png,   BinaryData::led_off_pngSize);
-    ledGreen = juce::ImageCache::getFromMemory (BinaryData::led_green_png, BinaryData::led_green_pngSize);
-    ledAmber = juce::ImageCache::getFromMemory (BinaryData::led_amber_png, BinaryData::led_amber_pngSize);
-    ledRed   = juce::ImageCache::getFromMemory (BinaryData::led_red_png,   BinaryData::led_red_pngSize);
+    waveform.setOnDark (true);
+    scope.setOnDark (true);
 
-    // Four frames, four characters, in the same order the plate prints them:
-    // GLASS at -135, EDGE at -45, SILK at +45, TUBE at +135.
-    characterSwitch.setFrameMap ({ 0, 1, 2, 3 });
-
-    // The wells and the headings of these are printed on the plate.
-    osBank    .setWellsAreBaked (true);
-    wordBank  .setWellsAreBaked (true);
-    ditherBank.setWellsAreBaked (true);
-
-    // As are the shapes and the resting legends of the five toggles. The legend
-    // is still drawn when one is engaged, in cream over the amber, because the
-    // printed one underneath is dark ink and would disappear.
-    for (auto* toggle : { &autoSwitch, &tpSafeSwitch, &deltaSwitch, &linkSwitch, &bypassSwitch })
-        toggle->setDrawFace (false);
+    for (auto& f : figures)
+        f = "--";
 
     for (auto* child : std::initializer_list<juce::Component*> {
              &inputMeter, &outputMeter, &waveform, &scope,
-             &inputKnob, &kneeKnob, &adaptKnob, &biasKnob, &colourKnob, &harmonicsKnob,
-             &seriesKnob, &sidechainKnob, &mixKnob, &ceilingKnob, &outputKnob,
-             &characterSwitch,
-             &osBank, &wordBank, &ditherBank,
-             &autoSwitch, &tpSafeSwitch, &deltaSwitch, &linkSwitch, &bypassSwitch,
-             &inputPeak, &outputPeak,
-             &clipAmount, &momentary, &shortTerm, &integrated })
+             &inputKnob, &characterKnob, &kneeKnob, &adaptKnob, &biasKnob,
+             &colourKnob, &harmonicsKnob, &seriesKnob, &sidechainKnob, &mixKnob,
+             &ceilingKnob, &outputKnob,
+             &osKeys, &wordKeys, &ditherKeys,
+             &autoKey, &tpSafeKey, &deltaKey, &linkKey, &bypassKey })
     {
         addAndMakeVisible (child);
     }
-
-    // Last, so the pane is over the trace rather than under it.
-    addAndMakeVisible (glass);
-}
-
-void CrestEditor::Face::setStatusText (const juce::String& text)
-{
-    if (statusText == text)
-        return;
-
-    statusText = text;
-    repaint (0, 436, getWidth(), 22);
-}
-
-void CrestEditor::Face::updateReadouts (float clipDb)
-{
-    auto figure = [] (float value, float floorDb)
-    {
-        return value <= floorDb ? juce::String ("-inf") : juce::String (value, 1);
-    };
-
-    inputPeak .setValue (figure (inputMeter .getHoldDb(), -60.0f));
-    outputPeak.setValue (figure (outputMeter.getHoldDb(), -60.0f));
-
-    clipAmount.setValue (clipDb < 0.02f ? juce::String ("0.0") : juce::String (clipDb, 1));
-
-    momentary .setValue (figure (processor.displayMomentary .load(), -99.0f));
-    shortTerm .setValue (figure (processor.displayShortTerm .load(), -99.0f));
-    integrated.setValue (figure (processor.displayIntegrated.load(), -99.0f));
 }
 
 void CrestEditor::Face::resized()
 {
-    // Straight out of the art's controls.json, grouped by signal flow.
-    inputKnob      .setBounds (place ( 120.0f, 150.0f, 78.0f));
+    inputKnob    .setBounds (Knob::boundsAt ({ 250.0f, 112.0f }, 36.0f));
+    characterKnob.setBounds (Knob::boundsAt ({ 384.0f, 112.0f }, 26.0f));
+    kneeKnob     .setBounds (Knob::boundsAt ({ 230.0f, 270.0f }, 24.0f));
+    adaptKnob    .setBounds (Knob::boundsAt ({ 313.0f, 270.0f }, 24.0f));
+    biasKnob     .setBounds (Knob::boundsAt ({ 396.0f, 270.0f }, 24.0f));
 
-    characterSwitch.setBounds (place ( 232.0f, 130.0f, 66.0f));
-    kneeKnob       .setBounds (place ( 200.0f, 235.0f, 50.0f));
-    adaptKnob      .setBounds (place ( 264.0f, 235.0f, 50.0f));
-    biasKnob       .setBounds (place ( 232.0f, 320.0f, 50.0f));
+    colourKnob   .setBounds (Knob::boundsAt ({ 1092.0f, 104.0f }, 24.0f));
+    harmonicsKnob.setBounds (Knob::boundsAt ({ 1214.0f, 104.0f }, 24.0f));
+    seriesKnob   .setBounds (Knob::boundsAt ({ 1153.0f, 190.0f }, 26.0f));
+    sidechainKnob.setBounds (Knob::boundsAt ({ 1092.0f, 280.0f }, 22.0f));
+    mixKnob      .setBounds (Knob::boundsAt ({ 1214.0f, 280.0f }, 22.0f));
 
-    colourKnob     .setBounds (place (1035.0f, 130.0f, 50.0f));
-    harmonicsKnob  .setBounds (place (1099.0f, 130.0f, 50.0f));
-    seriesKnob     .setBounds (place (1067.0f, 235.0f, 66.0f));
-    sidechainKnob  .setBounds (place (1035.0f, 320.0f, 50.0f));
-    mixKnob        .setBounds (place (1099.0f, 320.0f, 50.0f));
+    ceilingKnob  .setBounds (Knob::boundsAt ({ 1382.0f, 112.0f }, 34.0f));
+    outputKnob   .setBounds (Knob::boundsAt ({ 1382.0f, 262.0f }, 34.0f));
 
-    ceilingKnob    .setBounds (place (1240.0f, 120.0f, 78.0f));
-    outputKnob     .setBounds (place (1240.0f, 250.0f, 78.0f));
+    const auto inner = display.reduced (4.0f);
+    waveform.setBounds (inner.toNearestInt());
+    waveform.setExcluded (transferInset.translated (-inner.getX(), -inner.getY()).expanded (2.0f).toNearestInt());
+    scope   .setBounds (transferInset.withTrimmedTop (18.0f).reduced (4.0f, 2.0f).toNearestInt());
 
-    waveform.setBounds (330,  90, 650, 210);
+    inputMeter .setBounds (juce::Rectangle<float> (inScreen.getRight() - 50.0f, inScreen.getY(), 50.0f, inScreen.getHeight()).toNearestInt());
+    outputMeter.setBounds (juce::Rectangle<float> (outScreen.getX(), outScreen.getY(), 50.0f, outScreen.getHeight()).toNearestInt());
 
-    // Lower left. The waveform writes its newest column at the right edge and
-    // scrolls left, so an inset on the right covers material exactly as it
-    // arrives; on the left it covers material you have already watched.
-    scope   .setBounds (342, 170, 120, 120);
-    glass   .setBounds (330,  90, 650, 210);
 
-    // The transfer inset is a window of its own inside the same recess, so the
-    // scrolling trace stops at its edge rather than running behind it.
-    waveform.setExcluded (scope.getBounds().translated (-330, -90).expanded (2));
-
-    inputMeter .setBounds (  26, 90, 32, 270);
-    outputMeter.setBounds (1342, 90, 32, 270);
-
-    // The meters read in dBFS right underneath themselves, which is where
-    // anyone looks for the figure.
-    inputPeak .setBounds (  12, 366, 60, 32);
-    outputPeak.setBounds (1328, 366, 60, 32);
-
-    // And a row of figures under the display, so the panel says what it is
-    // doing without having to be touched.
+    const auto row = [] (KeyRow& keys, float x)
     {
-        constexpr int y = 314, width = 156, gap = 8;
+        keys.setBounds (juce::Rectangle<float> (x, keyRowY, keys.keyWidth * (float) keys.getNumChildComponents(), 26.0f).toNearestInt());
+    };
+    row (osKeys,     178.0f);
+    row (wordKeys,   410.0f);
+    row (ditherKeys, 596.0f);
 
-        panel::Readout* cells[] { &clipAmount, &momentary, &shortTerm, &integrated };
+    Key* toggles[] { &autoKey, &tpSafeKey, &deltaKey, &linkKey, &bypassKey };
 
-        for (int i = 0; i < 4; ++i)
-            cells[i]->setBounds (330 + i * (width + gap), y, width, 34);
+    for (int i = 0; i < 5; ++i)
+        toggles[i]->setBounds (juce::Rectangle<float> (800.0f + 72.0f * (float) i, keyRowY, 62.0f, 26.0f).toNearestInt());
+}
+
+void CrestEditor::Face::refresh (const juce::String& status)
+{
+    auto& m = processor.meters;
+    const auto inDb  = juce::Decibels::gainToDecibels (juce::jmax (m.inputPeak[0].take(),  m.inputPeak[1].take()),  -100.0f);
+    const auto outDb = juce::Decibels::gainToDecibels (juce::jmax (m.outputPeak[0].take(), m.outputPeak[1].take()), -100.0f);
+
+    inputMeter .push (inDb);
+    outputMeter.push (outDb);
+
+    // The figure under each ladder holds its peak for a second and a half,
+    // then falls, so it can be read.
+    const auto hold = [] (float db, float& held, int& ticks)
+    {
+        if (db >= held)
+        {
+            held = db;
+            ticks = 45;
+        }
+        else if (--ticks <= 0)
+        {
+            held = juce::jmax (-100.0f, held - 0.6f);
+        }
+    };
+    hold (inDb,  inputHold,  inputHoldTicks);
+    hold (outDb, outputHold, outputHoldTicks);
+
+    const auto removed = juce::jlimit (0.0f, 0.999f, m.reduction.take());
+    const auto clip = -juce::Decibels::gainToDecibels (1.0f - removed, -60.0f);
+    clipDb = clip > clipDb ? clip : juce::jmax (0.0f, clipDb - 0.1f);
+
+    juce::String next[6] {
+        figure (inputHold, -60.0f),
+        figure (outputHold, -60.0f),
+        clipDb < 0.02f ? juce::String ("0.0") : juce::String (clipDb, 1),
+        figure (processor.displayMomentary .load(), -99.0f),
+        figure (processor.displayShortTerm .load(), -99.0f),
+        figure (processor.displayIntegrated.load(), -99.0f)
+    };
+
+    const auto power = processor.apvts.getRawParameterValue (pid::bypass)->load() < 0.5f;
+    auto changed = status != statusText || power != powered;
+
+    for (int i = 0; i < 6; ++i)
+        if (next[i] != figures[i])
+        {
+            figures[i] = next[i];
+            changed = true;
+        }
+
+    osKeys.refresh();
+    wordKeys.refresh();
+    ditherKeys.refresh();
+
+    if (changed)
+    {
+        statusText = status;
+        powered = power;
+        repaint (0, 26, 178, 400);
+        repaint (1466, 26, 120, 400);
+        repaint (display.withY (310.0f).withHeight (46.0f).toNearestInt());
+        repaint (1150, 376, 330, 40);
     }
+}
 
-    osBank    .setBounds (110, 405, 220, 24);
-    wordBank  .setBounds (360, 405, 160, 24);
-    ditherBank.setBounds (548, 405, 130, 24);
+void CrestEditor::Face::paintScreen (juce::Graphics& g, juce::Rectangle<float> r, const juce::String& text, float textHeight) const
+{
+    g.setColour (juce::Colours::white.withAlpha (0.35f));
+    g.drawRoundedRectangle (r.translated (0.0f, 1.0f), 3.0f, 1.0f);
+    g.setColour (screen);
+    g.fillRoundedRectangle (r, 3.0f);
+    g.setGradientFill (juce::ColourGradient (juce::Colours::black.withAlpha (0.5f), 0.0f, r.getY(),
+                                             juce::Colours::transparentBlack, 0.0f, r.getY() + 6.0f, false));
+    g.fillRoundedRectangle (r, 3.0f);
 
-    autoSwitch  .setBounds ( 760, 405,  92, 24);
-    tpSafeSwitch.setBounds ( 868, 405, 104, 24);
-    deltaSwitch .setBounds ( 988, 405,  92, 24);
-    linkSwitch  .setBounds (1096, 405,  84, 24);
-    bypassSwitch.setBounds (1196, 405, 104, 24);
+    g.setColour (glow);
+    g.setFont (juce::Font (juce::FontOptions (juce::Font::getDefaultMonospacedFontName(), textHeight, juce::Font::bold)));
+    g.drawText (text, r, juce::Justification::centred, false);
 }
 
 void CrestEditor::Face::paint (juce::Graphics& g)
 {
-    if (plate.isValid())
-        g.drawImage (plate, getLocalBounds().toFloat(),
-                     juce::RectanglePlacement::stretchToFit, false);
-    else
-        g.fillAll (panel::cream);
+    const auto bounds = getLocalBounds().toFloat();
 
-    // ---- the light on the panel, drawn over the bake and under everything
-    // The render is lit flat, and a photograph of hardware never is. One light
-    // above the panel and corners that fall away from it is most of the
-    // difference between a surface and a scan of one.
+    ui::drawPlate (g, bounds, plateTop, plateBottom, 0x435253);
+    ui::drawRackEar (g, bounds.withWidth (earWidth), true);
+    ui::drawRackEar (g, bounds.withLeft (bounds.getRight() - earWidth), false);
+
+    // Left margin: the mark, the name, the input ladder.
+    ui::drawLogo (g, { leftMarginX, 52.0f }, 0.9f, ink, dim);
+    ui::drawLabel (g, "Crest", { leftMarginX - 56.0f, 100.0f, 112.0f, 32.0f }, 28.0f, ink, juce::Justification::centred, false);
+    ui::drawLabel (g, "CONVERTER", { leftMarginX - 56.0f, 134.0f, 112.0f, 10.0f }, 7.5f, dim, juce::Justification::centred, false, 2.0f);
+    ui::drawLabel (g, "CLIPPER",   { leftMarginX - 56.0f, 146.0f, 112.0f, 10.0f }, 7.5f, dim, juce::Justification::centred, false, 2.0f);
+
+    // Right margin: the power lamp and the output ladder.
+    ui::drawLed (g, { rightMarginX, 60.0f }, 4.0f, juce::Colour (0xffff9a3d), powered ? 1.0f : 0.0f);
+    ui::drawLabel (g, "POWER", { rightMarginX - 40.0f, 74.0f, 80.0f, 12.0f }, 7.0f, dim, juce::Justification::centred, true, 1.6f);
+
+    for (auto [area, name, value] : { std::tuple { inScreen, "IN", figures[0] }, std::tuple { outScreen, "OUT", figures[1] } })
     {
-        const auto centreX = (float) getWidth() * 0.5f;
-
-        g.setGradientFill ({ juce::Colours::white.withAlpha (0.075f), centreX, -140.0f,
-                             juce::Colours::transparentBlack,         centreX,  520.0f, true });
-        g.fillAll();
-
-        g.setGradientFill ({ juce::Colours::transparentBlack, centreX, (float) getHeight() * 0.5f,
-                             panel::ink.withAlpha (0.14f),    0.0f,    (float) getHeight(), true });
-        g.fillAll();
+        g.setColour (juce::Colour (0xff0b0a09));
+        g.fillRoundedRectangle (area, 4.0f);
+        ui::drawLabel (g, name, { area.getCentreX() - 30.0f, 376.0f, 60.0f, 12.0f }, 9.0f, ink, juce::Justification::centred, true);
+        paintScreen (g, juce::Rectangle<float> (52.0f, 20.0f).withCentre ({ area.getCentreX(), 402.0f }), value, 10.0f);
     }
 
-    // ---- group enclosures, drawn behind the controls
-    // Tops on one line, each well then as deep as its own contents. Ragged
-    // tops were most of why the four groups read as loose parts.
-    for (auto well : { juce::Rectangle<float> {   72.0f, 78.0f,  96.0f, 127.0f },
-                       juce::Rectangle<float> {  170.0f, 78.0f, 140.0f, 281.0f },
-                       juce::Rectangle<float> {  998.0f, 78.0f, 140.0f, 281.0f },
-                       juce::Rectangle<float> { 1188.0f, 78.0f, 104.0f, 241.0f } })
+    // The three control sections.
+    for (auto [area, title] : { std::pair { clipSection, "CLIP" }, std::pair { toneSection, "TONE" },
+                                std::pair { outputSection, "OUTPUT" } })
     {
-        panel::drawGroupWell (g, well);
+        ui::drawSubpanel (g, area, 10.0f, juce::Colour (0xffe2ddd1), juce::Colour (0xffcbc4b5));
+        ui::drawLabel (g, title, { area.getX(), area.getY() + 8.0f, area.getWidth(), 14.0f }, 10.0f, ink,
+                       juce::Justification::centred, true, 2.0f);
     }
 
-    // The art prints CEILING and OUTPUT only 26 points above their centres, so
-    // a knob of the diameter it also specifies covers them. Drawn clear here
-    // until the plate is re-cut.
-    panel::drawPlateLabel (g, "CEILING", { 1188.0f, 162.0f, 104.0f, 13.0f });
-    panel::drawPlateLabel (g, "OUTPUT",  { 1188.0f, 292.0f, 104.0f, 13.0f });
-
-    // ---- the transfer window, now that the plate no longer prints one
-    panel::drawDisplayInset (g, scope.getBounds().toFloat());
-
-    g.setColour (panel::amber);
-    g.setFont (panel::plateFont (9.0f));
-    g.drawText ("TRANSFER", juce::Rectangle<int> (342, 154, 120, 13),
-                juce::Justification::centred, false);
-
-    // ---- the subtitle, right aligned where the plate used to print its own
-    panel::drawTrackedLabel (g, juce::CharPointer_UTF8 ("MASTERING GRADE HARMONIC CONVERTER  \xc2\xb7  CLIPPER"),
-                             { 780.0f, 26.0f, 486.0f, 16.0f }, 8.5f, 1.6f,
-                             juce::Justification::right);
-
-    // The plate prints a sample rate and a latency of its own; cover it with a
-    // clean piece of the same surface and write the live figures instead.
-    if (plate.isValid())
+    // The display: a black screen with a faint grid, the ceiling marked.
+    g.setColour (juce::Colours::white.withAlpha (0.4f));
+    g.drawRoundedRectangle (display.translated (0.0f, 1.0f), 6.0f, 1.0f);
+    g.setColour (screen);
+    g.fillRoundedRectangle (display, 6.0f);
     {
-        const auto scaleX = (float) plate.getWidth()  / (float) getWidth();
-        const auto scaleY = (float) plate.getHeight() / (float) getHeight();
+        juce::Graphics::ScopedSaveState clip (g);
+        g.reduceClipRegion (display.toNearestInt());
+        g.setColour (juce::Colours::white.withAlpha (0.05f));
 
-        g.drawImage (plate,
-                     300, 436, 800, 22,
-                     juce::roundToInt (300.0f * scaleX), juce::roundToInt (368.0f * scaleY),
-                     juce::roundToInt (800.0f * scaleX), juce::roundToInt ( 22.0f * scaleY),
-                     false);
+        for (int i = 1; i < 8; ++i)
+            g.fillRect (display.getX() + display.getWidth() * (float) i / 8.0f, display.getY(), 1.0f, display.getHeight());
+
+        for (int i = 1; i < 4; ++i)
+            g.fillRect (display.getX(), display.getY() + display.getHeight() * (float) i / 4.0f, display.getWidth(), 1.0f);
+    }
+    ui::drawLabel (g, "WAVEFORM", { display.getX() + 18.0f, display.getY() + 8.0f, 120.0f, 12.0f }, 8.0f,
+                   juce::Colour (0xffe08a44), juce::Justification::centredLeft, true, 1.4f);
+
+    g.setColour (juce::Colour (0xff120d09));
+    g.fillRoundedRectangle (transferInset, 4.0f);
+    g.setColour (juce::Colour (0xffe08a44).withAlpha (0.4f));
+    g.drawRoundedRectangle (transferInset, 4.0f, 1.0f);
+    ui::drawLabel (g, "TRANSFER", transferInset.withHeight (18.0f).translated (0.0f, 3.0f), 7.0f,
+                   juce::Colour (0xffe08a44), juce::Justification::centred, true, 1.2f);
+
+    // The four figures under the display.
+    const char* names[] { "CLIP dB", "MOMENTARY", "SHORT TERM", "INTEGRATED" };
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const auto x = display.getX() + readoutPitch * (float) i;
+        ui::drawLabel (g, names[i], { x, readoutY - 16.0f, readoutWidth, 12.0f }, 8.0f, ink, juce::Justification::centred, true, 1.0f);
+        paintScreen (g, { x, readoutY, readoutWidth, 24.0f }, figures[2 + i], 13.0f);
     }
 
-    g.setColour (panel::ink.withAlpha (0.68f));
-    g.setFont (panel::plateFont (9.0f, false));
-    g.drawText (statusText, juce::Rectangle<int> (0, 438, getWidth(), 18),
-                juce::Justification::centred, false);
+    // Headings over the converter row.
+    for (auto [x, width, title] : { std::tuple { 178.0f, 200.0f, "OVERSAMPLING" }, std::tuple { 410.0f, 160.0f, "WORD" },
+                                    std::tuple { 596.0f, 156.0f, "DITHER" } })
+        ui::drawLabel (g, title, { x, keyRowY - 14.0f, width, 11.0f }, 8.0f, dim, juce::Justification::centred, true, 1.4f);
+
+    ui::drawLabel (g, statusText, { 1170.0f, keyRowY + 4.0f, 300.0f, 14.0f }, 8.0f, dim, juce::Justification::centred, false, 0.8f);
 }
 
 // ---------------------------------------------------------------------------
 
 CrestEditor::Tooltips::Tooltips()
 {
-    setColour (juce::TooltipWindow::backgroundColourId, panel::cream);
-    setColour (juce::TooltipWindow::textColourId,       panel::ink);
-    setColour (juce::TooltipWindow::outlineColourId,    panel::ink);
+    setColour (juce::TooltipWindow::backgroundColourId, plateTop);
+    setColour (juce::TooltipWindow::textColourId,       ink);
+    setColour (juce::TooltipWindow::outlineColourId,    ink);
 }
 
-void CrestEditor::Tooltips::drawTooltip (juce::Graphics& g, const juce::String& text,
-                                         int width, int height)
+void CrestEditor::Tooltips::drawTooltip (juce::Graphics& g, const juce::String& text, int width, int height)
 {
     const juce::Rectangle<float> bounds (0.0f, 0.0f, (float) width, (float) height);
 
-    g.setColour (panel::cream);
+    g.setColour (plateTop);
     g.fillRoundedRectangle (bounds, 3.0f);
-    g.setColour (panel::ink.withAlpha (0.5f));
+    g.setColour (ink.withAlpha (0.5f));
     g.drawRoundedRectangle (bounds.reduced (0.5f), 3.0f, 1.0f);
 
-    g.setColour (panel::ink);
-    g.setFont (panel::plateFont (12.0f, false));
-    g.drawFittedText (text, bounds.reduced (9.0f, 6.0f).toNearestInt(),
-                      juce::Justification::centredLeft, 3);
+    g.setColour (ink);
+    g.setFont (ui::font (12.0f, false));
+    g.drawFittedText (text, bounds.reduced (9.0f, 6.0f).toNearestInt(), juce::Justification::centredLeft, 3);
 }
 
 // ---------------------------------------------------------------------------
@@ -295,16 +400,19 @@ CrestEditor::CrestEditor (CrestProcessor& p)
     if (auto* sizeConstrainer = getConstrainer())
     {
         sizeConstrainer->setFixedAspectRatio ((double) designWidth / (double) designHeight);
-        sizeConstrainer->setSizeLimits (designWidth * 60 / 100, designHeight * 60 / 100,
+        sizeConstrainer->setSizeLimits (designWidth * 50 / 100, designHeight * 50 / 100,
                                         designWidth * 150 / 100, designHeight * 150 / 100);
     }
 
-    const auto saved = (int) processor.apvts.state.getProperty ("editorWidth", designWidth);
-    const auto width = juce::jlimit (designWidth * 60 / 100, designWidth * 150 / 100, saved);
+    // The width the editor was last left at is kept with the session. Sessions
+    // from before the wider panel stored a width for the old one, which lands
+    // at about the same height here.
+    const auto saved = (int) processor.apvts.state.getProperty ("editorWidth", designWidth * 4 / 5);
+    const auto width = juce::jlimit (designWidth * 50 / 100, designWidth * 150 / 100, saved);
 
     setSize (width, juce::roundToInt ((double) width * designHeight / designWidth));
 
-    startTimerHz (4);
+    startTimerHz (30);
 }
 
 CrestEditor::~CrestEditor()
@@ -314,7 +422,7 @@ CrestEditor::~CrestEditor()
 
 void CrestEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (panel::ink);
+    g.fillAll (plateBottom);
 }
 
 void CrestEditor::resized()
@@ -332,24 +440,15 @@ void CrestEditor::timerCallback()
     const auto rate    = processor.getSampleRate();
     const auto latency = processor.getLatencySamples();
 
-    // The loudness family has its own plates now, so the footer keeps to the
-    // things that have nowhere else to live.
     juce::String status;
-    status << juce::String (rate / 1000.0, 1) << " kHz    .    LATENCY " << latency << " smp";
-
-    if (rate > 0.0)
-        status << " / " << juce::String (1000.0 * latency / rate, 2) << " ms";
-
-    status << "    .    CREST v" << JucePlugin_VersionString;
+    status << juce::String (rate / 1000.0, 1) << " kHz  " << juce::String (juce::CharPointer_UTF8 ("\xc2\xb7"))
+           << "  LATENCY " << latency << " smp  " << juce::String (juce::CharPointer_UTF8 ("\xc2\xb7"))
+           << "  v" << JucePlugin_VersionString;
 
     if (JucePlugin_VersionCode < 0x10000)
         status << " BETA";
 
-    face.setStatusText (status);
-
-    const auto removed = juce::jlimit (0.0f, 0.999f, processor.meters.reduction.take());
-
-    face.updateReadouts (-juce::Decibels::gainToDecibels (1.0f - removed, -60.0f));
+    face.refresh (status);
 }
 
 } // namespace crest

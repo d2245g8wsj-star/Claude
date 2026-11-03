@@ -33,11 +33,17 @@ Global:
 
 | Control | What it does |
 | --- | --- |
-| **LINK** | Row L drives both channels; row R is greyed out and ignored. The dynamics listen to both channels with one ear, so they cannot pull the image sideways. |
-| **M/S** | Row L works on the mid, row R on the side. The row letters change to **M** and **S**. Each listens to its own signal. |
+| **STEREO** | One row drives both channels; the unit is folded to that row. The dynamics listen to both channels with one ear, so they cannot pull the image sideways. |
+| **DUAL** | A row per channel: the unit folds out row R under row L. |
+| **M/S** | Row M works on the mid, row S on the side, each listening to its own signal. The tab on the bottom edge folds row S away, so one setting drives both halves, or out again. |
+
+The modes are the plugin's two switches, LINK and M/S, as earlier versions
+had them, so a session opens in the mode it was saved in.
 
 Each row has a twelve segment peak meter, and each dynamic shelf a lamp that
-lights as it moves.
+lights as it moves. Folded, the one row shows whichever channel is louder.
+
+![Hinge folded out in mid/side](docs/ui-ms.png)
 
 ## How the shelves work
 
@@ -151,7 +157,7 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DHINGE_BUILD_TESTS=ON -DHINGE_BUILD_TOOLS=ON
 cmake --build build --target hinge_tests hinge_shot --parallel
 ./build/hinge_tests_artefacts/Release/hinge_tests
-./build/hinge_shot_artefacts/Release/hinge_shot docs/ui.png 1620
+./build/hinge_shot_artefacts/Release/hinge_shot docs/ui.png 1.0 stereo   # or dual, ms
 ```
 
 The checks assert: the network's documented behaviour (half dB detents, shoulder
@@ -160,8 +166,9 @@ range), the digital filters against the network at 44.1 to 192 kHz, measured
 responses through the plugin, nulls for a flat panel, ENGAGE and bypass, zero
 latency, link and mid/side routing, the dynamic shelves taming, lifting,
 ignoring the other band and linking, click free switching under signal, finite
-output at extreme settings across rates and block sizes, and state surviving a
-save.
+output at extreme settings across rates and block sizes, state surviving a
+save, and every session saved by a released version (`tests/compat/`) opening
+with each setting as it was.
 
 ## Source
 

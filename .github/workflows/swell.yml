@@ -7,10 +7,12 @@ on:
     tags: ["swell-v*"]
     paths:
       - "plugins/swell/**"
+      - "shared/**"
       - ".github/workflows/swell.yml"
   pull_request:
     paths:
       - "plugins/swell/**"
+      - "shared/**"
       - ".github/workflows/swell.yml"
   workflow_dispatch:
     inputs:

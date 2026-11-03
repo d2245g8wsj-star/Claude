@@ -57,6 +57,14 @@ target_sources(Tide PRIVATE
 
 target_include_directories(Tide PRIVATE src)
 
+# The matched design fits a 20 Hz high pass at 192 kHz from nearly equal
+# cosines; fused multiply-adds, which Clang uses by default on Apple silicon,
+# round that fit differently enough to move the curve by a hundredth of a dB.
+# Build without them, as Hinge does, so every platform gets the same filter.
+if(NOT MSVC)
+    target_compile_options(Tide PUBLIC -ffp-contract=off)
+endif()
+
 target_compile_definitions(Tide PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
@@ -82,7 +90,10 @@ if(TIDE_BUILD_TESTS)
     juce_add_console_app(tide_tests PRODUCT_NAME "tide_tests")
 
     target_sources(tide_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(tide_tests PRIVATE src)
+    target_include_directories(tide_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(tide_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(tide_tests PRIVATE
         Tide
         juce::juce_audio_utils

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Hinge VERSION 0.3.0 LANGUAGES C CXX)
+project(Hinge VERSION 0.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -53,9 +53,9 @@ juce_add_plugin(Hinge
 target_sources(Hinge PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
-    src/gui/Panel.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp)
 
-target_include_directories(Hinge PRIVATE src)
+target_include_directories(Hinge PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
 
 target_compile_definitions(Hinge PUBLIC
     JUCE_WEB_BROWSER=0
@@ -89,7 +89,10 @@ if(HINGE_BUILD_TESTS)
     juce_add_console_app(hinge_tests PRODUCT_NAME "hinge_tests")
 
     target_sources(hinge_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(hinge_tests PRIVATE src)
+    target_include_directories(hinge_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(hinge_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(hinge_tests PRIVATE
         Hinge
         juce::juce_audio_utils
@@ -108,7 +111,7 @@ if(HINGE_BUILD_TOOLS)
     juce_add_console_app(hinge_shot PRODUCT_NAME "hinge_shot")
 
     target_sources(hinge_shot PRIVATE tools/Snapshot.cpp)
-    target_include_directories(hinge_shot PRIVATE src)
+    target_include_directories(hinge_shot PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
     target_link_libraries(hinge_shot PRIVATE
         Hinge
         juce::juce_audio_utils

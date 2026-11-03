@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Beacon VERSION 0.5.0 LANGUAGES C CXX)
+project(Beacon VERSION 0.6.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -53,9 +53,9 @@ juce_add_plugin(Beacon
 target_sources(Beacon PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
-    src/gui/Panel.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp)
 
-target_include_directories(Beacon PRIVATE src)
+target_include_directories(Beacon PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
 
 target_compile_definitions(Beacon PUBLIC
     JUCE_WEB_BROWSER=0
@@ -82,7 +82,10 @@ if(BEACON_BUILD_TESTS)
     juce_add_console_app(beacon_tests PRODUCT_NAME "beacon_tests")
 
     target_sources(beacon_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(beacon_tests PRIVATE src)
+    target_include_directories(beacon_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_compile_definitions(beacon_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(beacon_tests PRIVATE
         Beacon
         juce::juce_audio_utils
@@ -101,7 +104,7 @@ if(BEACON_BUILD_TOOLS)
     juce_add_console_app(beacon_shot PRODUCT_NAME "beacon_shot")
 
     target_sources(beacon_shot PRIVATE tools/Snapshot.cpp)
-    target_include_directories(beacon_shot PRIVATE src)
+    target_include_directories(beacon_shot PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
     target_link_libraries(beacon_shot PRIVATE
         Beacon
         juce::juce_audio_utils

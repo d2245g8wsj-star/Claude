@@ -36,6 +36,10 @@ namespace pid
     inline constexpr const char* dynLink   = "dynamic_link";
 
     inline constexpr const char* mode      = "mode";
+    /** Dual mono only: the right channel takes the second set of controls
+        (the one mid/side gives the side) instead of following the left. Off
+        in every session saved before it existed, so those sound as they did. */
+    inline constexpr const char* dualSplit = "dual_split";
     inline constexpr const char* bypass    = "bypass";
 
     /** In mid/side mode the side channel has a set of controls of its own:
@@ -171,6 +175,7 @@ private:
     juce::AudioParameterBool*   ironParam       { nullptr };
     juce::AudioParameterFloat*  ironPadParam    { nullptr };
     juce::AudioParameterChoice* modeParam       { nullptr };
+    juce::AudioParameterBool*   dualSplitParam  { nullptr };
     juce::AudioParameterBool*   bypassParameter { nullptr };
 
     std::array<ChannelPath, 2> paths;

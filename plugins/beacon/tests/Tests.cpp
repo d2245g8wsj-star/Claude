@@ -10,6 +10,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "PluginProcessor.h"
+#include "indiewave/SessionCompat.h"
 #include "dsp/OutputStage.h"
 #include "dsp/Tube.h"
 #include "dsp/VariMu.h"
@@ -724,6 +725,30 @@ void testSwitching()
     }
 }
 
+void testDualSplit()
+{
+    section ("Dual mono: the right channel follows the left unless split");
+
+    Settings settings {
+        { beacon::pid::mode, (float) beacon::ChannelMode::dualMono },
+        { beacon::pid::threshold, th (-30.0f) },
+        { beacon::pid::side (beacon::pid::threshold), 0.0f }   // the second set: compressor off
+    };
+
+    const auto source = tone (1000.0, 0.5f);
+    const auto level = [] (const juce::AudioBuffer<float>& b, int ch) { return b.getRMSLevel (ch, 24000, 24000); };
+
+    auto linked = render (settings, source, 48000);
+    check (std::abs (db (level (linked, 1) / level (linked, 0))) < 0.01,
+           "unsplit, as every earlier session is: both channels take the left's controls");
+
+    settings[beacon::pid::dualSplit] = 1.0f;
+    auto split = render (settings, source, 48000);
+    check (db (level (split, 1) / level (split, 0)) > 2.0,
+           "split: the right channel takes the second set (here not compressing)");
+    check (std::abs (db (level (split, 0) / level (linked, 0))) < 0.01, "and the left is untouched by the split");
+}
+
 void testLatency()
 {
     section ("Latency");
@@ -825,9 +850,14 @@ int main()
     testColour();
     testSidechain();
     testSwitching();
+    testDualSplit();
     testLatency();
     testRobustness();
     testState();
+
+    section ("Sessions saved by released versions open unchanged");
+    indiewave::compat::run ([] { return std::make_unique<beacon::BeaconProcessor>(); },
+                            juce::File (INDIEWAVE_COMPAT_DIR), INDIEWAVE_VERSION, check);
 
     std::cout << "\n" << (checks - failures) << " / " << checks << " checks passed" << std::endl;
     return failures == 0 ? 0 : 1;

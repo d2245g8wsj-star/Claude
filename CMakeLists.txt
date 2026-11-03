@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Crest VERSION 0.9.0 LANGUAGES C CXX)
+project(Crest VERSION 0.10.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,29 +52,14 @@ juce_add_plugin(Crest
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD     FALSE)
 
-# ---------------------------------------------------------------------------
-# Panel art. The plate and the knob filmstrips are rendered in Blender and
-# dropped in here; the frame count is read from the image at runtime so a
-# higher resolution render replaces the file without touching code.
-# ---------------------------------------------------------------------------
-juce_add_binary_data(CrestAssets SOURCES
-    resources/gui/plate.png
-    resources/gui/knob_large.png
-    resources/gui/knob_small.png
-    resources/gui/character_selector_4.png
-    resources/gui/led_off.png
-    resources/gui/led_green.png
-    resources/gui/led_amber.png
-    resources/gui/led_red.png)
-
-set_target_properties(CrestAssets PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_sources(Crest PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
-    src/gui/Panel.cpp)
+    src/gui/Panel.cpp
+    shared/indiewave/ui/Panel.cpp)
 
-target_include_directories(Crest PRIVATE src)
+target_include_directories(Crest PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/shared)
 
 target_compile_definitions(Crest PUBLIC
     JUCE_WEB_BROWSER=0
@@ -85,7 +70,6 @@ target_compile_definitions(Crest PUBLIC
     JUCE_STRICT_REFCOUNTEDPOINTER=1)
 
 target_link_libraries(Crest PRIVATE
-    CrestAssets
     juce::juce_audio_utils
     juce::juce_dsp
     PUBLIC
@@ -102,7 +86,10 @@ if(CREST_BUILD_TESTS)
     juce_add_console_app(crest_tests PRODUCT_NAME "crest_tests")
 
     target_sources(crest_tests PRIVATE tests/Tests.cpp)
-    target_include_directories(crest_tests PRIVATE src)
+    target_include_directories(crest_tests PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/shared)
+    target_compile_definitions(crest_tests PRIVATE
+        INDIEWAVE_COMPAT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/compat"
+        INDIEWAVE_VERSION="${PROJECT_VERSION}")
     target_link_libraries(crest_tests PRIVATE
         Crest
         juce::juce_audio_utils
@@ -122,7 +109,7 @@ if(CREST_BUILD_TOOLS)
     juce_add_console_app(crest_shot PRODUCT_NAME "crest_shot")
 
     target_sources(crest_shot PRIVATE tools/Snapshot.cpp)
-    target_include_directories(crest_shot PRIVATE src)
+    target_include_directories(crest_shot PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/shared)
     target_link_libraries(crest_shot PRIVATE
         Crest
         juce::juce_audio_utils

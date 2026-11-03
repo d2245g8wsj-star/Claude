@@ -5,7 +5,7 @@ have their own folder under `plugins/` and their own workflow.
 
 | Plugin | What it is | Version | Folder | Workflow | Plugin code | Bundle id |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Crest** | Converter and clipper | 0.9.0 beta | `/` | `macos.yml` | `Crst` | `audio.indiewave.crest` |
+| **Crest** | Converter and clipper | 0.10.0 beta | `/` | `macos.yml` | `Crst` | `audio.indiewave.crest` |
 | **Breakwater** | Mastering limiter | 0.5.0 beta | `plugins/breakwater` | `breakwater.yml` | `Brkw` | `audio.indiewave.breakwater` |
 | **Beacon** | Vari-mu tube compressor | 0.6.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
 | **Swell** | Two channel harmonic equaliser | 0.4.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
@@ -108,6 +108,10 @@ separated by spaces. It deletes each release together with its tag.
 ## Changes
 
 ### Crest
+- **0.10.0** - New panel in the range's look: brushed aluminium, rack ears,
+  bakelite knobs, the IndieWave mark with the name in the left margin, LED
+  ladders for IN and OUT and a black display with the waveform and the
+  transfer curve. Same parameters as 0.9.0, so sessions open as they were.
 - **0.9.0** - First public beta. K weighting now follows the BS.1770
   coefficient table exactly.
 

@@ -1,6 +1,6 @@
 # IndieWave Audio plugin suite: versions and releases
 
-Six plugins live in this repository. Crest sits at the root; the others each
+Seven plugins live in this repository. Crest sits at the root; the others each
 have their own folder under `plugins/` and their own workflow.
 
 | Plugin | What it is | Version | Folder | Workflow | Plugin code | Bundle id |
@@ -11,8 +11,9 @@ have their own folder under `plugins/` and their own workflow.
 | **Swell** | Two channel harmonic equaliser | 0.3.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.3.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.3.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
+| **Tide** | Three band mastering equaliser with mid/side | 0.3.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
 
-All six build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
+All seven build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
 and Standalone for macOS and a 64 bit VST3 and Standalone for Windows, and
 share the manufacturer code `Idwv`. The plugin code and bundle id never change once a
 plugin is public: hosts use them to find the plugin in saved sessions.
@@ -37,7 +38,7 @@ Where each plugin starts reflects how settled it is:
 - **0.9** - feature complete, only polish left (Crest).
 - **0.5** - feature complete, layout still moving (Breakwater, Beacon).
 - **0.3** - complete and working, young and not yet used much (Swell, Hinge,
-  Lacquer).
+  Lacquer, Tide).
 
 ## Releasing
 
@@ -106,3 +107,6 @@ separated by spaces. It deletes each release together with its tag.
 ### Lacquer
 - **0.3.0** - First public beta, with the Classic White and Lacquer Black
   finishes.
+
+### Tide
+- **0.3.0** - First public beta.

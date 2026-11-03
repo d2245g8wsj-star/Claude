@@ -8,7 +8,7 @@ have their own folder under `plugins/` and their own workflow.
 | **Crest** | Converter and clipper | 0.9.0 beta | `/` | `macos.yml` | `Crst` | `audio.indiewave.crest` |
 | **Breakwater** | Mastering limiter | 0.5.0 beta | `plugins/breakwater` | `breakwater.yml` | `Brkw` | `audio.indiewave.breakwater` |
 | **Beacon** | Vari-mu tube compressor | 0.6.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
-| **Swell** | Two channel harmonic equaliser | 0.3.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
+| **Swell** | Two channel harmonic equaliser | 0.4.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.4.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.4.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
 | **Tide** | Three band mastering equaliser with mid/side | 0.3.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
@@ -127,6 +127,11 @@ separated by spaces. It deletes each release together with its tag.
   mid/side mode.
 
 ### Swell
+- **0.4.0** - A modern panel: satin graphite, aluminium knobs in coloured
+  value arcs (coral, amber and cyan for the three bands), pill switches and
+  LED bar meters, with the IndieWave mark. STEREO folds the unit to one row;
+  DUAL and M/S fold out the second strip. Same parameters as 0.3.0, so
+  sessions open as they were.
 - **0.3.0** - First public beta (was Ember during development; hosts list it
   as a new plugin).
 

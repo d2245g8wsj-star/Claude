@@ -2,7 +2,7 @@
     Renders the editor to a PNG without opening a window, so the layout can be
     looked at from a terminal or in CI.
 
-    Usage:  swell_shot <output.png> [width]
+    Usage:  swell_shot <output.png> [width] [stereo|dual|ms]
 */
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -34,7 +34,10 @@ int main (int argc, char* argv[])
 
     // Settings that show the controls doing something, rather than all at zero.
     using swell::pid::forStrip;
-    set (swell::pid::mode, (float) swell::StripMode::dualMono);
+    const juce::String mode (argc > 3 ? argv[3] : "dual");
+    set (swell::pid::mode, (float) (mode == "stereo" ? swell::StripMode::stereo
+                                    : mode == "ms"   ? swell::StripMode::midSide
+                                                     : swell::StripMode::dualMono));
     set (forStrip (0, swell::pid::input),   4.0f);
     set (forStrip (0, swell::pid::loGain),  6.5f);
     set (forStrip (0, swell::pid::loFreq),  80.0f);
@@ -58,7 +61,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * swell::designHeight / swell::designWidth));
+    editor->setSize (width, juce::roundToInt ((double) width * editor->getHeight() / editor->getWidth()));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.

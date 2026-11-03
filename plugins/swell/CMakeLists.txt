@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Swell VERSION 0.3.0 LANGUAGES C CXX)
+project(Swell VERSION 0.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -53,9 +53,10 @@ juce_add_plugin(Swell
 target_sources(Swell PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
-    src/gui/Panel.cpp)
+    src/gui/Modern.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp)
 
-target_include_directories(Swell PRIVATE src)
+target_include_directories(Swell PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
 
 target_compile_definitions(Swell PUBLIC
     JUCE_WEB_BROWSER=0
@@ -104,7 +105,7 @@ if(SWELL_BUILD_TOOLS)
     juce_add_console_app(swell_shot PRODUCT_NAME "swell_shot")
 
     target_sources(swell_shot PRIVATE tools/Snapshot.cpp)
-    target_include_directories(swell_shot PRIVATE src)
+    target_include_directories(swell_shot PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
     target_link_libraries(swell_shot PRIVATE
         Swell
         juce::juce_audio_utils

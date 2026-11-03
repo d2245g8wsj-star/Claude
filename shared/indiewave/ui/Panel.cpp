@@ -287,7 +287,8 @@ void Key::paintButton (juce::Graphics& g, bool highlighted, bool down)
         y += lh + 15.0f;
     }
 
-    const auto capArea = juce::Rectangle<float> (cap, cap).withCentre ({ b.getCentreX(), y + cap * 0.5f + 2.0f });
+    const auto capW = style.capWidth > 0.0f ? style.capWidth : cap;
+    const auto capArea = juce::Rectangle<float> (capW, cap).withCentre ({ b.getCentreX(), y + cap * 0.5f + 2.0f });
     const auto corner = style.kind == Kind::white ? 3.0f : 2.0f;
 
     if (style.kind == Kind::white && on && enabled)
@@ -310,6 +311,10 @@ void Key::paintButton (juce::Graphics& g, bool highlighted, bool down)
                                              juce::Colours::black.withAlpha (0.18f), 0.0f, capArea.getBottom(), false));
     g.fillRoundedRectangle (capArea, corner);
 
+    if (style.capLabel.isNotEmpty())
+        drawLabel (g, style.capLabel, capArea, juce::jmin (9.0f, cap * 0.42f), on ? style.capLabelOn : style.capLabelOff,
+                   juce::Justification::centred, true, 0.4f);
+
     auto ly = capArea.getBottom() + 5.0f;
     for (const auto& text : { style.below, style.below2 })
         if (text.isNotEmpty())
@@ -317,6 +322,191 @@ void Key::paintButton (juce::Graphics& g, bool highlighted, bool down)
             drawLabel (g, text, { b.getX(), ly, b.getWidth(), lh + 2.0f }, lh, enabled ? style.ink : style.dim);
             ly += lh + 1.0f;
         }
+}
+
+// ---------------------------------------------------------------------------
+
+BakeliteKnob::BakeliteKnob (juce::AudioProcessorValueTreeState& state, const juce::String& parameterID, Style s)
+    : juce::Slider (juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::NoTextBox),
+      style (std::move (s)),
+      attachment (state, parameterID, *this)
+{
+    setRotaryParameters (radians (sweepStart), radians (sweepEnd), true);
+    setPopupDisplayEnabled (true, true, nullptr, 1200);
+    setMouseDragSensitivity (160);
+    setScrollWheelEnabled (true);
+
+    if (auto* parameter = state.getParameter (parameterID))
+    {
+        setDoubleClickReturnValue (true, parameter->convertFrom0to1 (parameter->getDefaultValue()));
+        setTooltip (parameter->getName (64));
+    }
+}
+
+juce::Rectangle<int> BakeliteKnob::boundsAt (juce::Point<float> centre, float radius)
+{
+    const auto half = radius + 44.0f;
+    return juce::Rectangle<float> (half * 2.0f, half * 2.0f).withCentre (centre).toNearestInt();
+}
+
+bool BakeliteKnob::hitTest (int x, int y)
+{
+    return getLocalBounds().toFloat().getCentre().getDistanceFrom ({ (float) x, (float) y }) < style.radius + 10.0f;
+}
+
+void BakeliteKnob::paint (juce::Graphics& g)
+{
+    const auto centre = getLocalBounds().toFloat().getCentre();
+    const auto radius = style.radius;
+    const auto params = getRotaryParameters();
+    const auto start = params.startAngleRadians, end = params.endAngleRadians;
+    const auto angleOf = [this, start, end] (double value) { return start + (float) valueToProportionOfLength (value) * (end - start); };
+    const auto angle = angleOf (getValue());
+
+    // The scale: a dot per step, or a fixed number along the travel.
+    const auto interval = getInterval();
+    const auto steps = style.dots > 0 ? style.dots
+                     : interval > 0.0 ? juce::jmin (41, juce::roundToInt ((getMaximum() - getMinimum()) / interval) + 1) : 11;
+    const auto dotSize = radius > 26.0f ? 2.8f : 2.3f;
+    for (int i = 0; i < steps; ++i)
+    {
+        const auto a = start + (end - start) * (float) i / (float) juce::jmax (1, steps - 1);
+        g.setColour (style.dotColour);
+        g.fillEllipse (juce::Rectangle<float> (dotSize, dotSize).withCentre (onCircle (centre, radius + 7.0f, a)));
+    }
+
+    const auto legendR = style.legendRadius > 0.0f ? style.legendRadius : radius + 18.0f;
+    for (const auto& [value, text] : style.legends)
+        drawLabel (g, text, juce::Rectangle<float> (44.0f, style.legendHeight + 3.0f).withCentre (onCircle (centre, legendR, angleOf (value))),
+                   style.legendHeight, style.ink, juce::Justification::centred, true);
+
+    if (style.name.isNotEmpty())
+        drawLabel (g, style.name, { centre.x - 60.0f, centre.y + legendR + style.nameGap - 6.0f, 120.0f, style.nameHeight + 2.0f },
+                   style.nameHeight, style.ink, juce::Justification::centred, true, 1.2f);
+
+    // Shadow cast on the plate, long and soft towards the bottom.
+    for (int i = 4; i >= 1; --i)
+    {
+        g.setColour (juce::Colours::black.withAlpha (0.16f));
+        g.fillEllipse (juce::Rectangle<float> (radius * 2.0f + (float) i * 2.5f, radius * 2.0f + (float) i * 2.5f)
+                           .withCentre (centre.translated (0.0f, (float) i * 1.2f)));
+    }
+
+    // The skirt: black phenolic with a fluted grip that turns with the knob.
+    const auto skirt = juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (centre);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff3a3a3b), skirt.getX(), skirt.getY(),
+                                             juce::Colour (0xff050505), skirt.getRight(), skirt.getBottom(), false));
+    g.fillEllipse (skirt);
+    const int flutes = juce::jmax (24, juce::roundToInt (radius * 1.5f));
+    for (int i = 0; i < flutes; ++i)
+    {
+        const auto a = angle + (float) i * twoPi / (float) flutes;
+        const auto facing = 0.5f + 0.5f * std::cos (a - radians (-45.0f));
+        g.setColour (juce::Colours::white.withAlpha (0.03f + 0.20f * facing * facing));
+        g.drawLine ({ onCircle (centre, radius * 0.80f, a), onCircle (centre, radius * 0.985f, a) }, 1.1f);
+        g.setColour (juce::Colours::black.withAlpha (0.55f));
+        const auto b = a + twoPi / (float) flutes * 0.5f;
+        g.drawLine ({ onCircle (centre, radius * 0.80f, b), onCircle (centre, radius * 0.985f, b) }, 1.0f);
+    }
+    g.setColour (juce::Colours::black);
+    g.drawEllipse (skirt, 1.0f);
+
+    // A bevel down onto the cap, then the polished dome.
+    const auto capRadius = radius * 0.78f;
+    const auto cap = juce::Rectangle<float> (capRadius * 2.0f, capRadius * 2.0f).withCentre (centre);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff000000), cap.getX(), cap.getY(),
+                                             juce::Colour (0xff3c3c3d), cap.getRight(), cap.getBottom(), false));
+    g.fillEllipse (cap.expanded (1.6f));
+
+    const auto tint = style.cap.isTransparent() ? juce::Colour (0xff2e2e30) : style.cap;
+    g.setGradientFill (juce::ColourGradient (tint, cap.getX() + capRadius * 0.55f, cap.getY() + capRadius * 0.45f,
+                                             style.cap.isTransparent() ? juce::Colour (0xff050505) : tint.darker (0.8f),
+                                             cap.getRight(), cap.getBottom(), true));
+    g.fillEllipse (cap);
+    {
+        const auto sheen = juce::Rectangle<float> (capRadius * 1.25f, capRadius * 0.75f).withCentre (centre.translated (-capRadius * 0.22f, -capRadius * 0.42f));
+        g.setGradientFill (juce::ColourGradient (juce::Colours::white.withAlpha (0.22f), sheen.getCentreX(), sheen.getCentreY(),
+                                                 juce::Colours::white.withAlpha (0.0f), sheen.getRight(), sheen.getCentreY(), true));
+        g.fillEllipse (sheen);
+        const auto spot = juce::Rectangle<float> (capRadius * 0.32f, capRadius * 0.18f).withCentre (centre.translated (-capRadius * 0.38f, -capRadius * 0.52f));
+        g.setGradientFill (juce::ColourGradient (juce::Colours::white.withAlpha (0.75f), spot.getCentreX(), spot.getCentreY(),
+                                                 juce::Colours::white.withAlpha (0.0f), spot.getRight(), spot.getCentreY(), true));
+        g.fillEllipse (spot);
+    }
+
+    // The engraved index line, filled white, from the middle of the dome
+    // across the skirt.
+    const auto from = onCircle (centre, capRadius * 0.18f, angle);
+    const auto to   = onCircle (centre, radius * 0.97f, angle);
+    const auto width = juce::jmax (2.0f, radius * 0.085f);
+    g.setColour (juce::Colours::black.withAlpha (0.7f));
+    g.drawLine ({ from.translated (0.0f, 0.8f), to.translated (0.0f, 0.8f) }, width + 1.2f);
+    g.setColour (juce::Colour (0xfff7f5ef));
+    g.drawLine ({ from, to }, width);
+
+    if (! isEnabled())
+    {
+        g.setColour (juce::Colours::black.withAlpha (0.35f));
+        g.fillEllipse (skirt.expanded (2.0f));
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+BatToggle::BatToggle (juce::AudioProcessorValueTreeState& state, const juce::String& parameterID, bool sideways)
+    : juce::Button (parameterID), horizontal (sideways), attachment (state, parameterID, *this)
+{
+    setClickingTogglesState (true);
+    if (auto* parameter = state.getParameter (parameterID))
+        setTooltip (parameter->getName (64));
+}
+
+void BatToggle::paintButton (juce::Graphics& g, bool highlighted, bool)
+{
+    const auto bounds = getLocalBounds().toFloat();
+    const auto centre = bounds.getCentre();
+    const auto nut = (horizontal ? juce::jmin (bounds.getHeight(), bounds.getWidth() * 0.5f)
+                                 : juce::jmin (bounds.getWidth(), bounds.getHeight() * 0.5f)) * 0.8f;
+    const auto on = getToggleState();
+    const auto direction = horizontal ? juce::Point<float> (on ? 1.0f : -1.0f, 0.0f) : juce::Point<float> (0.0f, on ? -1.0f : 1.0f);
+
+    juce::Path hex;
+    hex.addPolygon (centre, 6, nut * 0.5f, juce::MathConstants<float>::pi / 6.0f);
+    g.setColour (juce::Colours::black.withAlpha (0.5f));
+    g.fillPath (hex, juce::AffineTransform::translation (0.8f, 1.6f));
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xffe9e9e7), centre.x - nut * 0.4f, centre.y - nut * 0.4f,
+                                             juce::Colour (0xff616365), centre.x + nut * 0.4f, centre.y + nut * 0.5f, false));
+    g.fillPath (hex);
+    g.setColour (juce::Colour (0xff3b3c3d));
+    g.strokePath (hex, juce::PathStrokeType (0.7f));
+
+    const auto bushing = juce::Rectangle<float> (nut * 0.55f, nut * 0.55f).withCentre (centre);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xffcfd0d1), bushing.getX(), bushing.getY(),
+                                             juce::Colour (0xff4a4c4e), bushing.getRight(), bushing.getBottom(), false));
+    g.fillEllipse (bushing);
+
+    const auto length = nut * 1.25f;
+    const auto tip = centre + direction * length;
+    const auto across = juce::Point<float> (-direction.y, direction.x);
+    const auto baseW = nut * 0.17f, tipW = nut * 0.24f;
+    juce::Path lever;
+    lever.startNewSubPath (centre + across * baseW);
+    lever.lineTo (tip + across * tipW);
+    lever.lineTo (tip - across * tipW);
+    lever.lineTo (centre - across * baseW);
+    lever.closeSubPath();
+    g.setColour (juce::Colours::black.withAlpha (0.45f));
+    g.fillPath (lever, juce::AffineTransform::translation (1.5f, 2.5f));
+    g.setGradientFill (juce::ColourGradient (juce::Colours::white, tip.x - tipW, tip.y - tipW,
+                                             juce::Colour (0xff6b6d6f), tip.x + tipW, tip.y + tipW, false));
+    g.fillPath (lever);
+    g.fillEllipse (juce::Rectangle<float> (tipW * 2.3f, tipW * 2.3f).withCentre (tip));
+
+    if (highlighted)
+    {
+        g.setColour (juce::Colours::white.withAlpha (0.05f));
+        g.fillEllipse (bounds.withSizeKeepingCentre (nut * 1.6f, nut * 1.6f));
+    }
 }
 
 // ---------------------------------------------------------------------------

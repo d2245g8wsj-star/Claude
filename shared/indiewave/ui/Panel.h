@@ -98,6 +98,9 @@ public:
         juce::String above, below, below2;   ///< legends printed on the plate
         bool onLamp = false;                  ///< the small ON lamp of a dark key
         float capSize = 30.0f;
+        float capWidth = 0.0f;                ///< wider than tall when set
+        juce::String capLabel;                ///< printed on the cap itself
+        juce::Colour capLabelOn { 0xff1a1206 }, capLabelOff { 0xff2b2b2b };
         float legendHeight = 9.0f;
     };
 
@@ -111,6 +114,56 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> attachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Key)
+};
+
+/**
+    Tide's black bakelite knob: a fluted phenolic skirt, a polished dome and a
+    white index line, with a printed dot at every step (or along the travel)
+    and legends at the values they name.
+*/
+class BakeliteKnob final : public juce::Slider
+{
+public:
+    struct Style
+    {
+        float radius = 26.0f;
+        int dots = 0;                       ///< 0: one per step of the parameter
+        juce::Colour dotColour, ink, dim;
+        std::vector<std::pair<float, juce::String>> legends;  ///< parameter value, text
+        float legendRadius = 0.0f;          ///< 0: radius + 18
+        float legendHeight = 8.5f;
+        juce::String name;
+        float nameHeight = 9.5f, nameGap = 12.0f;
+        juce::Colour cap {};                ///< a coloured cap, or transparent for black
+    };
+
+    BakeliteKnob (juce::AudioProcessorValueTreeState&, const juce::String& parameterID, Style);
+
+    void paint (juce::Graphics&) override;
+    bool hitTest (int x, int y) override;
+
+    static juce::Rectangle<int> boundsAt (juce::Point<float> centre, float radius);
+
+private:
+    Style style;
+    juce::AudioProcessorValueTreeState::SliderAttachment attachment;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BakeliteKnob)
+};
+
+/** A chrome bat toggle on a hex nut. Up (or right) is on. */
+class BatToggle final : public juce::Button
+{
+public:
+    BatToggle (juce::AudioProcessorValueTreeState&, const juce::String& parameterID, bool horizontal = false);
+
+    void paintButton (juce::Graphics&, bool highlighted, bool down) override;
+
+private:
+    bool horizontal;
+    juce::AudioProcessorValueTreeState::ButtonAttachment attachment;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BatToggle)
 };
 
 /** A row of white keys that picks one choice of a parameter, each key's name

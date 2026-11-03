@@ -129,6 +129,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout LacquerProcessor::createPara
     }
 
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::link, 1 }, "Link", true));
+    layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::midSide, 1 }, "Mid/Side", false));
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { pid::output, 1 }, "Output",
         juce::NormalisableRange<float> (-12.0f, 12.0f, 0.1f), 0.0f,
@@ -173,6 +174,7 @@ LacquerProcessor::LacquerProcessor()
     }
 
     linkParam       = findParameter<juce::AudioParameterBool>  (pid::link);
+    midSideParam    = findParameter<juce::AudioParameterBool>  (pid::midSide);
     outputParam     = findParameter<juce::AudioParameterFloat> (pid::output);
     bypassParameter = findParameter<juce::AudioParameterBool>  (pid::bypass);
 }
@@ -369,6 +371,13 @@ void LacquerProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
         }
     }
 
+    // Mid/side: the two channel paths work on the sum and the difference,
+    // and the pair goes back to left and right after the way down.
+    const auto midSide = midSideParam->get() && numChannels == 2;
+
+    if (midSide)
+        encodeMidSide (buffer, numSamples);
+
     auto block = juce::dsp::AudioBlock<float> (buffer).getSubsetChannelBlock (0, (size_t) numChannels);
     auto inner = oversampler->processSamplesUp (block);
 
@@ -383,6 +392,9 @@ void LacquerProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
 
     oversampler->processSamplesDown (block);
 
+    if (midSide)
+        decodeMidSide (buffer, numSamples);
+
     // Output trim and bypass at the host rate, against the latency matched dry
     // signal, so bypass is the input exactly.
     for (int i = 0; i < numSamples; ++i)
@@ -396,6 +408,34 @@ void LacquerProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
             const auto dry = dryBuffer.getSample (ch, i);
             data[i] = dry + wet * (data[i] * gain - dry);
         }
+    }
+}
+
+void LacquerProcessor::encodeMidSide (juce::AudioBuffer<float>& buffer, int numSamples) noexcept
+{
+    auto* l = buffer.getWritePointer (0);
+    auto* r = buffer.getWritePointer (1);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        const auto m = 0.5f * (l[i] + r[i]);
+        const auto s = 0.5f * (l[i] - r[i]);
+        l[i] = m;
+        r[i] = s;
+    }
+}
+
+void LacquerProcessor::decodeMidSide (juce::AudioBuffer<float>& buffer, int numSamples) noexcept
+{
+    auto* m = buffer.getWritePointer (0);
+    auto* s = buffer.getWritePointer (1);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        const auto l = m[i] + s[i];
+        const auto r = m[i] - s[i];
+        m[i] = l;
+        s[i] = r;
     }
 }
 

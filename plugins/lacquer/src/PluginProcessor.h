@@ -34,7 +34,10 @@ namespace pid
     inline constexpr const char* transformer       = "transformer";
     inline constexpr const char* eqIn              = "eq_in";
 
-    inline constexpr const char* link   = "link";
+    inline constexpr const char* link    = "link";
+    /** Added in 0.4.0, off by default so sessions saved before it sound as
+        they did: the two channels are the mid and the side, not left and right. */
+    inline constexpr const char* midSide = "mid_side";
     inline constexpr const char* output = "output";
     inline constexpr const char* bypass = "bypass";
 
@@ -93,6 +96,9 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
+    static void encodeMidSide (juce::AudioBuffer<float>&, int numSamples) noexcept;
+    static void decodeMidSide (juce::AudioBuffer<float>&, int numSamples) noexcept;
+
     struct StripParameters
     {
         juce::AudioParameterChoice* lowBoostFreq      { nullptr };
@@ -148,6 +154,7 @@ private:
 
     std::array<StripParameters, numChannelStrips> strips;
     juce::AudioParameterBool*  linkParam       { nullptr };
+    juce::AudioParameterBool*  midSideParam    { nullptr };
     juce::AudioParameterFloat* outputParam     { nullptr };
     juce::AudioParameterBool*  bypassParameter { nullptr };
 

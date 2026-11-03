@@ -156,7 +156,7 @@ HingeEditor::Face::Face (HingeProcessor& p)
     }
 
     addAndMakeVisible (fold);
-    fold.setCaption ("M/S · DUAL", "FOLD");
+    fold.setCaption (juce::String (juce::CharPointer_UTF8 ("M/S · DUAL")), "FOLD");
     fold.onClick = [this]
     {
         // Folding links the rows; unfolding unlinks them. In mid/side that is
@@ -245,7 +245,7 @@ void HingeEditor::Face::refresh()
     for (auto* child : strips[1]->components())
         child->setVisible (open);
 
-    fold.setCaption (midSide ? "SPLIT M · S" : "DUAL L · R", "FOLD");
+    fold.setCaption (midSide ? juce::String (juce::CharPointer_UTF8 ("SPLIT M · S")) : juce::String (juce::CharPointer_UTF8 ("DUAL L · R")), "FOLD");
     fold.setOpen (open);
 
     resized();
@@ -259,7 +259,7 @@ void HingeEditor::Face::paintRow (juce::Graphics& g, int index, float y) const
 {
     const auto midSide = shownMode == 2;
     juce::String letter = midSide ? (index == 0 ? "M" : "S") : (index == 0 ? "L" : "R");
-    if (! open) letter = midSide ? "M·S" : "";
+    if (! open) letter = midSide ? juce::String (juce::CharPointer_UTF8 ("M·S")) : "";
     ui::drawLabel (g, letter, { letterX - 30.0f, y - 18.0f, 60.0f, 36.0f }, letter.length() > 1 ? 15.0f : 30.0f,
                    ink, juce::Justification::centred, false);
 

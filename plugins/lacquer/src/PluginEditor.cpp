@@ -3,6 +3,8 @@
 namespace lacquer
 {
 
+namespace ui = indiewave::ui;
+
 namespace
 {
     using Size = panel::SteppedKnob::Size;
@@ -30,6 +32,22 @@ namespace
 
     constexpr float earWidth = 44.0f;
     constexpr float middleTop = 292.0f, middleBottom = 348.0f;
+
+    constexpr float modeKeyX[] = { 948.0f, 1004.0f, 1060.0f };
+    constexpr float logoX = 560.0f;
+
+    ui::Key::Style modeKey (juce::String text)
+    {
+        ui::Key::Style s;
+        s.kind = ui::Key::Kind::white;
+        s.lit = juce::Colour (0xfff2c46a);
+        s.capSize = 20.0f;
+        s.capWidth = 50.0f;
+        s.capLabel = std::move (text);
+        s.capLabelOn = juce::Colour (0xff2b261f);
+        s.capLabelOff = juce::Colour (0xff2b261f);
+        return s;
+    }
 
     juce::Rectangle<int> square (float centreX, float centreY, float side)
     {
@@ -114,7 +132,8 @@ std::vector<juce::Component*> LacquerEditor::Strip::components()
 
 LacquerEditor::Face::Face (LacquerProcessor& p)
     : processor (p),
-      link   (p.apvts, pid::link),
+      modeKeys { ui::Key (modeKey ("STEREO")), ui::Key (modeKey ("DUAL")), ui::Key (modeKey ("M/S")) },
+      fold   (ui::FoldTab::Edge::bottom, juce::Colours::black, juce::Colours::grey),
       output (p.apvts, pid::output, Size::small, SteppedKnob::evenMarks (25, panel::Ink::neutral))
 {
     finishSelector.onChange = [this] (panel::Finish f)
@@ -128,10 +147,26 @@ LacquerEditor::Face::Face (LacquerProcessor& p)
         strips[(size_t) i] = std::make_unique<Strip> (p, i);
 
         for (auto* child : strips[(size_t) i]->components())
-            addAndMakeVisible (child);
+            i == 0 ? addAndMakeVisible (child) : addChildComponent (child);
     }
 
-    addAndMakeVisible (link);
+    for (int i = 0; i < 3; ++i)
+    {
+        addAndMakeVisible (modeKeys[(size_t) i]);
+        modeKeys[(size_t) i].onClick = [this, i] { setMode (i); };
+    }
+
+    addAndMakeVisible (fold);
+    fold.onClick = [this]
+    {
+        // Folding links the channels; unfolding gives each its own controls.
+        // Mid/side stays as it is: folded, one setting works on mid and side.
+        auto* link = processor.apvts.getParameter (pid::link);
+        link->beginChangeGesture();
+        link->setValueNotifyingHost (open ? 1.0f : 0.0f);
+        link->endChangeGesture();
+    };
+
     addAndMakeVisible (output);
     addAndMakeVisible (pilot);
     addAndMakeVisible (finishSelector);
@@ -146,7 +181,12 @@ void LacquerEditor::Face::resized()
 
     const auto middle = 0.5f * (middleTop + middleBottom);
     pilot .setBounds (square (112.0f, middle, 30.0f));
-    link  .setBounds (juce::Rectangle<float> (40.0f, 50.0f).withCentre ({ 1112.0f, middle }).toNearestInt());
+
+    for (int i = 0; i < 3; ++i)
+        modeKeys[(size_t) i].setBounds (juce::Rectangle<float> (54.0f, 30.0f).withCentre ({ modeKeyX[i], middle }).toNearestInt());
+
+    const auto height = (float) (open ? designHeightOpen : designHeightFolded);
+    fold.setBounds (juce::Rectangle<float> (640.0f, height - 22.0f, 120.0f, 17.0f).toNearestInt());
     output.setBounds (square (1240.0f, middle, 64.0f));
     finishSelector.setBounds (juce::Rectangle<float> (56.0f, 28.0f).withCentre ({ 300.0f, middle }).toNearestInt());
 }
@@ -189,8 +229,8 @@ void LacquerEditor::Face::applyFinish (panel::Finish f)
         for (auto* child : strip->components())
             apply (child);
 
-    apply (&link);
     apply (&output);
+    fold.setColours (palette->engraving, palette->plateBottom.contrasting (0.12f));
     repaint();
 }
 
@@ -204,19 +244,49 @@ void LacquerEditor::Face::refresh()
     // The pilot is the power lamp: lit unless the host has bypassed the unit.
     pilot.setLit (processor.apvts.getRawParameterValue (pid::bypass)->load() < 0.5f);
 
-    const auto linked = processor.apvts.getRawParameterValue (pid::link)->load() > 0.5f ? 1 : 0;
+    const auto linked  = processor.apvts.getRawParameterValue (pid::link)   ->load() >= 0.5f;
+    const auto midSide = processor.apvts.getRawParameterValue (pid::midSide)->load() >= 0.5f;
+    const auto modeIndex = midSide ? 2 : linked ? 0 : 1;
 
-    if (linked == shownLink)
+    for (int i = 0; i < 3; ++i)
+        modeKeys[(size_t) i].setToggleState (i == modeIndex, juce::dontSendNotification);
+
+    const auto shouldOpen = ! linked;
+
+    if (shouldOpen == open && modeIndex == shownMode)
         return;
 
-    shownLink = linked;
+    shownMode = modeIndex;
+    const auto changed = shouldOpen != open;
+    open = shouldOpen;
 
-    // Linked, channel 1 sets both sides; channel 2's switches stay where they
-    // were but are greyed, so they cannot look as if they did something.
+    // Linked, channel 1 sets both sides and channel 2 folds away; its
+    // settings stay where they were for when it comes back.
     for (auto* child : strips[1]->components())
-        child->setEnabled (linked == 0);
+        child->setVisible (open);
 
+    fold.setCaption (midSide ? juce::String (juce::CharPointer_UTF8 ("SPLIT M · S")) : juce::String (juce::CharPointer_UTF8 ("DUAL L · R")), "FOLD");
+    fold.setOpen (open);
+
+    resized();
     repaint();
+
+    if (changed && onFoldChanged)
+        onFoldChanged();
+}
+
+void LacquerEditor::Face::setMode (int index)
+{
+    // STEREO: linked, left/right. DUAL: unlinked, left/right. M/S: unlinked, mid/side.
+    const float link = index == 0 ? 1.0f : 0.0f, midSide = index == 2 ? 1.0f : 0.0f;
+
+    for (auto [id, value] : { std::pair<const char*, float> { pid::link, link }, { pid::midSide, midSide } })
+    {
+        auto* parameter = processor.apvts.getParameter (id);
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost (value);
+        parameter->endChangeGesture();
+    }
 }
 
 void LacquerEditor::Face::paint (juce::Graphics& g)
@@ -277,12 +347,14 @@ void LacquerEditor::Face::paint (juce::Graphics& g)
 
     const auto middle = 0.5f * (middleTop + middleBottom);
 
-    // Name, in a script cut into the bar.
+    // The maker's mark and the name, cut into the bar.
+    ui::drawLogo (g, { logoX, middle }, 0.62f, palette->engraving, palette->engravingDim, false);
     {
         juce::GlyphArrangement name;
-        auto font = juce::Font (juce::FontOptions (juce::Font::getDefaultSerifFontName(), 34.0f,
+        auto font = juce::Font (juce::FontOptions (juce::Font::getDefaultSerifFontName(), 32.0f,
                                                    juce::Font::bold | juce::Font::italic));
-        name.addFittedText (font, "Lacquer", 540.0f, middle - 24.0f, 320.0f, 36.0f, juce::Justification::centred, 1);
+        name.addFittedText (font, "Lacquer", logoX + 26.0f, middle - 26.0f, 240.0f, 34.0f,
+                            juce::Justification::centredLeft, 1);
 
         g.setColour (palette->lip);
         name.draw (g, juce::AffineTransform::translation (0.0f, 1.0f));
@@ -290,21 +362,24 @@ void LacquerEditor::Face::paint (juce::Graphics& g)
         name.draw (g);
     }
 
-    panel::drawTrackedLabel (g, *palette, "INDIEWAVE AUDIO", { 540.0f, middle + 11.0f, 320.0f, 10.0f }, 7.5f, 3.0f,
-                             juce::Justification::centred, palette->engravingDim);
+    panel::drawTrackedLabel (g, *palette, "INDIEWAVE AUDIO", { logoX + 28.0f, middle + 10.0f, 240.0f, 10.0f }, 7.5f, 3.0f,
+                             juce::Justification::centredLeft, palette->engravingDim);
+
+    panel::drawTrackedLabel (g, *palette, "MODE", { modeKeyX[0] - 100.0f, middle - 5.0f, 66.0f, 10.0f }, 7.5f, 2.0f,
+                             juce::Justification::centredRight, palette->engravingDim);
 
     panel::drawGlyph (g, *palette, panel::Glyph::power,  { 136.0f, middle - 9.0f, 18.0f, 18.0f }, palette->engraving);
-    panel::drawGlyph (g, *palette, panel::Glyph::link,   { 1062.0f, middle - 10.0f, 30.0f, 20.0f }, palette->engraving);
     panel::drawGlyph (g, *palette, panel::Glyph::output, { 1180.0f, middle - 9.0f, 24.0f, 18.0f }, palette->engraving);
 
-    for (int i = 0; i < numChannelStrips; ++i)
-        paintStripMarkings (g, i, rowTop[i]);
+    paintStripMarkings (g, 0, rowTop[0]);
+
+    if (open)
+        paintStripMarkings (g, 1, rowTop[1]);
 }
 
 void LacquerEditor::Face::paintStripMarkings (juce::Graphics& g, int index, float top) const
 {
-    const auto dimmed = index == 1 && shownLink == 1;
-    const auto tint = [dimmed] (juce::Colour c) { return dimmed ? c.withSaturation (0.0f).withAlpha (0.4f) : c; };
+    const auto tint = [] (juce::Colour c) { return c; };
     const auto ink  = [this] (panel::Ink i) { return palette->ink (i); };
 
     const auto glyphBox = [top] (float x) { return juce::Rectangle<float> (46.0f, 22.0f).withCentre ({ x, top + glyphY }); };
@@ -337,10 +412,14 @@ void LacquerEditor::Face::paintStripMarkings (juce::Graphics& g, int index, floa
                           juce::Rectangle<float> (42.0f, 26.0f).withCentre ({ toggleX[i], top + toggleGlyphY }),
                           tint (i == 0 ? palette->ink (panel::Ink::bass) : palette->engraving));
 
-    // Channel numeral.
+    // Channel letter, when there are two channels to tell apart.
+    if (! open)
+        return;
+
+    const auto midSide = shownMode == 2;
     juce::GlyphArrangement numeral;
     numeral.addFittedText (juce::Font (juce::FontOptions (juce::Font::getDefaultSerifFontName(), 30.0f, juce::Font::bold)),
-                           index == 0 ? "I" : "II", numeralX - 24.0f, top + 120.0f, 48.0f, 40.0f,
+                           index == 0 ? (midSide ? "M" : "L") : (midSide ? "S" : "R"), numeralX - 24.0f, top + 120.0f, 48.0f, 40.0f,
                            juce::Justification::centred, 1);
     g.setColour (palette->lip);
     numeral.draw (g, juce::AffineTransform::translation (0.0f, 1.0f));
@@ -356,21 +435,36 @@ LacquerEditor::LacquerEditor (LacquerProcessor& p)
       face (p)
 {
     addAndMakeVisible (face);
-    face.setBounds (0, 0, designWidth, designHeight);
+    face.onFoldChanged = [this] { applyFold(); };
 
     setResizable (true, true);
-    setResizeLimits (designWidth / 2, designHeight / 2, designWidth * 2, designHeight * 2);
+    const auto height = face.isOpen() ? designHeightOpen : designHeightFolded;
+    setResizeLimits (designWidth / 2, height / 2, designWidth * 2, height * 2);
 
     if (auto* sizeLimits = getConstrainer())
-        sizeLimits->setFixedAspectRatio ((double) designWidth / designHeight);
+        sizeLimits->setFixedAspectRatio ((double) designWidth / height);
 
-    setSize (designWidth * 4 / 5, designHeight * 4 / 5);
+    setSize (designWidth * 4 / 5, height * 4 / 5);
     startTimerHz (15);
 }
 
 LacquerEditor::~LacquerEditor()
 {
     stopTimer();
+}
+
+void LacquerEditor::applyFold()
+{
+    // Keep the scale the panel is drawn at; only the height changes.
+    const auto scale  = (double) getWidth() / designWidth;
+    const auto height = face.isOpen() ? designHeightOpen : designHeightFolded;
+
+    setResizeLimits (designWidth / 2, height / 2, designWidth * 2, height * 2);
+
+    if (auto* sizeLimits = getConstrainer())
+        sizeLimits->setFixedAspectRatio ((double) designWidth / height);
+
+    setSize (getWidth(), juce::roundToInt (height * scale));
 }
 
 void LacquerEditor::paint (juce::Graphics& g)
@@ -380,8 +474,10 @@ void LacquerEditor::paint (juce::Graphics& g)
 
 void LacquerEditor::resized()
 {
-    face.setTransform (juce::AffineTransform::scale ((float) getWidth()  / designWidth,
-                                                     (float) getHeight() / designHeight));
+    const auto height = face.isOpen() ? designHeightOpen : designHeightFolded;
+    face.setBounds (0, 0, designWidth, height);
+    face.setTransform (juce::AffineTransform::scale ((float) getWidth()  / (float) designWidth,
+                                                     (float) getHeight() / (float) height));
 }
 
 void LacquerEditor::timerCallback()

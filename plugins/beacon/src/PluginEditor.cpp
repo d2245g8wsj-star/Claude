@@ -476,7 +476,7 @@ void BeaconEditor::Face::paint (juce::Graphics& g)
     ui::drawLabel (g, "MODE", { centreLeft, panelTopY + 8.0f, centreWidth, 14.0f }, 9.5f, ink, juce::Justification::centred, true, 1.2f);
 
     const auto note = m == ChannelMode::stereo   ? "ONE SET FOR BOTH SIDES"
-                    : m == ChannelMode::midSide  ? (open ? "MID LEFT · SIDE RIGHT" : "SIDE FOLDED AWAY")
+                    : m == ChannelMode::midSide  ? (open ? juce::String (juce::CharPointer_UTF8 ("MID LEFT · SIDE RIGHT")) : "SIDE FOLDED AWAY")
                                                  : (open ? "LEFT AND RIGHT SPLIT" : "RIGHT FOLLOWS LEFT");
     ui::drawLabel (g, note, { centreLeft, 106.0f, centreWidth, 10.0f }, 6.5f, dim, juce::Justification::centred, true, 0.6f);
 

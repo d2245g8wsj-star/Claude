@@ -731,6 +731,13 @@ void FoldTab::setCaption (juce::String closed, juce::String opened)
     repaint();
 }
 
+void FoldTab::setColours (juce::Colour newInk, juce::Colour newFill)
+{
+    ink = newInk;
+    fill = newFill;
+    repaint();
+}
+
 void FoldTab::paintButton (juce::Graphics& g, bool highlighted, bool down)
 {
     const auto b = getLocalBounds().toFloat();

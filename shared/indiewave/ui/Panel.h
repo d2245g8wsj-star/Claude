@@ -258,13 +258,14 @@ public:
     FoldTab (Edge, juce::Colour ink, juce::Colour fill);
     void setOpen (bool);
     void setCaption (juce::String closedText, juce::String openText);
+    void setColours (juce::Colour ink, juce::Colour fill);
     void paintButton (juce::Graphics&, bool highlighted, bool down) override;
 
 private:
     Edge edge;
     juce::Colour ink, fill;
     bool open { false };
-    juce::String closedText { "M/S · DUAL" }, openText { "FOLD" };
+    juce::String closedText { juce::String (juce::CharPointer_UTF8 ("M/S · DUAL")) }, openText { "FOLD" };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FoldTab)
 };

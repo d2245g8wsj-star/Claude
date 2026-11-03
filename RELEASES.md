@@ -10,7 +10,7 @@ have their own folder under `plugins/` and their own workflow.
 | **Beacon** | Vari-mu tube compressor | 0.6.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
 | **Swell** | Two channel harmonic equaliser | 0.3.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.4.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
-| **Lacquer** | Dual passive inductor equaliser | 0.3.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
+| **Lacquer** | Dual passive inductor equaliser | 0.4.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
 | **Tide** | Three band mastering equaliser with mid/side | 0.3.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
 
 All seven build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
@@ -138,6 +138,10 @@ separated by spaces. It deletes each release together with its tag.
 - **0.3.0** - First public beta. Bit exact on Apple silicon.
 
 ### Lacquer
+- **0.4.0** - The panel folds: STEREO is one channel over the centre bar,
+  DUAL and M/S fold the second out below. New mid/side mode (off in every
+  earlier session, which sound as they did). The IndieWave mark in the bar;
+  the band and switch symbols and both finishes stay.
 - **0.3.0** - First public beta, with the Classic White and Lacquer Black
   finishes.
 

@@ -7,8 +7,8 @@ cuts, a treble boost that is either an inductor bell or an RC shelf, a passive
 treble cut, and the switchable input buffer, output transformer and **Shift**
 filter set around them.
 
-![The Lacquer editor, Classic White](docs/ui.png)
-![The Lacquer editor, Lacquer Black](docs/ui-black.png)
+![The Lacquer editor, Classic White, stereo](docs/ui.png)
+![The Lacquer editor, Lacquer Black, folded out for mid/side](docs/ui-black.png)
 
 Built with JUCE 8. Ships as **VST3** and **Standalone** on Windows, macOS and
 Linux, plus **AU** on macOS.
@@ -41,11 +41,18 @@ Four toggles per channel, each under its symbol (up is on):
 | coils | **Transformer** | The 1:1 output transformer. On, the core thickens and compresses the lows at level, and the top octave softens by a fraction of a dB. Off is the single ended output. |
 | power | **EQ In** | Relays the filter network in and out. The amplifiers stay in circuit. |
 
-In the bar between the channels: the pilot lamp (lit unless bypassed), two
+In the bar under the channel: the pilot lamp (lit unless bypassed), two
 paint chips that switch the panel between the hardware's two finishes,
 **Classic White** and **Lacquer Black** (saved with the session, not a
-parameter, since it does not change the sound), **Link** (channel I's controls drive both channels; channel II greys out) and
-an **Output** trim of ±12 dB, which the hardware does not have.
+parameter, since it does not change the sound), the **STEREO / DUAL / M/S**
+keys and an **Output** trim of ±12 dB, which the hardware does not have.
+
+**STEREO** is one set of controls for both channels, and the unit folds to a
+single row. **DUAL** folds the second channel out under the bar, left on top
+and right below. **M/S** does the same for the mid and the side: the pair is
+split into sum and difference before the equaliser and put back after it. The
+tab under the panel folds and unfolds; folded in M/S, one setting works on
+both mid and side. The settings of the folded away channel are kept.
 
 ## Signal flow
 
@@ -119,8 +126,8 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DLACQUER_BUILD_TESTS=ON -DLACQUER_BUILD_TOOLS=ON
 cmake --build build --target lacquer_tests lacquer_shot --parallel
 ./build/lacquer_tests_artefacts/Release/lacquer_tests
-./build/lacquer_shot_artefacts/Release/lacquer_shot docs/ui.png 1400
-./build/lacquer_shot_artefacts/Release/lacquer_shot docs/ui-black.png 1400 black
+./build/lacquer_shot_artefacts/Release/lacquer_shot docs/ui.png 1400 white stereo
+./build/lacquer_shot_artefacts/Release/lacquer_shot docs/ui-black.png 1400 black ms
 ```
 
 The checks assert: every switch has the published positions; the taper rises at
@@ -129,9 +136,11 @@ analogue prototype and is transparent at 0 dB; each band reaches its full gain
 through the processor and disappears with EQ IN off; the bell and shelf halves
 of the treble boost; the transformer's low frequency harmonics, their level
 dependence and their absence in the mids; the buffer's effect on the second
-harmonic; link, channel independence and an exact bypass; latency the same at
+harmonic; link, channel independence and an exact bypass; mid/side leaving a
+centred source to the mid and a side only source to the side; latency the same at
 every rate and lined up with the output; finite output at extreme settings and
-under random automation; and state, panel finish included, surviving a save.
+under random automation; state, panel finish included, surviving a save; and
+sessions saved by every released version opening with the same settings.
 
 ## Source
 

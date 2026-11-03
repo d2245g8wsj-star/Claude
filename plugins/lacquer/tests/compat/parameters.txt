@@ -35,3 +35,4 @@ c2_tc_freq | choice | 4 kHz;6 kHz;10 kHz;12 kHz;18 kHz;24 kHz | default 3
 c2_transformer | bool | default 1
 link | bool | default 1
 output | float | -12..12 step 0.1 skew 1 | default 0
+mid_side | bool | default 0

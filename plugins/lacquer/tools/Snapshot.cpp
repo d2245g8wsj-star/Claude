@@ -2,7 +2,7 @@
     Renders the editor to a PNG without opening a window, so the layout can be
     looked at from a terminal or in CI.
 
-    Usage:  lacquer_shot <output.png> [width] [white|black]
+    Usage:  lacquer_shot <output.png> [width] [white|black] [stereo|dual|ms]
 */
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -57,6 +57,10 @@ int main (int argc, char* argv[])
     if (argc > 3 && juce::String (argv[3]) == "black")
         processor.setFinish (1);
 
+    const juce::String mode (argc > 4 ? argv[4] : "dual");
+    set (lacquer::pid::link,    mode == "stereo" ? 1.0f : 0.0f);
+    set (lacquer::pid::midSide, mode == "ms"     ? 1.0f : 0.0f);
+
     processor.prepareToPlay (48000.0, 512);
 
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
@@ -67,7 +71,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * lacquer::designHeight / lacquer::designWidth));
+    editor->setSize (width, juce::roundToInt ((double) width * editor->getHeight() / editor->getWidth()));
 
     // Run the plugin while the message loop runs, as a host would.
     struct Settle final : private juce::Timer

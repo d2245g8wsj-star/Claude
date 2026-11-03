@@ -9,7 +9,7 @@ name: Suite
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: [macOS, Swell, Beacon, Breakwater, Hinge, Lacquer, Tide]
+    workflows: [macOS, Swell, Beacon, Breakwater, Hinge, Lacquer, Tide, Transcender]
     types: [completed]
 
 concurrency:
@@ -41,7 +41,7 @@ jobs:
           tags="$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq '.[].tag_name')"
           contents=""
 
-          for name in Crest Breakwater Beacon Swell Hinge Lacquer Tide; do
+          for name in Crest Breakwater Beacon Swell Hinge Lacquer Tide Transcender; do
             id="${name,,}"
             tag="$(grep -E "^${id}-v[0-9]+\.[0-9]+\.[0-9]+$" <<<"$tags" | sort -V | tail -1 || true)"
             if [ -z "$tag" ]; then
@@ -121,7 +121,7 @@ jobs:
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/suite"
-          notes="$(printf 'All seven plugins in one download, public beta:\n\n```\n%s```\n' "$(cat "$work/contents.txt")")"
+          notes="$(printf 'All eight plugins in one download, public beta:\n\n```\n%s```\n' "$(cat "$work/contents.txt")")"
           gh release delete suite-latest --yes --cleanup-tag || true
           gh release create suite-latest --prerelease \
             --target "${{ github.event.repository.default_branch }}" \

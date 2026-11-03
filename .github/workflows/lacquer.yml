@@ -7,10 +7,12 @@ on:
     tags: ["lacquer-v*"]
     paths:
       - "plugins/lacquer/**"
+      - "shared/**"
       - ".github/workflows/lacquer.yml"
   pull_request:
     paths:
       - "plugins/lacquer/**"
+      - "shared/**"
       - ".github/workflows/lacquer.yml"
   workflow_dispatch:
     inputs:

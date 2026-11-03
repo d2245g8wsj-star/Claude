@@ -7,10 +7,12 @@ on:
     tags: ["hinge-v*"]
     paths:
       - "plugins/hinge/**"
+      - "shared/**"
       - ".github/workflows/hinge.yml"
   pull_request:
     paths:
       - "plugins/hinge/**"
+      - "shared/**"
       - ".github/workflows/hinge.yml"
   workflow_dispatch:
     inputs:

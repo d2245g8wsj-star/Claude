@@ -7,10 +7,12 @@ on:
     tags: ["tide-v*"]
     paths:
       - "plugins/tide/**"
+      - "shared/**"
       - ".github/workflows/tide.yml"
   pull_request:
     paths:
       - "plugins/tide/**"
+      - "shared/**"
       - ".github/workflows/tide.yml"
   workflow_dispatch:
     inputs:

@@ -2,10 +2,10 @@
     Renders the editor to a PNG without opening a window, so the layout can be
     looked at from a terminal or in CI.
 
-    Usage:  beacon_shot <output.png> [width] [side]
+    Usage:  beacon_shot <output.png> [scale] [stereo|dual|ms]
 
-    With "side", the panel is shown in mid/side mode with the side's
-    controls on show.
+    "dual" shows dual mono split, the right channel's panel folded out; "ms"
+    mid/side with the side's panel out.
 */
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -24,7 +24,8 @@ int main (int argc, char* argv[])
                                       : juce::File::getCurrentWorkingDirectory()
                                             .getChildFile ("beacon.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : beacon::designWidth;
+    const auto scale = argc > 2 ? juce::String (argv[2]).getFloatValue() : 1.0f;
+    const auto view  = argc > 3 ? juce::String (argv[3]) : juce::String ("stereo");
 
     beacon::BeaconProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
@@ -50,13 +51,17 @@ int main (int argc, char* argv[])
     set (beacon::pid::output,    4.0f);
     set (beacon::pid::ironPad,   3.0f);
 
-    if (argc > 3 && juce::String (argv[3]) == "side")
+    if (view == "ms" || view == "dual")
     {
-        set (beacon::pid::mode, (float) beacon::ChannelMode::midSide);
+        set (beacon::pid::mode, (float) (view == "ms" ? beacon::ChannelMode::midSide : beacon::ChannelMode::dualMono));
+        set (beacon::pid::dualSplit, view == "dual" ? 1.0f : 0.0f);
         set (beacon::pid::side (beacon::pid::threshold), -18.0f);
+        set (beacon::pid::side (beacon::pid::attack),    30.0f);
+        set (beacon::pid::side (beacon::pid::release),   1.2f);
         set (beacon::pid::side (beacon::pid::thd),       5.0f);
+        set (beacon::pid::side (beacon::pid::mix),       100.0f);
         set (beacon::pid::side (beacon::pid::feedFwd),   1.0f);
-        processor.apvts.state.setProperty ("editorView", 1, nullptr);
+        set (beacon::pid::side (beacon::pid::bellIn),    1.0f);
     }
 
     processor.prepareToPlay (48000.0, 512);
@@ -69,7 +74,8 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * beacon::designHeight / beacon::designWidth));
+    // Let the editor settle its fold first, then draw it at the scale asked for.
+    editor->setSize (juce::roundToInt (editor->getWidth() / 0.9f * scale), juce::roundToInt (beacon::designHeight * scale));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.

@@ -1,7 +1,8 @@
 # BEACON — IndieWave Audio
 
 A stereo variable-mu tube compressor, modelled on a well known two channel
-hardware unit with digital recall. No ratio knob: like the hardware, the ratio is a property of level,
+hardware unit with digital recall, and dressed after it: black panels, knurled
+knobs in rings of LEDs, a moving coil meter between level ladders. No ratio knob: like the hardware, the ratio is a property of level,
 gentle at the threshold and steepening as the signal goes past it. Around the
 vari-mu tube sit input transformers, a calibrated THD stage, a TUBE drive
 control, and a choice of output: RED (tube amplifier, transformer and IRON PAD)
@@ -55,21 +56,32 @@ One set of controls drives both channels:
 | **LINK** (output) | | Iron link: Output and PAD move together, so the iron is driven harder at the same level. |
 | **BYPASS** | | The host's bypass, on the panel. |
 
-**Mode** sets what the detectors listen to; the settings are the same in all
-three. **Stereo** (the default): one detector for both channels, so the image
-cannot shift. **Dual Mono**: each channel compresses on its own detector, which
-the hardware's manual calls its most common use on a stereo source.
-**Mid/Side**: mid and side each compress on their own detector, each with
-its own settings: an **EDIT MID | SIDE** switch appears beside the meter and
-turns the panel over to the other half, the section headings say which half is
-on show, and the meter follows it. The main settings are the mid's. IRON, PAD
-and the iron link stay single, because the output transformers work in
-left/right, outside the M/S matrix, as on the unit. For different settings per
-channel outside mid/side, use two instances on mono tracks.
+**Mode** sets what the detectors listen to. **Stereo** (the default): one
+set of controls and one detector for both channels, so the image cannot
+shift; the unit is folded to a single channel panel beside the centre.
+**Dual Mono**: each channel compresses on its own detector, which the
+hardware's manual calls its most common use on a stereo source. The right
+channel follows the left until the tab at the edge of the unit is pulled
+(**SPLIT L/R**): the unit folds out a RIGHT panel, which starts as a copy of
+the left and from then on has its own settings; **LINK L/R** folds it away
+and the right follows the left again. **Mid/Side**: mid and side each
+compress on their own detector, each with its own settings; the SIDE panel
+folds out beside the centre, and its tab folds it away again without
+changing what it does. IRON, PAD and the iron link stay single, on the first
+panel, because the output transformers work in left/right, outside the M/S
+matrix, as on the unit.
 
-The moving coil gain reduction meter reads 0 to 16 dB like the unit's, and
-shows whichever channel is being reduced more (in mid/side, the half on show). A heater lamp in the
-SATURATION section glows as THD is driven.
+Each channel panel has a moving coil gain reduction meter that reads 0 to
+16 dB like the unit's, between LED ladders for the level in and out in dBu
+(0 dBu is the operating level, -18 dBFS). Folded, a panel shows whichever
+channel works harder. The display in the centre gives the gain reduction in
+numbers, per channel when there are two. A heater lamp by SATURATION glows
+as THD is driven.
+
+Sessions saved by earlier versions open as they were saved: the split is
+off in all of them, so a dual mono setting sounds as it did.
+
+![Beacon folded out in mid/side](docs/ui-ms.png)
 
 ## How it is modelled
 
@@ -165,7 +177,7 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DBEACON_BUILD_TESTS=ON -DBEACON_BUILD_TOOLS=ON
 cmake --build build --target beacon_tests beacon_shot --parallel
 ./build/beacon_tests_artefacts/Release/beacon_tests
-./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 944
+./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 1.0 stereo   # or dual, ms
 ```
 
 The checks assert: the THD table inverts; the idle response is flat and the
@@ -177,8 +189,10 @@ saturates on bass, Output up with PAD down drives it harder at the same level,
 and the PAD is a plain attenuator in RED only; the sidechain filters, their
 switches and listen work; bypass and mix at 0 % behave; stereo linking
 holds the image; the mid/side matrix reconstructs, the side follows its own
-controls in mid/side and only there, and the iron stays in left/right; reported latency; finite output at extreme settings across rates
-and block sizes; and state surviving a save.
+controls in mid/side and only there, and the iron stays in left/right; in dual mono the right channel follows the left unless split; reported latency; finite output at extreme settings across rates
+and block sizes; state surviving a save; and that a session saved by any
+released version (`tests/compat/`) opens with every setting as it was saved,
+with no parameter's ID, range, default or choices changed.
 
 ## Source
 

@@ -15,6 +15,8 @@ struct MeterSource
     {
         std::atomic<float> reductionDb { 0.0f };   ///< dB, positive
         std::atomic<float> thdDrive    { 0.0f };   ///< peak into the THD curve
+        std::atomic<float> inPeak      { 0.0f };   ///< peak at the input, linear
+        std::atomic<float> outPeak     { 0.0f };   ///< peak at the output, linear
     };
 
     std::array<Channel, 2> channels;

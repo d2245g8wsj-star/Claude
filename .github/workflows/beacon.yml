@@ -7,10 +7,12 @@ on:
     tags: ["beacon-v*"]
     paths:
       - "plugins/beacon/**"
+      - "shared/**"
       - ".github/workflows/beacon.yml"
   pull_request:
     paths:
       - "plugins/beacon/**"
+      - "shared/**"
       - ".github/workflows/beacon.yml"
   workflow_dispatch:
     inputs:

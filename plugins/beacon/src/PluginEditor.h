@@ -1,17 +1,20 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "gui/Panel.h"
+#include "indiewave/ui/Panel.h"
 
 namespace beacon
 {
 
-/** Every coordinate in the editor is in these units; the face is scaled as one. */
-inline constexpr int designWidth  = 1180;
-inline constexpr int designHeight = 510;
+/** Every coordinate in the editor is in these units; the face is scaled as one.
+    Folded, the unit is one channel panel and the centre; unfolded (dual mono
+    split, or mid/side) it carries a second channel panel to the right. */
+inline constexpr int designHeight      = 450;
+inline constexpr int designWidthFolded = 1000;
+inline constexpr int designWidthOpen   = 1640;
 
 class BeaconEditor final : public juce::AudioProcessorEditor,
-                         private juce::Timer
+                           private juce::Timer
 {
 public:
     explicit BeaconEditor (BeaconProcessor&);
@@ -31,7 +34,7 @@ private:
     class Follow
     {
     public:
-        Follow (panel::Knob& source, juce::RangedAudioParameter* enable,
+        Follow (juce::Slider& source, juce::RangedAudioParameter* enable,
                 std::vector<std::pair<juce::RangedAudioParameter*, float>> followers,
                 std::function<bool()> extraCondition = {});
 
@@ -40,7 +43,7 @@ private:
         void update();
         void end();
 
-        panel::Knob& source;
+        juce::Slider& source;
         juce::RangedAudioParameter* enable;
         std::vector<std::pair<juce::RangedAudioParameter*, float>> followers;
         std::function<bool()> extraCondition;
@@ -50,21 +53,24 @@ private:
         std::vector<float> followerStart;
     };
 
-    /** The controls of one channel's signal path. There are two sets: the
-        main one, which is the mid in mid/side mode, and the side's, shown in
-        its place when the MID/SIDE switch is on SIDE. */
+    using Knob = indiewave::ui::RingKnob;
+    using Key  = indiewave::ui::Key;
+
+    /** One channel panel: the controls of one signal path. The first panel
+        holds the main set (left, mid, or both in stereo); the second the
+        second set (right when dual mono is split, side in mid/side). */
     struct ChannelControls
     {
-        ChannelControls (BeaconProcessor&, bool side);
+        ChannelControls (BeaconProcessor&, bool second);
 
         std::vector<juce::Component*> components();
+        void layout (float left);
 
-        panel::Knob input, threshold, attack, release, hpf, bell, thd, tube, mix, output;
-        panel::Lamp dynLink, feedForward, limit, hpfIn, bellIn, listen, tubeIn;
+        Knob threshold, mix, attack, input, release, thd, tube, output, hpf, bell;
+        Key limit, feedForward, dynLink, tubeIn, hpfIn, bellIn, listen;
+        indiewave::ui::VuMeter meter;
+        indiewave::ui::LedLadder inLadder, outLadder;
 
-        /** Dynamic link: input and threshold move together and the output
-            the other way, so the drive changes and the level does not. On the
-            main set, iron link: output and pad move together in RED mode. */
         std::vector<std::unique_ptr<Follow>> links;
     };
 
@@ -78,37 +84,34 @@ private:
 
         void refresh();
 
+        bool isOpen() const noexcept { return open; }
+        std::function<void()> onFoldChanged;
+
     private:
-        void layoutChannel (ChannelControls&);
-        std::vector<juce::Component*> sharedComponents();
-
-        /** Shows the side's controls in place of the main ones, in mid/side
-            mode with the switch on SIDE. */
-        bool editingSide() const;
-
-        /** THD stage drive to heater lamp brightness. */
-        static const float heatScale;
+        ChannelMode currentMode() const;
+        bool wantsOpen() const;
+        void foldTabClicked();
+        void paintChannel (juce::Graphics&, float left, const juce::String& title, bool second);
 
         BeaconProcessor& processor;
-        ChannelControls main, side;
+        ChannelControls main, second;
 
-        // Shared by both channels: the output transformer works on left and
-        // right in every mode.
-        panel::Knob ironPad;
-        panel::Lamp iron, ironLink, bypass;
-        panel::DriveLamp heat;
-        panel::VuMeter meter;
-        panel::ViewSwitch view;
-        panel::ModeSelector mode;
+        Knob ironPad;
+        Key ironLink, iron, bypass;
+        indiewave::ui::ChoiceKeys mode;
+        indiewave::ui::Display display;
+        indiewave::ui::FoldTab fold;
 
+        float heat[2] {};
+        bool open { false };
         int shownMode { -1 };
-        bool shownSide { true };  // so the first refresh sets the visibility up
-        bool shownRed { true };   // and the PAD
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
     };
 
-    BeaconProcessor&      processor;
+    void applyFold();
+
+    BeaconProcessor&    processor;
     juce::TooltipWindow tooltips { this, 650 };
     Face                face;
 

@@ -7,10 +7,12 @@ on:
     tags: ["breakwater-v*"]
     paths:
       - "plugins/breakwater/**"
+      - "shared/**"
       - ".github/workflows/breakwater.yml"
   pull_request:
     paths:
       - "plugins/breakwater/**"
+      - "shared/**"
       - ".github/workflows/breakwater.yml"
   workflow_dispatch:
     inputs:

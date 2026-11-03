@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "gui/Display.h"
 #include "gui/Panel.h"
+#include "indiewave/ui/Panel.h"
 
 namespace breakwater
 {
@@ -12,6 +13,10 @@ namespace breakwater
 inline constexpr int designWidth          = 1200;
 inline constexpr int designHeight         = 636;
 inline constexpr int designHeightAdvanced = 1056;
+
+/** The face sits between two rack ears; the editor's width is the whole unit. */
+inline constexpr int earWidth   = 64;
+inline constexpr int panelWidth = designWidth + 2 * earWidth;
 
 class BreakwaterEditor final : public juce::AudioProcessorEditor,
                                private juce::Timer

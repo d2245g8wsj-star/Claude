@@ -6,7 +6,7 @@ have their own folder under `plugins/` and their own workflow.
 | Plugin | What it is | Version | Folder | Workflow | Plugin code | Bundle id |
 | --- | --- | --- | --- | --- | --- | --- |
 | **Crest** | Converter and clipper | 0.10.0 beta | `/` | `macos.yml` | `Crst` | `audio.indiewave.crest` |
-| **Breakwater** | Mastering limiter | 0.5.0 beta | `plugins/breakwater` | `breakwater.yml` | `Brkw` | `audio.indiewave.breakwater` |
+| **Breakwater** | Mastering limiter | 0.6.0 beta | `plugins/breakwater` | `breakwater.yml` | `Brkw` | `audio.indiewave.breakwater` |
 | **Beacon** | Vari-mu tube compressor | 0.6.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
 | **Swell** | Two channel harmonic equaliser | 0.4.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.4.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
@@ -116,6 +116,10 @@ separated by spaces. It deletes each release together with its tag.
   coefficient table exactly.
 
 ### Breakwater
+- **0.6.0** - In the range's frame: rack ears either side and the IndieWave
+  mark beside the name. The layout, the Advanced panel and the remembered
+  size are as before. Same parameters as 0.5.0, so sessions open as they
+  were.
 - **0.5.0** - First public beta (was Zenith during development). Simple view
   by default with everything else behind Advanced; the editor size is
   remembered.

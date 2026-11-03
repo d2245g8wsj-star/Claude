@@ -23,6 +23,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <functional>
 #include <map>
@@ -35,10 +36,13 @@ using Check = std::function<void (bool, const juce::String&)>;
 using Factory = std::function<std::unique_ptr<juce::AudioProcessor>()>;
 
 /** Five significant figures: enough to tell ranges apart, few enough that
-    the rounding of a platform's maths library does not show. */
-inline juce::String number (double v)
+    the rounding of a platform's maths library does not show. Anything
+    smaller than a millionth of `scale` is noise from that rounding (a
+    default of 0 on a -100..100 range comes back from the normalised value
+    as 1.5e-06 on some machines) and reads as 0. */
+inline juce::String number (double v, double scale = 1.0)
 {
-    if (std::abs (v) < 1.0e-9)
+    if (std::abs (v) < 1.0e-6 * std::max (1.0, std::abs (scale)))
         return "0";
     char text[32];
     std::snprintf (text, sizeof (text), "%.5g", v);
@@ -62,7 +66,8 @@ inline juce::String describe (juce::RangedAudioParameter& p)
              << " step " << number (r.interval) << " skew " << number (r.skew)
              << (r.symmetricSkew ? " sym" : "");
 
-    line << " | default " << number (p.convertFrom0to1 (p.getDefaultValue()));
+    line << " | default " << number (p.convertFrom0to1 (p.getDefaultValue()),
+                                     (double) r.end - (double) r.start);
     return line;
 }
 

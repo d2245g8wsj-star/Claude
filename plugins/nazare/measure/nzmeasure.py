@@ -85,7 +85,7 @@ def latency(out, sig, seg):
     i_out = int(np.argmax(np.abs(win).sum(axis=0)))
     return i_out - i_in
 
-def welch_tf(x, y, fs, n=8192):
+def welch_tf(x, y, fs, n=65536):
     hop, w = n // 2, np.hanning(n)
     sxx = np.zeros(n // 2 + 1); sxy = np.zeros(n // 2 + 1, complex)
     for i in range(0, len(x) - n, hop):
@@ -97,7 +97,9 @@ THIRD_OCT = [20 * 2 ** (i / 6) for i in range(61)]  # 20 Hz .. 20.5 kHz in 1/6 o
 
 def _at(freqs, h, fc):
     sel = (freqs > fc * 2 ** (-1 / 12)) & (freqs < fc * 2 ** (1 / 12))
-    return complex(np.mean(h[sel])) if np.any(sel) else complex("nan")
+    if not np.any(sel):  # band narrower than a bin (low end): take the nearest bin
+        return complex(h[int(np.argmin(np.abs(freqs - fc)))])
+    return complex(np.mean(h[sel]))
 
 
 # --------------------------------------------------------------------------- analysis

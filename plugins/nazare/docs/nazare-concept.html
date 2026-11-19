@@ -115,7 +115,7 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
 
 <div class="wrap">
   <header class="intro">
-    <div class="eyebrow">IndieWave Audio · voorstel · concept 0.4</div>
+    <div class="eyebrow">IndieWave Audio · voorstel · concept 0.5</div>
     <h1>Nazaré, large format analog console</h1>
     <p>Gerenderd in Blender: gelakt aluminium, crème bakeliet, verchroomd messing. Voorop alleen console, drive, breedte en volume. Draai aan de knoppen, druk op play, of draai het apparaat om via REAR PANEL.</p>
   </header>
@@ -164,19 +164,19 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
 
       <section id="consoles">
         <h2><span class="n">02</span>Zes consoles, genoemd naar golven</h2>
-        <p>Elke console is vernoemd naar een beroemde surfspot. Op het paneel staat alleen een generieke omschrijving; merknamen van SSL, Neve, API of Abbey Road komen niet op de GUI of in de plugin. Dat is juridisch veilig en past bij het thema. In marketing kun je "geïnspireerd door" gebruiken met een disclaimer, zoals Slate en Waves dat doen.</p>
+        <p>Elke console is vernoemd naar een beroemde surfspot. Op het paneel staat alleen een generieke omschrijving; merknamen komen niet op de GUI of in de plugin. Vijf van de zes zijn gekalibreerd op een gemeten referentieconsole met een vergelijkbaar karakter. GLASS is een eigen ontwerp.</p>
         <div class="tw"><table>
-          <thead><tr><th>Console</th><th>Op het paneel</th><th>Inspiratie</th><th>Headroom</th><th>Karakter</th></tr></thead>
+          <thead><tr><th>Console</th><th>Op het paneel</th><th>Gekalibreerd op</th><th>Karakter, zoals gemeten</th></tr></thead>
           <tbody>
-            <tr><td class="spot">GLASS</td><td>Modern transformerless</td><td>SSL 9000 J/K, AMS Neve 88</td><td class="num">+26 dB</td><td>De referentie. Bijna onmeetbaar tot hij hard wordt aangesproken, dan een strakke, symmetrische (oneven) verzadiging.</td></tr>
-            <tr><td class="spot">PIPELINE</td><td>British VCA</td><td>SSL 4000 E/G</td><td class="num">+22 dB</td><td>Helder en strak. Vooral oneven harmonischen uit de op-amps, een vleugje lucht bovenin, en slew-limiting op scherpe transiënten.</td></tr>
-            <tr><td class="spot">MAVERICKS</td><td>American discrete</td><td>API 2520 / 312</td><td class="num">+21 dB</td><td>Punch in het middengebied, iets meer 2e harmonische, transformator-uitgang die het laag stevig houdt.</td></tr>
-            <tr><td class="spot">JAWS</td><td>British class A</td><td>Neve 80-serie (1073/1081 kanalen)</td><td class="num">+20 dB</td><td>IJzer en gewicht. De ingangstrafo verzadigt eerst in het laag, rijke 2e en 3e harmonische, hoog dat zacht afrondt.</td></tr>
-            <tr><td class="spot">TEAHUPO'O</td><td>Germanium transistor</td><td>EMI TG12345 (Abbey Road, jaren 70)</td><td class="num">+17 dB</td><td>Korrel en midden. Asymmetrisch, met hogere oneven harmonischen en een duidelijke presence-bult.</td></tr>
-            <tr><td class="spot">SUPERTUBES</td><td>British valve</td><td>EMI REDD.51 (Abbey Road, jaren 60)</td><td class="num">+15 dB</td><td>Buizen. Zacht, groot en warm, sterk even, asymmetrisch clippen, hoog dat vroeg afrolt.</td></tr>
+            <tr><td class="spot">GLASS</td><td>Modern transformerless</td><td>eigen ontwerp</td><td>De referentie. Alleen oneven, onder −100 dB bij nominaal niveau, een zachte grens net boven 0 dBFS.</td></tr>
+            <tr><td class="spot">PIPELINE</td><td>British VCA</td><td>VCC Channel 0</td><td>Een vaste H2-glans van −60 dB die ook bij zachte signalen blijft, plus kleur die met het niveau groeit. Warme tilt: −1 dB bij 20 Hz, −0,5 dB bij 20 kHz.</td></tr>
+            <tr><td class="spot">MAVERICKS</td><td>American discrete</td><td>VCC Channel 2</td><td>Schoon tot de muur: −82 dB bij nominaal, en vlak boven 0 dBFS een harde knik. Het laag heeft al eerder H3.</td></tr>
+            <tr><td class="spot">JAWS</td><td>British class A</td><td>VCC Channel 3</td><td>Transformator-laag: +5 dB bij 20 Hz, H3 die bij 100 Hz snel groeit terwijl 1 kHz schoon blijft.</td></tr>
+            <tr><td class="spot">TEAHUPO'O</td><td>Germanium</td><td>VCC Channel 4</td><td>HF-glans: de vervorming neemt toe met de frequentie, met een high shelf tot +0,6 dB, en is relatief ruwer bij zachte signalen.</td></tr>
+            <tr><td class="spot">SUPERTUBES</td><td>British valve</td><td>VCC Channel 5</td><td>Buis: H2 en H3 even sterk met een lange staart, comprimeert 1,4 dB bij 0 dBFS, en drive is echte ingangsgain.</td></tr>
           </tbody>
         </table></div>
-        <p>Ieder model krijgt in de echte plugin zijn eigen keten van trappen (zie <a href="#dsp">de non-lineaire kern</a>). In de demo hierboven is elk model teruggebracht tot één asymmetrische waveshaper plus de juiste filters rond die waveshaper, genoeg om het verschil te horen.</p>
+        <p>De koppeling is op karakter gekozen; de referentie geeft alleen consolenummers door. De meting en de fit staan in <code>plugins/nazare/measure/reference/vcc/</code> en <code>plugins/nazare/dsp/</code>.</p>
       </section>
 
       <section id="drive">
@@ -207,17 +207,23 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
 
       <section id="dsp">
         <h2><span class="n">04</span>De non-lineaire kern</h2>
-        <p>Goede console-emulatie zit niet in één waveshaper. Het zit in de volgorde van trappen die elk op hun eigen manier en in hun eigen frequentiegebied verzadigen, en in het geheugen van die trappen. Per kanaal ziet de keten er zo uit:</p>
+        <p>De VCC-metingen lieten zien dat het karakter van zo'n console uit een statische waveshaper met lineaire filters eromheen komt, en niet uit ingewikkelde circuitmodellen. Nazaré gebruikt daarom één keten met zes gefitte parametersets:</p>
         <div class="flow" aria-label="Signaalketen">
-          <span>in</span><i>→</i><span>0 VU-ijking</span><i>→</i><span class="nl">ingangstrafo</span><i>→</i><span class="nl">versterkertrap</span><i>→</i><span>kanaal-EQ-kleur</span><i>→</i><span class="nl">summing / bus-amp</span><i>→</i><span class="nl">uitgangstrafo</span><i>→</i><span>crosstalk + ruis</span><i>→</i><span>auto gain · mix · out</span>
+          <span>in</span><i>→</i><span>0 VU-ijking</span><i>→</i><span>pre-shelves</span><i>→</i><span class="nl">4× shaper</span><i>→</i><span>inverse shelves</span><i>→</i><span>toon-EQ</span><i>→</i><span>gain + spreiding</span><i>→</i><span>overspraak (BUS)</span><i>→</i><span>ruis met gate</span>
         </div>
         <ul>
-          <li><b>Transformatoren</b> met frequentie-afhankelijke verzadiging: kern-flux is evenredig met de integraal van de spanning, dus laag verzadigt eerst. Gemodelleerd met een vereenvoudigde Jiles-Atherton-hysterese, zodat het laag ook licht faseverschuift en "ademt".</li>
-          <li><b>Versterkertrappen</b> per type: VCA en op-amp met slew-rate-limiet (PIPELINE, GLASS), discrete class-A met asymmetrische werkpuntverschuiving (MAVERICKS, JAWS), germanium met temperatuurafhankelijke bias (TEAHUPO'O), triode met roosterstroom (SUPERTUBES).</li>
-          <li><b>Dynamische bias.</b> Bij luide passages verschuift het werkpunt traag (tijdconstante 20 tot 300 ms per model). Daardoor veranderen de harmonischen met het programma, en krijg je die "lijm" die een statische curve nooit geeft.</li>
-          <li><b>Aliasing.</b> Antiderivative antialiasing (ADAA, eerste orde) op elke non-lineaire trap plus 1× tot 8× oversampling met lineaire-fase of minimum-fase filters. Op PRISTINE kost dat bijna niets, want de trappen worden dan overgeslagen zodra het signaal ver onder de knik blijft.</li>
-          <li><b>Ruis</b> per kanaal onafhankelijk, met het spectrum van het model en optioneel brom op 50 of 60 Hz. De ruis is gate-baar zodat hij niet doorloopt in stille passages.</li>
+          <li><b>De shaper</b> heeft vijf ingrediënten. Een |x|-term voor vaste even kleur, die niet van het niveau afhangt (H4 precies 14 dB onder H2). Een x²-term en een x³-term voor kleur die groeit. Een tanh met bias voor de buis. En een zachte clip.</li>
+          <li><b>Frequentie-afhankelijke vervorming</b> zonder frequentierespons te veranderen. Een shelf vóór de shaper en het exacte inverse filter erna laten het laag een transformator harder raken, of het hoog een slew-beperkte trap.</li>
+          <li><b>Drive</b> schaalt per dB drive de vervorming met ongeveer 1 dB en laat het clippunt staan, zoals gemeten. Alleen de buis krijgt echte ingangsgain met gedeeltelijke make-up.</li>
         </ul>
+        <h3>Wat Nazaré beter doet dan de referentie</h3>
+        <ul>
+          <li><b>Geen aliasing.</b> De referentie rekent zonder oversampling en laat aliases tot −27 dB toe. Nazaré oversamplet 4× met een filter dat vlak is tot 21 kHz. Het gevouwen product ligt daardoor onder −90 dB.</li>
+          <li><b>Een echt stereobeeld.</b> De referentie is links en rechts bit-identiek. Nazaré geeft elk kanaalnummer eigen componentwaarden.</li>
+          <li><b>Geheugen.</b> De referentie is volledig statisch. Bij Nazaré zwellen de even kleur en de buis-bias ongeveer 100 ms na een transiënt en zakken dan terug. Bij stilstaande tonen is dat effect nul, zodat de kalibratie blijft kloppen.</li>
+          <li><b>Stilte blijft stil.</b> De ruis loopt alleen mee zolang er signaal is, net als bij de referentie.</li>
+        </ul>
+        <p>De demo hierboven gebruikt dezelfde shaper, dezelfde filtercoëfficiënten en dezelfde drive-wet als het Python-referentiemodel, maar zonder het geheugen. Dat kan een WaveShaper in de browser niet.</p>
       </section>
 
       <section id="stereo">
@@ -292,77 +298,80 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
 'use strict';
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-/* ------------------------------------------------------------------ models */
-const MODELS=[
- {id:'glass',name:'GLASS',desc:'Modern transformerless',H:26,e:.0008,p:4.0,neg:1.0,lf:0,lpf:40000,shelfLo:0,peak:[1000,0,.7],shelfHi:0,noise:-100},
- {id:'pipeline',name:'PIPELINE',desc:'British VCA',H:22,e:.004,p:3.0,neg:1.0,lf:1,lpf:34000,shelfLo:0,peak:[3200,.3,.8],shelfHi:.7,noise:-92},
- {id:'mavericks',name:'MAVERICKS',desc:'American discrete',H:21,e:.009,p:2.5,neg:1.05,lf:2,lpf:30000,shelfLo:.5,peak:[1400,.9,.7],shelfHi:0,noise:-90},
- {id:'jaws',name:'JAWS',desc:'British class A',H:20,e:.016,p:2.0,neg:1.1,lf:6,lpf:26000,shelfLo:.9,peak:[1000,0,.7],shelfHi:-.6,noise:-88},
- {id:'teahupoo',name:'TEAHUPO’O',desc:'Germanium',H:17,e:.022,p:2.2,neg:1.25,lf:2,lpf:20000,shelfLo:0,peak:[2600,1.0,.8],shelfHi:0,noise:-84},
- {id:'supertubes',name:'SUPERTUBES',desc:'British valve',H:15,e:.045,p:1.6,neg:1.35,lf:3,lpf:16500,shelfLo:.6,peak:[5000,-.5,.6],shelfHi:0,noise:-80},
-];
+
+/* ------------------------------------------------------------------ models (fitted: plugins/nazare/dsp/models.json) */
+const MODELS=[{"name":"GLASS","desc":"Modern transformerless","drive_mode":"coef","eq":{"hp_f":7.3527611293756685,"hp_order":1,"ls_f":59.40519351128062,"ls_g":-0.01881219129798317,"pk_f":244.21213124257673,"pk_g":0.0028131983637066284,"pk_q":0.7531711152721102,"hs_f":3135.2947951903006,"hs_g":-9.259034258623287e-07,"dc_f":3.0},"gain_db":0.0,"bump":0.02,"pre":{"lf_f":150.0,"lf_g":0.0,"hf_f":3000.0,"hf_g":0.0},"shaper":{"k1":0.0,"a2":2e-05,"a3":-0.0004,"clip_c":1.25,"clip_p":6.0},"xtalk":{"flat":-2.081072526197097e-05,"lf":5.3220485627491794e-05,"hf":-1.1290426156285076e-05,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-107,"memory":0.1,"reference":{"designed":true},"fit_rms":0.0},{"name":"PIPELINE","desc":"British VCA","drive_mode":"coef","eq":{"hp_f":7.167381412469503,"hp_order":1,"ls_f":45.59284937900688,"ls_g":-0.38929892818562745,"pk_f":192.5138587432797,"pk_g":-0.1461520973181828,"pk_q":2.999999593037681,"hs_f":7776.923832699424,"hs_g":-0.5336157199257107,"dc_f":3.0},"gain_db":0.6372485447684337,"bump":0.1711343184770443,"pre":{"lf_f":599.9999999999999,"lf_g":-0.9262002602437294,"hf_f":5229.853632346045,"hf_g":-0.6159029395313824},"shaper":{"k1":0.002342161369893672,"a2":0.004213604161786043,"a3":0.0029342719843573058,"clip_c":1.5717515884201236,"clip_p":6.641109710536647,"xover":-9.999999999999999e-10},"xtalk":{"flat":-0.00024899817101708624,"lf":0.00040444501881006204,"hf":0.0003869244254743183,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-98,"memory":0.25,"reference":{"plugin":"Channel","console":0},"fit_rms":1.1},{"name":"MAVERICKS","desc":"American discrete","drive_mode":"coef","eq":{"hp_f":35.832556647327806,"hp_order":1,"ls_f":30.660700881516902,"ls_g":7.999999999971139,"pk_f":245.83743002145638,"pk_g":-0.6239718484331844,"pk_q":0.3000000000001833,"hs_f":15486.365055052172,"hs_g":-0.27605458175968617,"dc_f":3.0},"gain_db":0.6088585748873334,"bump":0.016137303696987716,"pre":{"lf_f":599.9999999992035,"lf_g":-3.1722957187856218,"hf_f":6818.815887356708,"hf_g":-8.444840749557512},"shaper":{"k1":-9.660197427049888e-06,"a2":-0.0021424125446440003,"a3":0.0017352899119983398,"clip_c":1.0758531096694366,"clip_p":9.354844871419226,"xover":-9.999999999999999e-10},"xtalk":{"flat":-2.8813265589546483e-06,"lf":1.8523086840344288e-05,"hf":1.360670497349856e-05,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-97,"memory":0.25,"reference":{"plugin":"Channel","console":2},"fit_rms":9.066},{"name":"JAWS","desc":"British class A","drive_mode":"coef","eq":{"hp_f":1.0000000000810267,"hp_order":1,"ls_f":41.0859738209994,"ls_g":5.800552390172699,"pk_f":923.3858206028441,"pk_g":-0.19997326049339934,"pk_q":0.30000000000000004,"hs_f":14565.347874153364,"hs_g":0.10228757153237426,"dc_f":3.0},"gain_db":0.31772328294006064,"bump":0.09592849712465017,"pre":{"lf_f":124.55565772433344,"lf_g":17.999999999999996,"hf_f":5368.698786996767,"hf_g":-6.879259020809671},"shaper":{"k1":4.5361622071235596e-05,"a2":0.0001389165480743611,"a3":0.00010338032411041829,"clip_c":3.9999999999999996,"clip_p":39.99977327103019,"xover":-9.999999999999999e-10},"xtalk":{"flat":0.0002794968370506167,"lf":0.0003053625990891614,"hf":-0.000112453203580481,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-95,"memory":0.35,"reference":{"plugin":"Channel","console":3},"fit_rms":4.486},{"name":"TEAHUPO\u2019O","desc":"Germanium","drive_mode":"coef","eq":{"hp_f":6.534605026669444,"hp_order":1,"ls_f":155.8374168297437,"ls_g":-0.3306024624589997,"pk_f":584.1809166618023,"pk_g":-0.44781407956683233,"pk_q":0.3517155190417404,"hs_f":10468.814986027928,"hs_g":0.16827772511718742,"dc_f":3.0},"gain_db":0.5492439902167757,"bump":-0.018468208132217116,"pre":{"lf_f":116.88271044139024,"lf_g":-17.91563028765716,"hf_f":2976.5994234079117,"hf_g":-3.2238354127502835},"shaper":{"k1":-0.00011846555786231073,"a2":-0.0002066824983764041,"a3":0.0005282060547874406,"clip_c":2.3506911297249116,"clip_p":8.210204717692973,"xover":-0.0024970247800801195},"xtalk":{"flat":-3.720881560292675e-05,"lf":0.00010017040124018509,"hf":0.00031397805468397216,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-93,"memory":0.3,"reference":{"plugin":"Channel","console":4},"fit_rms":7.684},{"name":"SUPERTUBES","desc":"British valve","drive_mode":"pregain","eq":{"hp_f":5.889595468927962,"hp_order":1,"ls_f":121.9100654346009,"ls_g":0.2335472450919447,"pk_f":3226.1244814389956,"pk_g":2.40826124222943,"pk_q":2.999999117874265,"hs_f":11756.291754762698,"hs_g":0.6571423120963191,"dc_f":3.0},"gain_db":0.2090770673882272,"bump":0.0,"pre":{"lf_f":284.89417205017565,"lf_g":-0.9782434582248543,"hf_f":2218.587310936159,"hf_g":5.293972042405226},"shaper":{"k1":-0.008615502552882131,"a2":-0.1437540346537668,"a3":0.0013165016217090407,"clip_c":2.7637827136462114,"clip_p":12.362220051182755,"xover":9.999999999999999e-10,"tube_g":0.9095754755390976,"tube_b":-0.2127173426325697,"pre_gain":0.95078494188802,"makeup":0.8760401462735152},"xtalk":{"flat":0.0019222421655730824,"lf":0.0074959237476845035,"hf":0.006299212226721951,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-93,"memory":0.5,"reference":{"plugin":"Channel","console":5},"fit_rms":11.753}].map(m=>Object.assign(m,{noise:m.noise_dbfs}));
 const ZONES=[
- {n:'PRISTINE',c:'#dff3ee',txt:'Niets te horen, ook niet in een null-test. Alleen de lineaire kleur van het model.'},
- {n:'CLEAN',c:'#b6e6dc',txt:'Je meet het, je hoort het nauwelijks. Goed voor elk spoor in een volle mix.'},
- {n:'SILK',c:'#8fd6c9',txt:'Hoog wordt zachter, transiënten iets ronder. De "console op elk kanaal"-stand.'},
- {n:'WARM',c:'#c9d38a',txt:'Duidelijk dikker laag en midden. De standaard voor bus en drums.'},
- {n:'RICH',c:'#f0b240',txt:'De console doet mee: harmonischen zijn hoorbaar, pieken worden ingehouden.'},
- {n:'SATURATED',c:'#ee7a36',txt:'Bewust gekleurd. Synths, bas, room-mics, parallel op drums.'},
- {n:'DROWNED',c:'#e5432f',txt:'Zompig en verzadigd. De tafel ligt in het rood en klinkt daar ook naar.'},
+ {n:'PRISTINE',txt:'Niets te horen, ook niet in een null-test. Alleen de lineaire kleur van het model.'},
+ {n:'CLEAN',txt:'Je meet het, je hoort het nauwelijks. Goed voor elk spoor in een volle mix.'},
+ {n:'SILK',txt:'Hoog wordt zachter, transiënten iets ronder. De "console op elk kanaal"-stand.'},
+ {n:'WARM',txt:'Duidelijk dikker laag en midden. De standaard voor bus en drums.'},
+ {n:'RICH',txt:'De console doet mee: harmonischen zijn hoorbaar, pieken worden ingehouden.'},
+ {n:'SATURATED',txt:'Bewust gekleurd. Synths, bas, room-mics, parallel op drums.'},
+ {n:'DROWNED',txt:'Zompig en verzadigd. De tafel ligt in het rood en klinkt daar ook naar.'},
 ];
 const THD_LO=-3.3, THD_HI=1.4; // log10 of THD % across the knob travel
+const S={model:3, drive:.5, harm:.5, age:.2, noise:.3, tol:.45, xt:.35, out:.5, mix:1, ch:7, os:'4x', cal:'-18', mode:'channel', matched:false, auto:true, bypass:false};
 
-const S={model:3, drive:.5, harm:.5, age:.2, noise:.3, tol:.45, xt:.35, out:.5, mix:1, ch:7, os:'4x', cal:-18, mode:'channel', matched:false, auto:true, bypass:false, view:'harm'};
-
-function hash(n){let x=Math.sin(n*127.1+311.7)*43758.5453;return (x-Math.floor(x))*2-1}
-function chanOffsets(ch){return {L:[hash(ch*3+1),hash(ch*3+2),hash(ch*3+3)],R:[hash(ch*3+101),hash(ch*3+102),hash(ch*3+103)]}}
-
-function params(side){ // side: null (nominal), 'L' or 'R'
-  const m=MODELS[S.model];
-  const eoScale=Math.pow(2,(.5-S.harm)*3), pScale=Math.pow(2,(S.harm-.5)*.8);
-  let e=m.e*eoScale*(1+S.age*.8), p=m.p*pScale, H=m.H-S.age*1.5, gain=0, lpf=m.lpf*(1-S.age*.35);
-  if(S.mode==='bus'){p*=.88; H-=1}
-  if(side && !S.matched){
-    const o=chanOffsets(S.ch)[side], t=S.tol*(1+S.age*.6);
-    gain=.25*t*o[0]; H+=1.5*t*o[1]; e*=1+.3*t*o[2]; lpf*=1+.12*t*o[1];
-  }
-  return {e,p,H,neg:m.neg,gain,lpf:clamp(lpf,4000,22000*2)};
+/* RBJ biquads, identical to dsp/model.py */
+function biquad(kind,f,fs,g=0,q=Math.SQRT1_2){
+  const A=Math.pow(10,g/40),w=2*Math.PI*f/fs,c=Math.cos(w),s=Math.sin(w),al=s/(2*q);let b,a;
+  if(kind==='hp1'){const k=Math.tan(w/2);b=[1,-1,0];a=[1+k,k-1,0]}
+  else if(kind==='lp1'){const k=Math.tan(w/2);b=[k,k,0];a=[1+k,k-1,0]}
+  else if(kind==='hp'){b=[(1+c)/2,-(1+c),(1+c)/2];a=[1+al,-2*c,1-al]}
+  else if(kind==='peak'){b=[1+al*A,-2*c,1-al*A];a=[1+al/A,-2*c,1-al/A]}
+  else{const sq=2*Math.sqrt(A)*al;
+    if(kind==='ls'){b=[A*((A+1)-(A-1)*c+sq),2*A*((A-1)-(A+1)*c),A*((A+1)-(A-1)*c-sq)];a=[(A+1)+(A-1)*c+sq,-2*((A-1)+(A+1)*c),(A+1)+(A-1)*c-sq]}
+    else{b=[A*((A+1)+(A-1)*c+sq),-2*A*((A-1)+(A+1)*c),A*((A+1)+(A-1)*c-sq)];a=[(A+1)-(A-1)*c+sq,2*((A-1)-(A+1)*c),(A+1)-(A-1)*c-sq]}}
+  return [b.map(v=>v/a[0]),a.map(v=>v/a[0])];
 }
-function shape(u,P){
-  const v=u+P.e*(u*u)/(1+u*u);
-  if(v>=0) return v/Math.pow(1+Math.pow(v,P.p),1/P.p);
-  const w=-v*P.neg; return -(w/Math.pow(1+Math.pow(w,P.p),1/P.p))/P.neg;
+function preFilters(P,fs){const o=[];if(P.pre.lf_g)o.push(biquad('ls',P.pre.lf_f,fs,P.pre.lf_g,.6));if(P.pre.hf_g)o.push(biquad('hs',P.pre.hf_f,fs,P.pre.hf_g,.6));return o}
+function postFilters(P,fs){return preFilters(P,fs).map(([b,a])=>[a,b])}
+function eqFilters(P,fs){const e=P.eq,o=[];
+  if(e.hp_f)o.push(biquad(e.hp_order===2?'hp':'hp1',e.hp_f,fs));if(e.ls_g)o.push(biquad('ls',e.ls_f,fs,e.ls_g,.6));
+  if(e.pk_g)o.push(biquad('peak',e.pk_f,fs,e.pk_g,e.pk_q||.8));if(e.hs_g)o.push(biquad('hs',e.hs_f,fs,e.hs_g,.6));o.push(biquad('hp1',e.dc_f||3,fs));return o}
+function mag(filters,f,fs){let re=1,im=0;for(const [b,a] of filters){const w=2*Math.PI*f/fs,c1=Math.cos(w),s1=Math.sin(w),c2=Math.cos(2*w),s2=Math.sin(2*w);
+  const nr=b[0]+b[1]*c1+b[2]*c2,ni=-(b[1]*s1+b[2]*s2),dr=a[0]+a[1]*c1+a[2]*c2,di=-(a[1]*s1+a[2]*s2);const d=dr*dr+di*di,hr=(nr*dr+ni*di)/d,hi=(ni*dr-nr*di)/d;
+  const r2=re*hr-im*hi;im=re*hi+im*hr;re=r2}return Math.hypot(re,im)}
+
+/* the stage, identical to dsp/model.py shaper(); sp = per-channel component spread */
+function shapeN(u,P,d,sp){
+  const s=P.shaper,D=Math.pow(10,(d-6)/20),age=1+S.age*.6;
+  let k1=s.k1*age,a2=s.a2*age,a3=s.a3,cc=s.clip_c;if(sp){k1*=sp.k1;a2*=sp.k1;cc*=sp.clip}
+  let G=1,Gb=1,bs=1;if(P.drive_mode==='coef'){k1*=D;a2*=D;a3*=D}
+  else{bs=Math.pow(10,Math.min(d,0)/20);Gb=Math.pow(10,(Math.max(d,0)-6)/20)*(s.pre_gain||1);G=Gb*bs;k1*=bs;a2*=bs;a3*=bs}
+  const x=u*G;let v=x+k1*Math.abs(x)+a2*x*x+a3*x*x*x;
+  if(s.xover){const e=1e-3;v+=s.xover*e*Math.tanh(x/e)}
+  if(s.tube_g>0){const g=s.tube_g,b=s.tube_b*bs,t0=Math.tanh(g*s.tube_b);v=(Math.tanh(g*(v+b))-Math.tanh(g*b))/(g*(1-t0*t0))}
+  v=v/Math.pow(1+Math.pow(Math.abs(v)/cc,s.clip_p),1/s.clip_p);
+  if(P.drive_mode!=='coef')v=v/(Math.pow(Gb,s.makeup||1)*bs);
+  return v;
 }
-const N=512, SIN=new Float64Array(N), COS=new Float64Array(N);
-for(let i=0;i<N;i++){SIN[i]=Math.sin(2*Math.PI*i/N);COS[i]=Math.cos(2*Math.PI*i/N)}
-function analyse(D,P){ // harmonics of a 0 VU sine at stage level D
-  const A=Math.SQRT2*Math.pow(10,(D-P.H)/20), y=new Float64Array(N);
-  for(let i=0;i<N;i++) y[i]=shape(A*SIN[i],P);
-  const h=[];
-  for(let k=1;k<=10;k++){let re=0,im=0;for(let i=0;i<N;i++){const j=(k*i)%N;re+=y[i]*COS[j];im+=y[i]*SIN[j]}h.push(Math.hypot(re,im))}
-  let s=0;for(let k=1;k<10;k++) s+=h[k]*h[k];
-  const thd=Math.sqrt(s)/h[0]*100;
+function outGainDb(P,d){let g=P.gain_db;if(P.drive_mode==='coef')g+=(P.bump||0)*(Math.pow(10,Math.min(d,24)/20)-Math.pow(10,6/20));return g}
+function spreadFor(ch,amt){const fr=(x)=>x-Math.floor(x);
+  const r=[fr(ch*.6180339887+.13)*2-1,fr(ch*.7548776662+.29)*2-1,fr(ch*.569840291+.61)*2-1];
+  return {gain_db:.15*amt*r[0],k1:Math.pow(10,2*amt*r[1]/20),clip:1+.04*amt*r[2]}}
+
+/* drive knob: position -> internal drive that gives the zone's THD for a 1 kHz tone at 0 VU (-18 dBFS) */
+const N=512,SIN=new Float64Array(N),COS=new Float64Array(N);for(let i=0;i<N;i++){SIN[i]=Math.sin(2*Math.PI*i/N);COS[i]=Math.cos(2*Math.PI*i/N)}
+function analyse(d,P){
+  const A=Math.pow(10,-18/20)*mag(preFilters(P,48000),1000,48000),y=new Float64Array(N);
+  for(let i=0;i<N;i++)y[i]=shapeN(A*SIN[i],P,d);
+  const h=[];for(let k=1;k<=10;k++){let re=0,im=0;for(let i=0;i<N;i++){const j=(k*i)%N;re+=y[i]*COS[j];im+=y[i]*SIN[j]}h.push(Math.hypot(re,im))}
+  let s=0;for(let k=1;k<10;k++)s+=h[k]*h[k];
   let r1=0,r2=0;for(let i=0;i<N;i++){r1+=(A*SIN[i])**2;r2+=y[i]*y[i]}
-  return {h,thd,A,comp:Math.sqrt(r1/Math.max(r2,1e-30))};
+  return {h,thd:Math.sqrt(s)/h[0]*100,comp:Math.sqrt(r1/Math.max(r2,1e-30))*Math.pow(10,-outGainDb(P,d)/20)};
 }
-function solveD(t,P){ // drive position -> stage level that gives the target THD
-  const target=Math.pow(10,THD_LO+t*(THD_HI-THD_LO));
-  let lo=-110,hi=60;
-  for(let i=0;i<34;i++){const mid=(lo+hi)/2; if(analyse(mid,P).thd<target) lo=mid; else hi=mid}
-  return (lo+hi)/2;
-}
-let cur={D:0,an:null,P:null};
-function compute(){
-  const P=params(null); const D=solveD(S.drive,P); const an=analyse(D,P);
-  cur={D,an,P};
-}
-
+function solveD(t,P){const target=Math.pow(10,THD_LO+t*(THD_HI-THD_LO));let lo=-140,hi=60;
+  for(let i=0;i<36;i++){const mid=(lo+hi)/2;if(analyse(mid,P).thd<target)lo=mid;else hi=mid}return (lo+hi)/2}
+let cur={D:6,an:null,P:null};
+function compute(){const P=MODELS[S.model];const D=solveD(S.drive,P);cur={D,an:analyse(D,P),P}}
 
 /* ------------------------------------------------------------------ the rendered unit */
 const LAYOUT={"size":[1600,440],"ears":56,"front":{"badge":{"cx":186,"cy":180,"w":222,"h":122},"console":{"cx":440,"cy":205,"len":112,"labelR":76,"dotR":60,"angles":[-110,-66,-22,22,66,110]},"drive":{"cx":815,"cy":196,"d":228,"dotR":132,"labelR":150,"frames":61},"vu":{"cx":1180,"cy":198,"w":290,"h":184,"face":[266,160],"pivot":[133,190],"r":146},"spread":{"cx":1405,"cy":118,"d":96,"dotR":62,"frames":41},"output":{"cx":1405,"cy":296,"d":96,"dotR":62,"frames":41},"jewel":{"cx":1500,"cy":112,"d":30},"power":{"cx":1500,"cy":262},"flip":{"x":1520,"y":402}},"rear":{"serial":{"x":112,"y":116,"w":288,"h":208},"age":{"cx":520,"cy":200,"d":52},"noise":{"cx":650,"cy":200,"d":52},"os":{"cx":810,"cy":200,"d":52,"frames":[6,14,22,30],"angles":[-90,-30,30,90]},"cal":{"cx":970,"cy":200,"d":52,"frames":[6,14,22,30],"angles":[-90,-30,30,90]},"mode":{"cx":1110,"cy":200},"auto":{"cx":1210,"cy":200},"matched":{"cx":1310,"cy":200},"channel":{"cx":1440,"cy":200,"w":76,"h":44},"flip":{"x":1520,"y":402}},"trimFrames":37}, STRIPS={"scale":2.0,"strips":{"drive":{"w":296.0,"h":296.0,"n":61,"cols":8,"rows":8},"small":{"w":144.0,"h":144.0,"n":41,"cols":8,"rows":6},"console":{"w":184.0,"h":184.0,"n":6,"cols":6,"rows":1},"trim":{"w":80.0,"h":80.0,"n":37,"cols":8,"rows":5},"toggle":{"w":116.0,"h":116.0,"n":2,"cols":2,"rows":1},"jewel":{"w":60.0,"h":60.0,"n":2,"cols":2,"rows":1}}};
 const LF=LAYOUT.front, LR=LAYOUT.rear;
 function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
-S.spread=.45;S.harm=.5;
+S.spread=.45;
 const front=$('#front'),rear=$('#rear'),tip=$('#tip');
 
 function sprite(face,key,cx,cy){
@@ -471,53 +480,59 @@ $('#zoneRows').innerHTML=ZONES.map((z,i)=>{const a=Math.pow(10,THD_LO+i/7*(THD_H
   return `<tr><td class="spot">${z.n}</td><td class="num">${fmtPct(a).replace(' %','')} – ${fmtPct(b)}</td><td>${z.txt}</td></tr>`}).join('');
 const vu={L:-22,R:-22};setVU(-22,-22);
 
-/* ------------------------------------------------------------------ audio */
-let ac=null,G=null,src=null,synth=null,playing=false;
+/* ------------------------------------------------------------------ audio: the fitted chain, per channel
+   cal → pre-shelves → 4× waveshaper → inverse shelves → tone EQ → DC → gain → (BUS crosstalk) → noise */
+let ac=null,G=null,src=null,synth=null,playing=false,builtModel=-1;
+function iir(b,a){return ac.createIIRFilter(b,a)}
+function chainOf(nodes){for(let i=0;i<nodes.length-1;i++)nodes[i].connect(nodes[i+1]);return nodes}
 function buildGraph(){
   ac=new (window.AudioContext||window.webkitAudioContext)();
   const g={};
   g.input=ac.createGain();g.input.channelCount=2;g.input.channelCountMode='explicit';g.input.channelInterpretation='speakers';
   g.split=ac.createChannelSplitter(2);g.merge=ac.createChannelMerger(2);g.wet=ac.createGain();g.dry=ac.createGain();g.out=ac.createGain();
   g.input.connect(g.split);g.input.connect(g.dry);g.dry.connect(g.out);
-  g.ch=['L','R'].map((side,i)=>{
-    const c={};c.pre=ac.createGain();c.lfUp=ac.createBiquadFilter();c.lfUp.type='lowshelf';c.lfUp.frequency.value=110;
-    c.sh=ac.createWaveShaper();c.lfDn=ac.createBiquadFilter();c.lfDn.type='lowshelf';c.lfDn.frequency.value=110;
-    c.lo=ac.createBiquadFilter();c.lo.type='lowshelf';c.lo.frequency.value=70;
-    c.pk=ac.createBiquadFilter();c.pk.type='peaking';
-    c.hi=ac.createBiquadFilter();c.hi.type='highshelf';c.hi.frequency.value=11000;
-    c.lp=ac.createBiquadFilter();c.lp.type='lowpass';c.lp.Q.value=.6;
-    c.dc=ac.createBiquadFilter();c.dc.type='highpass';c.dc.frequency.value=8;c.dc.Q.value=.6;
-    c.post=ac.createGain();
-    c.xf=ac.createBiquadFilter();c.xf.type='highpass';c.xf.frequency.value=1800;c.xf.Q.value=.5;c.xg=ac.createGain();
-    g.split.connect(c.pre,i);c.pre.connect(c.lfUp);c.lfUp.connect(c.sh);c.sh.connect(c.lfDn);c.lfDn.connect(c.lo);c.lo.connect(c.pk);c.pk.connect(c.hi);c.hi.connect(c.lp);c.lp.connect(c.dc);c.dc.connect(c.post);
-    c.post.connect(g.merge,0,i);c.post.connect(c.xf);c.xf.connect(c.xg);c.xg.connect(g.merge,0,1-i);
-    return c;});
-  // noise
-  const nb=ac.createBuffer(2,ac.sampleRate*3,ac.sampleRate);for(let k=0;k<2;k++){const d=nb.getChannelData(k);let b=0;for(let i=0;i<d.length;i++){const w=Math.random()*2-1;b=.97*b+.03*w;d[i]=(w*.6+b*3)*.5}}
-  g.nsrc=ac.createBufferSource();g.nsrc.buffer=nb;g.nsrc.loop=true;g.nlp=ac.createBiquadFilter();g.nlp.type='lowpass';g.nlp.frequency.value=14000;g.ng=ac.createGain();g.ng.gain.value=0;
+  g.cal=[0,1].map(i=>{const n=ac.createGain();g.split.connect(n,i);return n});
+  g.post=[0,1].map(i=>{const n=ac.createGain();n.connect(g.merge,0,i);return n});
+  const nb=ac.createBuffer(2,ac.sampleRate*3,ac.sampleRate);for(let k=0;k<2;k++){const d=nb.getChannelData(k);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*1.73}
+  g.nsrc=ac.createBufferSource();g.nsrc.buffer=nb;g.nsrc.loop=true;g.nlp=ac.createBiquadFilter();g.nlp.type='lowpass';g.nlp.frequency.value=16000;g.ng=ac.createGain();g.ng.gain.value=0;
   g.nsrc.connect(g.nlp);g.nlp.connect(g.ng);g.ng.connect(g.merge);g.nsrc.start();
   g.merge.connect(g.wet);g.wet.connect(g.out);g.out.connect(ac.destination);
   g.sp=ac.createChannelSplitter(2);g.out.connect(g.sp);g.aL=ac.createAnalyser();g.aR=ac.createAnalyser();g.aL.fftSize=g.aR.fftSize=2048;g.sp.connect(g.aL,0);g.sp.connect(g.aR,1);
   G=g;updateAudio(true);
 }
-function curveFor(P,D){ // shaper sees s/2; curve maps back to full scale x2
-  const c=Math.pow(10,(Number(S.cal)+P.H)/20), gg=Math.pow(10,D/20), Rr=2*gg/c, n=32768, cu=new Float32Array(n);
-  for(let i=0;i<n;i++){const x=i/(n-1)*2-1;cu[i]=shape(Rr*x,P)/Rr}
-  return cu;
+/* rebuild the filter chains when the console changes (IIR coefficients are fixed per node) */
+function buildChains(P){
+  const fs=ac.sampleRate;
+  if(G.ch) G.ch.forEach(c=>{c.nodes.forEach(n=>{try{n.disconnect()}catch(e){}});c.xt.forEach(n=>{try{n.disconnect()}catch(e){}})});
+  G.cal.forEach(n=>{try{n.disconnect()}catch(e){}});
+  G.ch=[0,1].map(i=>{
+    const sh=ac.createWaveShaper(),gain=ac.createGain();
+    const pre=preFilters(P,fs).map(([b,a])=>iir(b,a)),post=postFilters(P,fs).map(([b,a])=>iir(b,a)),eq=eqFilters(P,fs).map(([b,a])=>iir(b,a));
+    const nodes=chainOf([G.cal[i],...pre,sh,...post,...eq,gain]);gain.connect(G.post[i]);
+    const x=P.xtalk,flat=ac.createGain(),lf=ac.createGain(),hf=ac.createGain(),lpn=iir(...biquad('lp1',x.lf_f,fs)),hpn=iir(...biquad('hp1',x.hf_f,fs)),xg=ac.createGain();
+    gain.connect(flat);gain.connect(lpn);lpn.connect(lf);gain.connect(hpn);hpn.connect(hf);[flat,lf,hf].forEach(n=>n.connect(xg));xg.connect(G.merge,0,1-i);
+    flat.gain.value=x.flat;lf.gain.value=x.lf;hf.gain.value=x.hf;
+    return {sh,gain,xg,nodes:nodes.slice(1),xt:[flat,lf,hf,lpn,hpn,xg]};
+  });
+  builtModel=S.model;
 }
+const RANGE=4; // the shaper's curve covers ±4 FS (+12 dBFS)
+function curveFor(P,D,sp){const n=16384,cu=new Float32Array(n);for(let i=0;i<n;i++){const x=(i/(n-1)*2-1)*RANGE;cu[i]=shapeN(x,P,D,sp)/RANGE}return cu}
 let curvePending=false;
 function updateAudio(force){
-  if(!G)return;const t=ac.currentTime,m=MODELS[S.model];
-  ['L','R'].forEach((side,i)=>{const c=G.ch[i],P=params(side);
-    c.sh.curve=curveFor(P,cur.D);c.sh.oversample=S.os==='8x'?'4x':S.os;
-    c.pre.gain.setTargetAtTime(.5*Math.pow(10,P.gain/20),t,.02);
-    c.lfUp.gain.setTargetAtTime(m.lf,t,.02);c.lfDn.gain.setTargetAtTime(-m.lf,t,.02);
-    c.lo.gain.setTargetAtTime(m.shelfLo,t,.03);c.pk.frequency.setTargetAtTime(m.peak[0],t,.03);c.pk.gain.setTargetAtTime(m.peak[1],t,.03);c.pk.Q.value=m.peak[2];
-    c.hi.gain.setTargetAtTime(m.shelfHi,t,.03);c.lp.frequency.setTargetAtTime(Math.min(P.lpf,ac.sampleRate*.45),t,.03);
-    c.post.gain.setTargetAtTime(2*(S.auto?clamp(cur.an.comp,.5,3):1),t,.03);
-    const xdb=S.xt<.005?-200:(-90+60*S.xt)+(S.mode==='bus'?10:0);c.xg.gain.setTargetAtTime(Math.pow(10,xdb/20),t,.03);
+  if(!G)return;const t=ac.currentTime,P=MODELS[S.model];
+  if(builtModel!==S.model||force) buildChains(P);
+  const calG=Math.pow(10,(-18-Number(S.cal))/20)/RANGE;   // 0 VU lands on the model's -18 dBFS reference
+  G.ch.forEach((c,i)=>{
+    const sp=S.matched?null:spreadFor(S.ch+i,S.spread||0);
+    c.sh.curve=curveFor(P,cur.D,sp);c.sh.oversample=S.os==='none'?'none':(S.os==='2x'?'2x':'4x');
+    const comp=S.auto?Math.min(Math.max(cur.an.comp,.25),4):1;
+    const g=Math.pow(10,(outGainDb(P,cur.D)+(sp?sp.gain_db:0))/20)*RANGE/Math.pow(10,(-18-Number(S.cal))/20)*comp;
+    c.gain.gain.setTargetAtTime(g,t,.02);
+    c.xg.gain.setTargetAtTime(S.mode==='bus'?1:0,t,.03);
   });
-  const nl=S.noise<.005?0:Math.pow(10,(m.noise-12+24*S.noise+S.age*8)/20);G.ng.gain.setTargetAtTime(nl,t,.05);
+  G.cal.forEach(n=>n.gain.setTargetAtTime(calG,t,.02));
+  const nl=S.noise<.005?0:Math.pow(10,(P.noise_dbfs-12+24*S.noise+S.age*8)/20);G.ng.gain.setTargetAtTime(nl,t,.05);
   const outG=Math.pow(10,((S.out-.5)*24)/20);G.out.gain.setTargetAtTime(outG,t,.03);
   G.wet.gain.setTargetAtTime(S.bypass?0:S.mix,t,.03);G.dry.gain.setTargetAtTime(S.bypass?1:1-S.mix,t,.03);
 }
@@ -589,7 +604,7 @@ requestAnimationFrame(frame);
 /* ------------------------------------------------------------------ state changes */
 function onChange(key){
   if(key==='spread'){S.tol=S.spread;S.xt=S.spread*.8}
-  if(['drive','harm','age','model','mode','tol','spread','matched','ch'].includes(key)) compute();
+  if(['drive','age','model'].includes(key)) compute();
   renders.forEach(r=>r());
   if(G&&!curvePending){curvePending=true;requestAnimationFrame(()=>{curvePending=false;updateAudio()})}
 }

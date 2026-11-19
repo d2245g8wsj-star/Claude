@@ -149,7 +149,6 @@ src/dsp/Band.h          one filter section and its analogue prototype
 src/dsp/Voicing.h       switch positions, and what each one does to the network
 src/dsp/Colour.h        input buffer, make up amplifier, output transformer
 src/PluginProcessor.*   parameters, link, oversampling, the channel paths
-src/gui/Panel.*         knobs, dot scales, symbols, toggles, pilot lamp, all drawn in code
 src/PluginEditor.*      layout, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render
@@ -170,3 +169,8 @@ product page is followed.
 ## Licence
 
 As for the rest of this repository; see `../../LICENSE` and `../../NOTICE.md`.
+
+## Re-rendering the panel
+
+The panel is rendered in Blender from `art/spec.py` with the range's kit, see
+`shared/indiewave/art/README.md`.

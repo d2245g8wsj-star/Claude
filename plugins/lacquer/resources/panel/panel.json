@@ -1,0 +1,1088 @@
+{
+ "name": "lacquer",
+ "scale": 2.0,
+ "faces": {
+  "folded_white": {
+   "size": [
+    1600,
+    430
+   ]
+  },
+  "open_white": {
+   "size": [
+    1600,
+    700
+   ]
+  },
+  "folded_black": {
+   "size": [
+    1600,
+    430
+   ]
+  },
+  "open_black": {
+   "size": [
+    1600,
+    700
+   ]
+  }
+ },
+ "kinds": {
+  "f6": {
+   "type": "skirted",
+   "w": 98.0,
+   "h": 98.0,
+   "n": 6,
+   "cols": 6,
+   "angles": [
+    -120.0,
+    -72.0,
+    -24.0,
+    24.0,
+    72.0,
+    120.0
+   ],
+   "steps": null
+  },
+  "f11": {
+   "type": "skirted",
+   "w": 98.0,
+   "h": 98.0,
+   "n": 11,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -108.0,
+    -81.0,
+    -54.0,
+    -27.0,
+    0.0,
+    27.0,
+    54.0,
+    81.0,
+    108.0,
+    135.0
+   ],
+   "steps": null
+  },
+  "f12": {
+   "type": "skirted",
+   "w": 98.0,
+   "h": 98.0,
+   "n": 12,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -110.45454545454545,
+    -85.9090909090909,
+    -61.36363636363636,
+    -36.81818181818181,
+    -12.272727272727266,
+    12.27272727272728,
+    36.81818181818181,
+    61.363636363636374,
+    85.9090909090909,
+    110.45454545454547,
+    135.0
+   ],
+   "steps": null
+  },
+  "amount": {
+   "type": "skirted",
+   "w": 136.0,
+   "h": 136.5,
+   "n": 21,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -121.5,
+    -108.0,
+    -94.5,
+    -81.0,
+    -67.5,
+    -54.0,
+    -40.5,
+    -27.0,
+    -13.5,
+    0.0,
+    13.5,
+    27.0,
+    40.5,
+    54.0,
+    67.5,
+    81.0,
+    94.5,
+    108.0,
+    121.5,
+    135.0
+   ],
+   "steps": null
+  },
+  "q": {
+   "type": "skirted",
+   "w": 82.5,
+   "h": 82.0,
+   "n": 11,
+   "cols": 8,
+   "angles": [
+    -120.0,
+    -96.0,
+    -72.0,
+    -48.0,
+    -24.0,
+    0.0,
+    24.0,
+    48.0,
+    72.0,
+    96.0,
+    120.0
+   ],
+   "steps": null
+  },
+  "sw": {
+   "type": "toggle",
+   "w": 85.5,
+   "h": 85.5,
+   "n": 2,
+   "cols": 2,
+   "angles": null,
+   "steps": null
+  },
+  "output": {
+   "type": "skirted",
+   "w": 102.0,
+   "h": 102.0,
+   "n": 61,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -130.5,
+    -126.0,
+    -121.5,
+    -117.0,
+    -112.5,
+    -108.0,
+    -103.5,
+    -99.0,
+    -94.5,
+    -90.0,
+    -85.5,
+    -81.0,
+    -76.5,
+    -72.0,
+    -67.5,
+    -63.0,
+    -58.5,
+    -54.0,
+    -49.5,
+    -45.0,
+    -40.5,
+    -36.0,
+    -31.5,
+    -27.0,
+    -22.5,
+    -18.0,
+    -13.5,
+    -9.0,
+    -4.5,
+    0.0,
+    4.5,
+    9.0,
+    13.5,
+    18.0,
+    22.5,
+    27.0,
+    31.5,
+    36.0,
+    40.5,
+    45.0,
+    49.5,
+    54.0,
+    58.5,
+    63.0,
+    67.5,
+    72.0,
+    76.5,
+    81.0,
+    85.5,
+    90.0,
+    94.5,
+    99.0,
+    103.5,
+    108.0,
+    112.5,
+    117.0,
+    121.5,
+    126.0,
+    130.5,
+    135.0
+   ],
+   "steps": null
+  },
+  "mode": {
+   "type": "chicken",
+   "w": 103.5,
+   "h": 103.5,
+   "n": 3,
+   "cols": 3,
+   "angles": [
+    -50,
+    0,
+    50
+   ],
+   "steps": null
+  },
+  "pilot": {
+   "type": "jewel",
+   "w": 51.0,
+   "h": 51.5,
+   "n": 2,
+   "cols": 2,
+   "angles": null,
+   "steps": null
+  },
+  "finish": {
+   "type": "toggle",
+   "w": 64.5,
+   "h": 64.5,
+   "n": 2,
+   "cols": 2,
+   "angles": null,
+   "steps": null
+  }
+ },
+ "controls": [
+  {
+   "id": "c1_lb_freq",
+   "kind": "f6",
+   "face": "folded_white",
+   "cx": 170,
+   "cy": 120
+  },
+  {
+   "id": "c1_lb_amount",
+   "kind": "amount",
+   "face": "folded_white",
+   "cx": 170,
+   "cy": 235
+  },
+  {
+   "id": "c1_lc_freq",
+   "kind": "f6",
+   "face": "folded_white",
+   "cx": 300,
+   "cy": 120
+  },
+  {
+   "id": "c1_lc_amount",
+   "kind": "amount",
+   "face": "folded_white",
+   "cx": 300,
+   "cy": 235
+  },
+  {
+   "id": "c1_mb_freq",
+   "kind": "f11",
+   "face": "folded_white",
+   "cx": 460,
+   "cy": 120
+  },
+  {
+   "id": "c1_mb_amount",
+   "kind": "amount",
+   "face": "folded_white",
+   "cx": 460,
+   "cy": 235
+  },
+  {
+   "id": "c1_mc_freq",
+   "kind": "f11",
+   "face": "folded_white",
+   "cx": 590,
+   "cy": 120
+  },
+  {
+   "id": "c1_mc_amount",
+   "kind": "amount",
+   "face": "folded_white",
+   "cx": 590,
+   "cy": 235
+  },
+  {
+   "id": "c1_tb_freq",
+   "kind": "f12",
+   "face": "folded_white",
+   "cx": 750,
+   "cy": 120
+  },
+  {
+   "id": "c1_tb_amount",
+   "kind": "amount",
+   "face": "folded_white",
+   "cx": 750,
+   "cy": 235
+  },
+  {
+   "id": "c1_tc_freq",
+   "kind": "f6",
+   "face": "folded_white",
+   "cx": 970,
+   "cy": 120
+  },
+  {
+   "id": "c1_tc_amount",
+   "kind": "amount",
+   "face": "folded_white",
+   "cx": 970,
+   "cy": 235
+  },
+  {
+   "id": "c1_tb_q",
+   "kind": "q",
+   "face": "folded_white",
+   "cx": 860,
+   "cy": 178
+  },
+  {
+   "id": "c1_shift",
+   "kind": "sw",
+   "face": "folded_white",
+   "cx": 1110,
+   "cy": 200
+  },
+  {
+   "id": "c1_buffer",
+   "kind": "sw",
+   "face": "folded_white",
+   "cx": 1190,
+   "cy": 200
+  },
+  {
+   "id": "c1_transformer",
+   "kind": "sw",
+   "face": "folded_white",
+   "cx": 1270,
+   "cy": 200
+  },
+  {
+   "id": "c1_eq_in",
+   "kind": "sw",
+   "face": "folded_white",
+   "cx": 1350,
+   "cy": 200
+  },
+  {
+   "id": "pilot",
+   "kind": "pilot",
+   "face": "folded_white",
+   "cx": 150,
+   "cy": 350
+  },
+  {
+   "id": "finish",
+   "kind": "finish",
+   "face": "folded_white",
+   "cx": 330,
+   "cy": 350
+  },
+  {
+   "id": "mode",
+   "kind": "mode",
+   "face": "folded_white",
+   "cx": 1130,
+   "cy": 356
+  },
+  {
+   "id": "output",
+   "kind": "output",
+   "face": "folded_white",
+   "cx": 1330,
+   "cy": 350
+  },
+  {
+   "id": "c1_lb_freq",
+   "kind": "f6",
+   "face": "open_white",
+   "cx": 170,
+   "cy": 120
+  },
+  {
+   "id": "c1_lb_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 170,
+   "cy": 235
+  },
+  {
+   "id": "c1_lc_freq",
+   "kind": "f6",
+   "face": "open_white",
+   "cx": 300,
+   "cy": 120
+  },
+  {
+   "id": "c1_lc_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 300,
+   "cy": 235
+  },
+  {
+   "id": "c1_mb_freq",
+   "kind": "f11",
+   "face": "open_white",
+   "cx": 460,
+   "cy": 120
+  },
+  {
+   "id": "c1_mb_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 460,
+   "cy": 235
+  },
+  {
+   "id": "c1_mc_freq",
+   "kind": "f11",
+   "face": "open_white",
+   "cx": 590,
+   "cy": 120
+  },
+  {
+   "id": "c1_mc_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 590,
+   "cy": 235
+  },
+  {
+   "id": "c1_tb_freq",
+   "kind": "f12",
+   "face": "open_white",
+   "cx": 750,
+   "cy": 120
+  },
+  {
+   "id": "c1_tb_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 750,
+   "cy": 235
+  },
+  {
+   "id": "c1_tc_freq",
+   "kind": "f6",
+   "face": "open_white",
+   "cx": 970,
+   "cy": 120
+  },
+  {
+   "id": "c1_tc_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 970,
+   "cy": 235
+  },
+  {
+   "id": "c1_tb_q",
+   "kind": "q",
+   "face": "open_white",
+   "cx": 860,
+   "cy": 178
+  },
+  {
+   "id": "c1_shift",
+   "kind": "sw",
+   "face": "open_white",
+   "cx": 1110,
+   "cy": 200
+  },
+  {
+   "id": "c1_buffer",
+   "kind": "sw",
+   "face": "open_white",
+   "cx": 1190,
+   "cy": 200
+  },
+  {
+   "id": "c1_transformer",
+   "kind": "sw",
+   "face": "open_white",
+   "cx": 1270,
+   "cy": 200
+  },
+  {
+   "id": "c1_eq_in",
+   "kind": "sw",
+   "face": "open_white",
+   "cx": 1350,
+   "cy": 200
+  },
+  {
+   "id": "pilot",
+   "kind": "pilot",
+   "face": "open_white",
+   "cx": 150,
+   "cy": 350
+  },
+  {
+   "id": "finish",
+   "kind": "finish",
+   "face": "open_white",
+   "cx": 330,
+   "cy": 350
+  },
+  {
+   "id": "mode",
+   "kind": "mode",
+   "face": "open_white",
+   "cx": 1130,
+   "cy": 356
+  },
+  {
+   "id": "output",
+   "kind": "output",
+   "face": "open_white",
+   "cx": 1330,
+   "cy": 350
+  },
+  {
+   "id": "c2_lb_freq",
+   "kind": "f6",
+   "face": "open_white",
+   "cx": 170,
+   "cy": 480
+  },
+  {
+   "id": "c2_lb_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 170,
+   "cy": 595
+  },
+  {
+   "id": "c2_lc_freq",
+   "kind": "f6",
+   "face": "open_white",
+   "cx": 300,
+   "cy": 480
+  },
+  {
+   "id": "c2_lc_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 300,
+   "cy": 595
+  },
+  {
+   "id": "c2_mb_freq",
+   "kind": "f11",
+   "face": "open_white",
+   "cx": 460,
+   "cy": 480
+  },
+  {
+   "id": "c2_mb_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 460,
+   "cy": 595
+  },
+  {
+   "id": "c2_mc_freq",
+   "kind": "f11",
+   "face": "open_white",
+   "cx": 590,
+   "cy": 480
+  },
+  {
+   "id": "c2_mc_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 590,
+   "cy": 595
+  },
+  {
+   "id": "c2_tb_freq",
+   "kind": "f12",
+   "face": "open_white",
+   "cx": 750,
+   "cy": 480
+  },
+  {
+   "id": "c2_tb_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 750,
+   "cy": 595
+  },
+  {
+   "id": "c2_tc_freq",
+   "kind": "f6",
+   "face": "open_white",
+   "cx": 970,
+   "cy": 480
+  },
+  {
+   "id": "c2_tc_amount",
+   "kind": "amount",
+   "face": "open_white",
+   "cx": 970,
+   "cy": 595
+  },
+  {
+   "id": "c2_tb_q",
+   "kind": "q",
+   "face": "open_white",
+   "cx": 860,
+   "cy": 538
+  },
+  {
+   "id": "c2_shift",
+   "kind": "sw",
+   "face": "open_white",
+   "cx": 1110,
+   "cy": 560
+  },
+  {
+   "id": "c2_buffer",
+   "kind": "sw",
+   "face": "open_white",
+   "cx": 1190,
+   "cy": 560
+  },
+  {
+   "id": "c2_transformer",
+   "kind": "sw",
+   "face": "open_white",
+   "cx": 1270,
+   "cy": 560
+  },
+  {
+   "id": "c2_eq_in",
+   "kind": "sw",
+   "face": "open_white",
+   "cx": 1350,
+   "cy": 560
+  },
+  {
+   "id": "c1_lb_freq",
+   "kind": "f6",
+   "face": "folded_black",
+   "cx": 170,
+   "cy": 120
+  },
+  {
+   "id": "c1_lb_amount",
+   "kind": "amount",
+   "face": "folded_black",
+   "cx": 170,
+   "cy": 235
+  },
+  {
+   "id": "c1_lc_freq",
+   "kind": "f6",
+   "face": "folded_black",
+   "cx": 300,
+   "cy": 120
+  },
+  {
+   "id": "c1_lc_amount",
+   "kind": "amount",
+   "face": "folded_black",
+   "cx": 300,
+   "cy": 235
+  },
+  {
+   "id": "c1_mb_freq",
+   "kind": "f11",
+   "face": "folded_black",
+   "cx": 460,
+   "cy": 120
+  },
+  {
+   "id": "c1_mb_amount",
+   "kind": "amount",
+   "face": "folded_black",
+   "cx": 460,
+   "cy": 235
+  },
+  {
+   "id": "c1_mc_freq",
+   "kind": "f11",
+   "face": "folded_black",
+   "cx": 590,
+   "cy": 120
+  },
+  {
+   "id": "c1_mc_amount",
+   "kind": "amount",
+   "face": "folded_black",
+   "cx": 590,
+   "cy": 235
+  },
+  {
+   "id": "c1_tb_freq",
+   "kind": "f12",
+   "face": "folded_black",
+   "cx": 750,
+   "cy": 120
+  },
+  {
+   "id": "c1_tb_amount",
+   "kind": "amount",
+   "face": "folded_black",
+   "cx": 750,
+   "cy": 235
+  },
+  {
+   "id": "c1_tc_freq",
+   "kind": "f6",
+   "face": "folded_black",
+   "cx": 970,
+   "cy": 120
+  },
+  {
+   "id": "c1_tc_amount",
+   "kind": "amount",
+   "face": "folded_black",
+   "cx": 970,
+   "cy": 235
+  },
+  {
+   "id": "c1_tb_q",
+   "kind": "q",
+   "face": "folded_black",
+   "cx": 860,
+   "cy": 178
+  },
+  {
+   "id": "c1_shift",
+   "kind": "sw",
+   "face": "folded_black",
+   "cx": 1110,
+   "cy": 200
+  },
+  {
+   "id": "c1_buffer",
+   "kind": "sw",
+   "face": "folded_black",
+   "cx": 1190,
+   "cy": 200
+  },
+  {
+   "id": "c1_transformer",
+   "kind": "sw",
+   "face": "folded_black",
+   "cx": 1270,
+   "cy": 200
+  },
+  {
+   "id": "c1_eq_in",
+   "kind": "sw",
+   "face": "folded_black",
+   "cx": 1350,
+   "cy": 200
+  },
+  {
+   "id": "pilot",
+   "kind": "pilot",
+   "face": "folded_black",
+   "cx": 150,
+   "cy": 350
+  },
+  {
+   "id": "finish",
+   "kind": "finish",
+   "face": "folded_black",
+   "cx": 330,
+   "cy": 350
+  },
+  {
+   "id": "mode",
+   "kind": "mode",
+   "face": "folded_black",
+   "cx": 1130,
+   "cy": 356
+  },
+  {
+   "id": "output",
+   "kind": "output",
+   "face": "folded_black",
+   "cx": 1330,
+   "cy": 350
+  },
+  {
+   "id": "c1_lb_freq",
+   "kind": "f6",
+   "face": "open_black",
+   "cx": 170,
+   "cy": 120
+  },
+  {
+   "id": "c1_lb_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 170,
+   "cy": 235
+  },
+  {
+   "id": "c1_lc_freq",
+   "kind": "f6",
+   "face": "open_black",
+   "cx": 300,
+   "cy": 120
+  },
+  {
+   "id": "c1_lc_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 300,
+   "cy": 235
+  },
+  {
+   "id": "c1_mb_freq",
+   "kind": "f11",
+   "face": "open_black",
+   "cx": 460,
+   "cy": 120
+  },
+  {
+   "id": "c1_mb_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 460,
+   "cy": 235
+  },
+  {
+   "id": "c1_mc_freq",
+   "kind": "f11",
+   "face": "open_black",
+   "cx": 590,
+   "cy": 120
+  },
+  {
+   "id": "c1_mc_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 590,
+   "cy": 235
+  },
+  {
+   "id": "c1_tb_freq",
+   "kind": "f12",
+   "face": "open_black",
+   "cx": 750,
+   "cy": 120
+  },
+  {
+   "id": "c1_tb_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 750,
+   "cy": 235
+  },
+  {
+   "id": "c1_tc_freq",
+   "kind": "f6",
+   "face": "open_black",
+   "cx": 970,
+   "cy": 120
+  },
+  {
+   "id": "c1_tc_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 970,
+   "cy": 235
+  },
+  {
+   "id": "c1_tb_q",
+   "kind": "q",
+   "face": "open_black",
+   "cx": 860,
+   "cy": 178
+  },
+  {
+   "id": "c1_shift",
+   "kind": "sw",
+   "face": "open_black",
+   "cx": 1110,
+   "cy": 200
+  },
+  {
+   "id": "c1_buffer",
+   "kind": "sw",
+   "face": "open_black",
+   "cx": 1190,
+   "cy": 200
+  },
+  {
+   "id": "c1_transformer",
+   "kind": "sw",
+   "face": "open_black",
+   "cx": 1270,
+   "cy": 200
+  },
+  {
+   "id": "c1_eq_in",
+   "kind": "sw",
+   "face": "open_black",
+   "cx": 1350,
+   "cy": 200
+  },
+  {
+   "id": "pilot",
+   "kind": "pilot",
+   "face": "open_black",
+   "cx": 150,
+   "cy": 350
+  },
+  {
+   "id": "finish",
+   "kind": "finish",
+   "face": "open_black",
+   "cx": 330,
+   "cy": 350
+  },
+  {
+   "id": "mode",
+   "kind": "mode",
+   "face": "open_black",
+   "cx": 1130,
+   "cy": 356
+  },
+  {
+   "id": "output",
+   "kind": "output",
+   "face": "open_black",
+   "cx": 1330,
+   "cy": 350
+  },
+  {
+   "id": "c2_lb_freq",
+   "kind": "f6",
+   "face": "open_black",
+   "cx": 170,
+   "cy": 480
+  },
+  {
+   "id": "c2_lb_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 170,
+   "cy": 595
+  },
+  {
+   "id": "c2_lc_freq",
+   "kind": "f6",
+   "face": "open_black",
+   "cx": 300,
+   "cy": 480
+  },
+  {
+   "id": "c2_lc_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 300,
+   "cy": 595
+  },
+  {
+   "id": "c2_mb_freq",
+   "kind": "f11",
+   "face": "open_black",
+   "cx": 460,
+   "cy": 480
+  },
+  {
+   "id": "c2_mb_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 460,
+   "cy": 595
+  },
+  {
+   "id": "c2_mc_freq",
+   "kind": "f11",
+   "face": "open_black",
+   "cx": 590,
+   "cy": 480
+  },
+  {
+   "id": "c2_mc_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 590,
+   "cy": 595
+  },
+  {
+   "id": "c2_tb_freq",
+   "kind": "f12",
+   "face": "open_black",
+   "cx": 750,
+   "cy": 480
+  },
+  {
+   "id": "c2_tb_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 750,
+   "cy": 595
+  },
+  {
+   "id": "c2_tc_freq",
+   "kind": "f6",
+   "face": "open_black",
+   "cx": 970,
+   "cy": 480
+  },
+  {
+   "id": "c2_tc_amount",
+   "kind": "amount",
+   "face": "open_black",
+   "cx": 970,
+   "cy": 595
+  },
+  {
+   "id": "c2_tb_q",
+   "kind": "q",
+   "face": "open_black",
+   "cx": 860,
+   "cy": 538
+  },
+  {
+   "id": "c2_shift",
+   "kind": "sw",
+   "face": "open_black",
+   "cx": 1110,
+   "cy": 560
+  },
+  {
+   "id": "c2_buffer",
+   "kind": "sw",
+   "face": "open_black",
+   "cx": 1190,
+   "cy": 560
+  },
+  {
+   "id": "c2_transformer",
+   "kind": "sw",
+   "face": "open_black",
+   "cx": 1270,
+   "cy": 560
+  },
+  {
+   "id": "c2_eq_in",
+   "kind": "sw",
+   "face": "open_black",
+   "cx": 1350,
+   "cy": 560
+  }
+ ],
+ "parts": {
+  "folded_white": [],
+  "open_white": [],
+  "folded_black": [],
+  "open_black": []
+ }
+}

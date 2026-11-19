@@ -2,22 +2,17 @@
 
 #include "PluginProcessor.h"
 #include "gui/Display.h"
-#include "gui/Panel.h"
-#include "indiewave/ui/Panel.h"
+#include "indiewave/ui/Rendered.h"
 
 namespace breakwater
 {
 
-/** Every coordinate in the editor is in these units; the face is scaled as one.
-    The simple view is the top part; the advanced panel extends it downwards. */
-inline constexpr int designWidth          = 1200;
-inline constexpr int designHeight         = 636;
-inline constexpr int designHeightAdvanced = 1056;
-
-/** The face sits between two rack ears; the editor's width is the whole unit. */
-inline constexpr int earWidth   = 64;
-inline constexpr int panelWidth = designWidth + 2 * earWidth;
-
+/**
+    The rendered panel, in the range's Nazaré style (plugins/breakwater/art/spec.py).
+    The simple face carries the scope, the meters and the loudness behind glass
+    and the main row; the advanced face adds the limiter, tone, converter and
+    compressor rows underneath. The editor's size is remembered.
+*/
 class BreakwaterEditor final : public juce::AudioProcessorEditor,
                                private juce::Timer
 {
@@ -28,60 +23,37 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    /** The size in points of the face on show. */
+    juce::Point<int> designSize() const;
+
 private:
     void timerCallback() override;
-
-    /** Shows or hides the advanced panel, keeping the current scale. */
     void setAdvanced (bool);
+    juce::String caption() const;
+    juce::String footer() const;
 
-    class Face final : public juce::Component
+    using Face = indiewave::ui::rendered::Face;
+
+    /** One face and the live parts drawn into its windows. */
+    struct Panel
     {
-    public:
-        explicit Face (BreakwaterProcessor&);
+        Panel (BreakwaterProcessor&, const juce::String& name, bool advanced);
 
-        void paint (juce::Graphics&) override;
-        void resized() override;
-
-        void refresh();
-        void showAdvanced (bool);
-
-        panel::Toggle advanced { "Advanced" };
-
-    private:
-        juce::String caption() const;
-        juce::String footer() const;
-
-        std::vector<juce::Component*> advancedComponents();
-
-        BreakwaterProcessor& processor;
-
-        // Simple view.
-        panel::Segmented engine, style;
-        panel::Toggle    truePeak, bypass, match, delta;
-        panel::Knob      gain, ceiling, transients, lowPunch, detail, target;
-
+        Face face;
+        indiewave::ui::rendered::Switch advanced;
         display::Scope    scope;
         display::Meters   meters;
         display::Loudness loudness;
-
-        // Advanced panel.
-        panel::Segmented oversampling, compMode, wordLength, dither;
-        panel::Toggle    adaptiveLink, compOn, dcFilter, sidechain;
-        panel::Knob      lookahead, attack, release, window, linkTransients, linkRelease;
-        panel::Knob      balance, clip;
-        panel::Knob      compThreshold, compRatio, compAttack, compRelease, compHighPass;
-
-        bool  advancedShown { false };
-        int   shownEngine { -1 };
-        bool  shownCompressor { false };
-        float compressorReductionDb { 0.0f };
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
+        std::unique_ptr<juce::Label> compReduction;
     };
 
     BreakwaterProcessor& processor;
     juce::TooltipWindow  tooltips { this, 650 };
-    Face                 face;
+    Panel simple, full;
+    bool advancedShown { false };
+    float compressorReductionDb { 0.0f };
+    int shownEngine { -1 };
+    int shownCompressor { -1 };
 
     std::unique_ptr<juce::PropertiesFile> userSettings;
     bool sizeRestored { false };

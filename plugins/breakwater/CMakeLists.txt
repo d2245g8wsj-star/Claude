@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Breakwater VERSION 0.6.0 LANGUAGES C CXX)
+project(Breakwater VERSION 0.7.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -54,10 +54,13 @@ target_sources(Breakwater PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
     src/gui/Panel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp
     src/gui/Display.cpp)
 
 target_include_directories(Breakwater PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+
+# The rendered panel, made by shared/indiewave/art from art/spec.py.
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/panel.cmake)
+indiewave_add_panel(Breakwater)
 
 target_compile_definitions(Breakwater PUBLIC
     JUCE_WEB_BROWSER=0

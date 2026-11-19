@@ -1,0 +1,156 @@
+{
+  "_note": "Panel coordinates in points at 1x (renders are 2x). Origin top left. The Blender scene, the printed legends and the editor all read this file, so moving a control here moves it everywhere.",
+  "size": [
+    1600,
+    440
+  ],
+  "ears": 56,
+  "front": {
+    "badge": {
+      "cx": 186,
+      "cy": 180,
+      "w": 222,
+      "h": 122
+    },
+    "console": {
+      "cx": 440,
+      "cy": 205,
+      "len": 112,
+      "labelR": 76,
+      "dotR": 60,
+      "angles": [
+        -110,
+        -66,
+        -22,
+        22,
+        66,
+        110
+      ]
+    },
+    "drive": {
+      "cx": 815,
+      "cy": 196,
+      "d": 228,
+      "dotR": 132,
+      "labelR": 150,
+      "frames": 61
+    },
+    "vu": {
+      "cx": 1180,
+      "cy": 198,
+      "w": 290,
+      "h": 184,
+      "face": [
+        266,
+        160
+      ],
+      "pivot": [
+        133,
+        190
+      ],
+      "r": 146
+    },
+    "spread": {
+      "cx": 1405,
+      "cy": 118,
+      "d": 96,
+      "dotR": 62,
+      "frames": 41
+    },
+    "output": {
+      "cx": 1405,
+      "cy": 296,
+      "d": 96,
+      "dotR": 62,
+      "frames": 41
+    },
+    "jewel": {
+      "cx": 1500,
+      "cy": 112,
+      "d": 30
+    },
+    "power": {
+      "cx": 1500,
+      "cy": 262
+    },
+    "flip": {
+      "x": 1520,
+      "y": 402
+    }
+  },
+  "rear": {
+    "serial": {
+      "x": 112,
+      "y": 116,
+      "w": 288,
+      "h": 208
+    },
+    "age": {
+      "cx": 520,
+      "cy": 200,
+      "d": 52
+    },
+    "noise": {
+      "cx": 650,
+      "cy": 200,
+      "d": 52
+    },
+    "os": {
+      "cx": 810,
+      "cy": 200,
+      "d": 52,
+      "frames": [
+        6,
+        14,
+        22,
+        30
+      ],
+      "angles": [
+        -90,
+        -30,
+        30,
+        90
+      ]
+    },
+    "cal": {
+      "cx": 970,
+      "cy": 200,
+      "d": 52,
+      "frames": [
+        6,
+        14,
+        22,
+        30
+      ],
+      "angles": [
+        -90,
+        -30,
+        30,
+        90
+      ]
+    },
+    "mode": {
+      "cx": 1110,
+      "cy": 200
+    },
+    "auto": {
+      "cx": 1210,
+      "cy": 200
+    },
+    "matched": {
+      "cx": 1310,
+      "cy": 200
+    },
+    "channel": {
+      "cx": 1440,
+      "cy": 200,
+      "w": 76,
+      "h": 44
+    },
+    "flip": {
+      "x": 1520,
+      "y": 402
+    }
+  },
+  "trimFrames": 37
+}

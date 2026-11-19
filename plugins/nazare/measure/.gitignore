@@ -1,0 +1,5 @@
+__pycache__/
+.venv/
+nazare_testsignal.wav
+nazare_testsignal.json
+scan.json

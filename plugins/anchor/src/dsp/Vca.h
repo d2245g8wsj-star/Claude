@@ -73,12 +73,12 @@ namespace vca
         return std::min (maxReductionDb, gain * outputOverDb);
     }
 
-    /** Attack switch, ms. */
-    inline constexpr std::array<float, 6> attacks { 0.1f, 0.3f, 1.0f, 3.0f, 10.0f, 30.0f };
+    /** Attack switch, ms: the eight positions of the hardware's front panel. */
+    inline constexpr std::array<float, 8> attacks { 0.1f, 0.3f, 1.0f, 3.0f, 5.0f, 10.0f, 15.0f, 30.0f };
 
     /** Release switch, s; the last position is AUTO. */
-    inline constexpr std::array<float, 6> releases { 0.1f, 0.3f, 0.6f, 0.9f, 1.2f, 0.0f };
-    inline constexpr int autoRelease = 5;
+    inline constexpr std::array<float, 8> releases { 0.05f, 0.1f, 0.3f, 0.5f, 0.6f, 0.9f, 1.2f, 0.0f };
+    inline constexpr int autoRelease = 7;
 
     /** The two halves of AUTO: a fast recovery for what a transient took,
         and a slow one for what sustained material took. A short burst

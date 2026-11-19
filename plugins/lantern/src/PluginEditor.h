@@ -9,9 +9,9 @@ namespace lantern
 /** Every coordinate in the editor is in these units; the face is scaled as one.
     Folded, the unit is one channel panel and the centre; unfolded (dual mono
     split, or mid/side) it carries a second channel panel to the right. */
-inline constexpr int designHeight      = 470;
-inline constexpr int designWidthFolded = 1060;
-inline constexpr int designWidthOpen   = 1748;
+inline constexpr int designHeight      = 520;
+inline constexpr int designWidthFolded = 1140;
+inline constexpr int designWidthOpen   = 1908;
 
 class LanternEditor final : public juce::AudioProcessorEditor,
                             private juce::Timer
@@ -26,8 +26,8 @@ public:
 private:
     void timerCallback() override;
 
-    /** Moves the IRON PAD with the Output knob while a hand is on it, in RED
-        with the iron link in, as on Beacon. */
+    /** Moves the IRON PAD with the RED output knob while a hand is on it, in
+        RED with the iron link in. */
     class Follow
     {
     public:
@@ -52,7 +52,7 @@ private:
         void setCurves (std::vector<float> first, std::vector<float> second, float spanDb);
         void paint (juce::Graphics&) override;
 
-        static constexpr int points = 96;
+        static constexpr int points = 120;
         static float frequencyAt (int point) noexcept;
 
     private:
@@ -67,8 +67,8 @@ private:
     {
         BandControls (LanternProcessor&, int band, bool second);
 
-        std::unique_ptr<Knob> freq, gain;
-        std::unique_ptr<Key> in, variant;
+        std::unique_ptr<Knob> gain, freq, q;
+        std::unique_ptr<Key> in, shelf, listen;
     };
 
     struct ChannelControls
@@ -77,10 +77,16 @@ private:
 
         std::vector<juce::Component*> components();
         void layout (float left);
+        void showStage (bool iron);
 
+        /** The LISTEN keys reflect one choice parameter: which band, if any,
+            is in focus. */
+        void refreshListen();
+
+        juce::RangedAudioParameter* listenParameter { nullptr };
         std::vector<std::unique_ptr<BandControls>> bands;
-        Knob hpf, lpf, thd, output;
-        Key hpfIn, hpfSteep, lpfIn, lpfSteep;
+        Knob hpf, lpf, thd, output, outputIron;
+        Key hpfIn, hpfSteep, lpfIn, lpfSteep, wide, proportional, mute;
         indiewave::ui::LedLadder outLadder;
     };
 
@@ -108,7 +114,7 @@ private:
         ChannelControls main, second;
 
         Knob ironPad;
-        Key ironLink, iron, bypass, wide, constantQ;
+        Key ironLink, iron, bypass;
         indiewave::ui::ChoiceKeys mode;
         Curve curve;
         indiewave::ui::FoldTab fold;
@@ -117,6 +123,7 @@ private:
 
         float heat[2] {};
         bool open { false };
+        bool shownIron { false };
         int shownMode { -1 };
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)

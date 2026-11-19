@@ -44,6 +44,11 @@ namespace
         return steps == 0 ? juce::String ("0 dB") : "-" + juce::String (steps) + " dB";
     }
 
+    juce::String qString (float value, int)
+    {
+        return juce::String (value, 2);
+    }
+
     juce::String thdString (float value, int)
     {
         const auto steps = juce::roundToInt (value);
@@ -101,14 +106,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout LanternProcessor::createPara
             layout.add (std::make_unique<ChoiceP> (id (pid::band (b, "freq")), name (band + " Frequency"), choices,
                                                    eq::defaultPosition[(size_t) b]));
             layout.add (std::make_unique<FloatP>  (id (pid::band (b, "gain")), name (band + " Gain"),
-                                                   juce::NormalisableRange<float> (-eq::wideRangeDb, eq::wideRangeDb, 0.1f), 0.0f,
+                                                   juce::NormalisableRange<float> (-eq::wideRangeDb, eq::wideRangeDb, 0.25f), 0.0f,
                                                    Attr().withLabel ("dB").withStringFromValueFunction (gainString)));
+            layout.add (std::make_unique<FloatP>  (id (pid::band (b, "q")), name (band + " Q"), logRange (eq::minQ, eq::maxQ),
+                                                   eq::defaultQ, Attr().withStringFromValueFunction (qString)));
             layout.add (std::make_unique<BoolP>   (id (pid::band (b, "in")), name (band + " In"), true));
-
-            if (pid::isOuter (b))
-                layout.add (std::make_unique<BoolP> (id (pid::band (b, "bell")), name (band + " Bell"), false));
-            else
-                layout.add (std::make_unique<BoolP> (id (pid::band (b, "hiq")), name (band + " Hi-Q"), false));
+            layout.add (std::make_unique<BoolP>   (id (pid::band (b, "shelf")), name (band + " Shelf"), b == 0 || b == eq::numBands - 1));
         }
 
         layout.add (std::make_unique<FloatP> (id (pid::thd), name ("THD"),
@@ -117,12 +120,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout LanternProcessor::createPara
         layout.add (std::make_unique<FloatP> (id (pid::output), name ("Output"),
                                               juce::NormalisableRange<float> (-range::trimDb, range::trimDb, 0.25f), 0.0f,
                                               Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
+        layout.add (std::make_unique<FloatP> (id (pid::outputIron), name ("Output Iron"),
+                                              juce::NormalisableRange<float> (-range::trimDb, range::trimDb, 0.25f), 0.0f,
+                                              Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
+        layout.add (std::make_unique<ChoiceP> (id (pid::gainRange), name ("Gain Mode"),
+                                               juce::StringArray { "5 dB", "15 dB" }, static_cast<int> (GainRange::wide)));
+        layout.add (std::make_unique<ChoiceP> (id (pid::qMode), name ("Q Mode"),
+                                               juce::StringArray { "Constant", "Proportional" }, static_cast<int> (QMode::proportional)));
+        layout.add (std::make_unique<BoolP>   (id (pid::mute), name ("Mute"), false));
+        layout.add (std::make_unique<ChoiceP> (id (pid::listen), name ("Listen"),
+                                               juce::StringArray { "Off", "LF", "LMF", "HMF", "HF" }, 0));
     }
-
-    layout.add (std::make_unique<ChoiceP> (juce::ParameterID { pid::gainRange, 1 }, "Range",
-                                           juce::StringArray { "5 dB", "15 dB" }, static_cast<int> (GainRange::wide)));
-    layout.add (std::make_unique<ChoiceP> (juce::ParameterID { pid::qMode, 1 }, "Q Mode",
-                                           juce::StringArray { "Proportional", "Constant" }, static_cast<int> (QMode::proportional)));
 
     layout.add (std::make_unique<BoolP>  (juce::ParameterID { pid::iron, 1 }, "Iron", false));
     layout.add (std::make_unique<FloatP> (juce::ParameterID { pid::ironPad, 1 }, "Iron Pad",
@@ -156,18 +164,21 @@ LanternProcessor::LanternProcessor()
         for (int b = 0; b < eq::numBands; ++b)
         {
             const auto i = (size_t) b;
-            s.freq[i]    = findParameter<juce::AudioParameterChoice> (id (pid::band (b, "freq")));
-            s.gain[i]    = findParameter<juce::AudioParameterFloat>  (id (pid::band (b, "gain")));
-            s.in[i]      = findParameter<juce::AudioParameterBool>   (id (pid::band (b, "in")));
-            s.variant[i] = findParameter<juce::AudioParameterBool>   (id (pid::band (b, pid::isOuter (b) ? "bell" : "hiq")));
+            s.freq[i]  = findParameter<juce::AudioParameterChoice> (id (pid::band (b, "freq")));
+            s.gain[i]  = findParameter<juce::AudioParameterFloat>  (id (pid::band (b, "gain")));
+            s.q[i]     = findParameter<juce::AudioParameterFloat>  (id (pid::band (b, "q")));
+            s.in[i]    = findParameter<juce::AudioParameterBool>   (id (pid::band (b, "in")));
+            s.shelf[i] = findParameter<juce::AudioParameterBool>   (id (pid::band (b, "shelf")));
         }
 
-        s.thd    = findParameter<juce::AudioParameterFloat> (id (pid::thd));
-        s.output = findParameter<juce::AudioParameterFloat> (id (pid::output));
+        s.thd        = findParameter<juce::AudioParameterFloat>  (id (pid::thd));
+        s.output     = findParameter<juce::AudioParameterFloat>  (id (pid::output));
+        s.outputIron = findParameter<juce::AudioParameterFloat>  (id (pid::outputIron));
+        s.gainRange  = findParameter<juce::AudioParameterChoice> (id (pid::gainRange));
+        s.qMode      = findParameter<juce::AudioParameterChoice> (id (pid::qMode));
+        s.listen     = findParameter<juce::AudioParameterChoice> (id (pid::listen));
+        s.mute       = findParameter<juce::AudioParameterBool>   (id (pid::mute));
     }
-
-    rangeParam      = findParameter<juce::AudioParameterChoice> (pid::gainRange);
-    qModeParam      = findParameter<juce::AudioParameterChoice> (pid::qMode);
     ironParam       = findParameter<juce::AudioParameterBool>   (pid::iron);
     ironPadParam    = findParameter<juce::AudioParameterFloat>  (pid::ironPad);
     modeParam       = findParameter<juce::AudioParameterChoice> (pid::mode);
@@ -190,8 +201,8 @@ bool LanternProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 eq::Settings LanternProcessor::settingsFor (bool second) const
 {
     const auto& p = second ? sideParams : params;
-    const auto scale = rangeParam->getIndex() == (int) GainRange::moderate ? eq::moderateScale : 1.0f;
-    const auto proportional = qModeParam->getIndex() == (int) QMode::proportional;
+    const auto scale = p.gainRange->getIndex() == (int) GainRange::moderate ? eq::moderateScale : 1.0f;
+    const auto proportional = p.qMode->getIndex() == (int) QMode::proportional;
 
     eq::Settings s;
     s.highPassHz    = p.hpf->get();
@@ -210,19 +221,31 @@ eq::Settings LanternProcessor::settingsFor (bool second) const
         band.db = p.gain[i]->get() * scale;
         band.in = p.in[i]->get();
 
-        const auto shelf = pid::isOuter (b) && ! p.variant[i]->get();
+        const auto knobQ = p.q[i]->get();
 
-        if (shelf)
+        if (p.shelf[i]->get())
         {
-            band.shape = b == 0 ? eq::Shape::lowShelf : eq::Shape::highShelf;
-            band.q = eq::shelfQ;
+            band.shape = eq::shelvesLow (b) ? eq::Shape::lowShelf : eq::Shape::highShelf;
+            band.q = eq::shelfQFor (knobQ);
         }
         else
         {
             band.shape = eq::Shape::bell;
-            const auto nominal = (! pid::isOuter (b) && p.variant[i]->get()) ? eq::highQ : eq::bellQ;
-            band.q = proportional ? eq::proportionalQ (nominal, band.db) : nominal;
+            band.q = proportional ? eq::proportionalQ (knobQ, band.db) : knobQ;
         }
+    }
+
+    // Band focus: the filters close in around the band, as wide as its Q
+    // says, at 24 dB per octave, in place of their own settings.
+    if (const auto focus = p.listen->getIndex(); focus > 0)
+    {
+        const auto i = (size_t) (focus - 1);
+        const auto hz = eq::frequencies[i][(size_t) juce::jlimit (0, eq::positions - 1, p.freq[i]->getIndex())];
+        const auto half = std::pow (2.0f, 0.5f * eq::octavesFor (p.q[i]->get()));
+
+        s.highPassHz = juce::jlimit (10.0f, 40000.0f, hz / half);
+        s.lowPassHz  = juce::jlimit (40.0f, 60000.0f, hz * half);
+        s.highPassIn = s.lowPassIn = s.highPassSteep = s.lowPassSteep = true;
     }
 
     return s;
@@ -238,6 +261,7 @@ void LanternProcessor::ChannelPath::prepare (double innerRate, double hostRate)
 
     outputGain.reset (innerRate, 0.02);
     thdDrive  .reset (innerRate, 0.02);
+    audible   .reset (innerRate, 0.01);
     engaged   .reset (hostRate,  0.02);
 
     reset();
@@ -302,7 +326,8 @@ void LanternProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
         const auto& p = second ? sideParams : params;
 
         path.equaliser.setTargets (settingsFor (second));
-        path.outputGain.setTargetValue (juce::Decibels::decibelsToGain (p.output->get()));
+        path.outputGain.setTargetValue (juce::Decibels::decibelsToGain ((ironParam->get() ? p.outputIron : p.output)->get()));
+        path.audible.setTargetValue (p.mute->get() ? 0.0f : 1.0f);
         path.thdDrive.setTargetValue (tube::ThdCalibration::get().driveFor (range::thdPercent (p.thd->get())));
         path.engaged.setTargetValue (bypassed ? 0.0f : 1.0f);
         path.outputStage.setTargets (ironParam->get(), ironPadParam->get());
@@ -313,6 +338,7 @@ void LanternProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
             path.outputGain.setCurrentAndTargetValue (path.outputGain.getTargetValue());
             path.thdDrive.setCurrentAndTargetValue (path.thdDrive.getTargetValue());
             path.engaged.setCurrentAndTargetValue (path.engaged.getTargetValue());
+            path.audible.setCurrentAndTargetValue (path.audible.getTargetValue());
             path.outputStage.snapToTargets();
         }
     }
@@ -350,17 +376,17 @@ void LanternProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
         if (midSide)
             x = { 0.5f * (x[0] + x[1]), 0.5f * (x[0] - x[1]) };
 
-        // Filters and the passive bands, then the THD stage, which the
-        // equaliser's boosts drive, then the output gain.
+        // THD first, as on the unit, then the passive bands, then the high
+        // and low pass, then the output level and the channel's mute.
         for (int ch = 0; ch < numChannels; ++ch)
         {
             auto& path = paths[(size_t) ch];
             const auto c = (size_t) ch;
 
-            const auto y = path.equaliser.process (x[c]);
             const auto drive = path.thdDrive.getNextValue();
-            drivePeak[c] = juce::jmax (drivePeak[c], std::abs (y) * drive);
-            x[c] = path.thdStage.process (y, drive) * path.outputGain.getNextValue();
+            drivePeak[c] = juce::jmax (drivePeak[c], std::abs (x[c]) * drive);
+            const auto y = path.equaliser.process (path.thdStage.process (x[c], drive));
+            x[c] = y * path.outputGain.getNextValue() * path.audible.getNextValue();
         }
 
         // The output stage works on left and right.

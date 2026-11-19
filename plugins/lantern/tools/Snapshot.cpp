@@ -43,16 +43,17 @@ int main (int argc, char* argv[])
     set (lantern::pid::hpfIn,  1.0f);
     set (lantern::pid::hpf,    28.0f);
     set (band (0, "gain"),     4.0f);
-    set (band (0, "freq"),     4.0f);    // 80 Hz shelf
+    set (band (0, "freq"),     3.0f);    // 100 Hz shelf
     set (band (1, "gain"),     -3.0f);
-    set (band (1, "freq"),     4.0f);    // 390 Hz
+    set (band (1, "freq"),     4.0f);    // 430 Hz
+    set (band (1, "q"),        0.7f);
     set (band (2, "gain"),     2.5f);
-    set (band (2, "freq"),     7.0f);    // 3.3 kHz
-    set (band (2, "hiq"),      1.0f);
+    set (band (2, "freq"),     7.0f);    // 3.8 kHz
+    set (band (2, "q"),        2.2f);
     set (band (3, "gain"),     5.0f);
-    set (band (3, "freq"),     9.0f);    // 16 kHz shelf
+    set (band (3, "freq"),     10.0f);   // 18 kHz shelf
     set (lantern::pid::thd,    35.0f);
-    set (lantern::pid::output, 1.5f);
+    set (lantern::pid::outputIron, 1.5f);
     set (lantern::pid::iron,   1.0f);
     set (lantern::pid::ironPad, 2.0f);
 
@@ -66,6 +67,7 @@ int main (int argc, char* argv[])
         set (lantern::pid::side (band (3, "gain")),    7.0f);
         set (lantern::pid::side (band (3, "freq")),    8.0f);
         set (lantern::pid::side (band (2, "gain")),    -2.0f);
+        set (lantern::pid::side (lantern::pid::gainRange), 0.0f);
     }
 
     processor.prepareToPlay (48000.0, 512);

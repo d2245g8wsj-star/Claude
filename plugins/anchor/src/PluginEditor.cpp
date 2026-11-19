@@ -39,8 +39,8 @@ namespace
 
     /** The settings each channel panel has its own of. */
     const std::array<const char*, 12> perChannel {
-        pid::input, pid::threshold, pid::ratio, pid::attack, pid::release, pid::feedback,
-        pid::scFilter, pid::listen, pid::thd, pid::mix, pid::output, pid::dynLink
+        pid::threshold, pid::ratio, pid::attack, pid::release, pid::feedback, pid::scFilter,
+        pid::listen, pid::thd, pid::mix, pid::makeUp, pid::makeUpIron, pid::mute
     };
 
     ui::RingKnob::Style knobStyle (float radius, juce::String name, juce::String lo, juce::String hi,
@@ -180,40 +180,31 @@ void AnchorEditor::Follow::end()
 // ---------------------------------------------------------------------------
 
 AnchorEditor::ChannelControls::ChannelControls (AnchorProcessor& p, bool s)
-    : threshold (p.apvts, controlId (pid::threshold, s), knobStyle (36.0f, "THRESHOLD", "-20", "+20", reds(), "dBu")),
-      mix       (p.apvts, controlId (pid::mix, s),       knobStyle (36.0f, "MIX", "DRY", "WET", mixes())),
-      attack    (p.apvts, controlId (pid::attack, s),    knobStyle (30.0f, "ATTACK", "0.1 ms", "30", reds(), {}, 6)),
-      ratio     (p.apvts, controlId (pid::ratio, s),     knobStyle (30.0f, "RATIO", "1.5", "INF", reds(), {}, 5)),
-      release   (p.apvts, controlId (pid::release, s),   knobStyle (30.0f, "RELEASE", "0.1 s", "AUTO", reds(), {}, 6)),
-      input     (p.apvts, controlId (pid::input, s),     knobStyle (20.0f, "INPUT", "-15", "+15", reds())),
-      thd       (p.apvts, controlId (pid::thd, s),       knobStyle (20.0f, "THD", "0", "8%", reds())),
-      output    (p.apvts, controlId (pid::output, s),    knobStyle (20.0f, "OUTPUT", "-15", "+15", reds())),
-      scFilter  (p.apvts, controlId (pid::scFilter, s),  knobStyle (20.0f, "S.C. FILTER", "OFF", "T2", greens(), {}, 6)),
-      feedback  (p.apvts, controlId (pid::feedback, s),  darkKey ("FEED", "BACK")),
-      dynLink   (p.apvts, controlId (pid::dynLink, s),   darkKey ("DYNAMIC", "LINK")),
-      listen    (p.apvts, controlId (pid::listen, s),    darkKey ({}, {}, false, 12.0f, juce::Colour (0xfffffdf4))),
+    : threshold  (p.apvts, controlId (pid::threshold, s),  knobStyle (36.0f, "THRESHOLD", "-20", "+20", reds(), "dBu")),
+      mix        (p.apvts, controlId (pid::mix, s),        knobStyle (36.0f, "MIX", "DRY", "WET", mixes())),
+      attack     (p.apvts, controlId (pid::attack, s),     knobStyle (30.0f, "ATTACK", "0.1 ms", "30", reds(), {}, 8)),
+      ratio      (p.apvts, controlId (pid::ratio, s),      knobStyle (30.0f, "RATIO", "1.5", "INF", reds(), {}, 5)),
+      release    (p.apvts, controlId (pid::release, s),    knobStyle (30.0f, "RELEASE", "50 ms", "AUTO", reds(), {}, 8)),
+      thd        (p.apvts, controlId (pid::thd, s),        knobStyle (20.0f, "THD", "0", "100%", reds())),
+      // One knob on the panel, as on the unit: green LEDs drive the GREEN
+      // stage's make up, red the RED stage's.
+      makeUp     (p.apvts, controlId (pid::makeUp, s),     knobStyle (20.0f, "MAKE UP", "0", "20", [] (float) { return green; })),
+      makeUpIron (p.apvts, controlId (pid::makeUpIron, s), knobStyle (20.0f, "MAKE UP", "0", "20", reds())),
+      scFilter   (p.apvts, controlId (pid::scFilter, s),   knobStyle (20.0f, "S.C. FILTER", "OFF", "T2", greens(), {}, 6)),
+      feedback   (p.apvts, controlId (pid::feedback, s),   darkKey ("FEED", "BACK")),
+      mute       (p.apvts, controlId (pid::mute, s),       darkKey ("MUTE", {}, true, 22.0f, red)),
+      listen     (p.apvts, controlId (pid::listen, s),     darkKey ({}, {}, false, 12.0f, juce::Colour (0xfffffdf4))),
       meter (std::vector<std::pair<float, juce::String>> { { 0.0f, "20" }, { 0.5f, "10" }, { 0.7f, "6" }, { 0.85f, "3" }, { 1.0f, "0" } },
              reductionPosition, "GAIN REDUCTION"),
       inLadder  (ladderSteps(), ladderLabels(), true,  ink),
       outLadder (ladderSteps(), ladderLabels(), false, ink)
 {
-    const auto parameter = [&p, s] (const char* name) { return p.apvts.getParameter (controlId (name, s)); };
-
-    // Dynamic link: input and threshold move together, output the other way,
-    // so the drive changes and the level does not.
-    links.push_back (std::make_unique<Follow> (input, parameter (pid::dynLink),
-        std::vector<std::pair<juce::RangedAudioParameter*, float>> { { parameter (pid::threshold), 1.0f },
-                                                                     { parameter (pid::output),   -1.0f } }));
-    links.push_back (std::make_unique<Follow> (threshold, parameter (pid::dynLink),
-        std::vector<std::pair<juce::RangedAudioParameter*, float>> { { parameter (pid::input),   1.0f },
-                                                                     { parameter (pid::output), -1.0f } }));
-
     if (s)
         return;
 
-    // Iron link: output and pad move together in RED mode.
+    // Iron link: the RED make up and the pad move together.
     auto* ironParameter = p.apvts.getParameter (pid::iron);
-    links.push_back (std::make_unique<Follow> (output, p.apvts.getParameter (pid::ironLink),
+    links.push_back (std::make_unique<Follow> (makeUpIron, p.apvts.getParameter (pid::ironLink),
         std::vector<std::pair<juce::RangedAudioParameter*, float>> { { p.apvts.getParameter (pid::ironPad), 1.0f } },
         [ironParameter] { return ironParameter->getValue() >= 0.5f; }));
 }
@@ -222,8 +213,14 @@ std::vector<juce::Component*> AnchorEditor::ChannelControls::components()
 {
     // Keys after knobs, so a key sitting by a knob takes the click.
     return { &meter, &inLadder, &outLadder,
-             &threshold, &mix, &attack, &ratio, &release, &input, &thd, &output, &scFilter,
-             &feedback, &dynLink, &listen };
+             &threshold, &mix, &attack, &ratio, &release, &thd, &makeUp, &makeUpIron, &scFilter,
+             &feedback, &mute, &listen };
+}
+
+void AnchorEditor::ChannelControls::showStage (bool iron)
+{
+    makeUp.setVisible (! iron);
+    makeUpIron.setVisible (iron);
 }
 
 void AnchorEditor::ChannelControls::layout (float x)
@@ -244,12 +241,12 @@ void AnchorEditor::ChannelControls::layout (float x)
     place (attack,  x + 82.0f,  row2, 30.0f);
     place (ratio,   x + 306.0f, row2, 30.0f);
     place (release, x + 530.0f, row2, 30.0f);
-    dynLink .setBounds (keyAt (x + 172.0f, row2 - 40.0f, 70.0f, 94.0f));
+    mute    .setBounds (keyAt (x + 172.0f, row2 - 40.0f, 70.0f, 84.0f));
     feedback.setBounds (keyAt (x + 440.0f, row2 - 40.0f, 70.0f, 94.0f));
 
-    place (input,    x + 58.0f,  row3, 20.0f);
-    place (thd,      x + 154.0f, row3, 20.0f);
-    place (output,   x + 256.0f, row3, 20.0f);
+    place (thd,        x + 82.0f,  row3, 20.0f);
+    place (makeUp,     x + 226.0f, row3, 20.0f);
+    place (makeUpIron, x + 226.0f, row3, 20.0f);
     place (scFilter, x + 458.0f, row3, 20.0f);
     listen.setBounds (keyAt (x + 588.0f, headerY - 10.0f, 18.0f, 18.0f));
 }
@@ -277,6 +274,9 @@ AnchorEditor::Face::Face (AnchorProcessor& p)
 
     addChildComponent (fold);
     fold.onClick = [this] { foldTabClicked(); };
+
+    shownIron = iron.getToggleState();
+    main.showStage (shownIron);
 
     open = wantsOpen();
     refresh();
@@ -339,8 +339,8 @@ void AnchorEditor::Face::resized()
 
     Knob::Style s;
     s.knobRadius = 20.0f;
-    ironPad .setBounds (Knob::boundsAt ({ firstLeft + 352.0f, row3 }, s));
-    ironLink.setBounds (keyAt (firstLeft + 304.0f, row3 - 14.0f, 40.0f, 32.0f));
+    ironPad .setBounds (Knob::boundsAt ({ firstLeft + 330.0f, row3 }, s));
+    ironLink.setBounds (keyAt (firstLeft + 278.0f, row3 - 14.0f, 40.0f, 32.0f));
     external.setBounds (keyAt (firstLeft + 546.0f, row3 - 34.0f, 60.0f, 84.0f));
 
     fold.setBounds (juce::Rectangle<float> (open ? 1553.0f : 915.0f, 120.0f, 20.0f, 210.0f).toNearestInt());
@@ -377,8 +377,8 @@ void AnchorEditor::Face::refresh()
     {
         heat[0] = heatFirst;
         heat[1] = heatSecond;
-        repaint (juce::Rectangle<float> (firstLeft + 30.0f, headerY - 10.0f, 20.0f, 20.0f).toNearestInt());
-        repaint (juce::Rectangle<float> (secondLeft + 30.0f, headerY - 10.0f, 20.0f, 20.0f).toNearestInt());
+        repaint (juce::Rectangle<float> (firstLeft + 18.0f, headerY - 10.0f, 20.0f, 20.0f).toNearestInt());
+        repaint (juce::Rectangle<float> (secondLeft + 18.0f, headerY - 10.0f, 20.0f, 20.0f).toNearestInt());
     }
 
     const auto m = currentMode();
@@ -394,6 +394,15 @@ void AnchorEditor::Face::refresh()
     const auto red = iron.getToggleState();
     ironPad.setEnabled (red);
     ironLink.setEnabled (red);
+    if (red != shownIron)
+    {
+        shownIron = red;
+        main.showStage (red);
+        second.showStage (red);
+        if (! open)
+            for (auto* c : { &second.makeUp, &second.makeUpIron })
+                c->setVisible (false);
+    }
 
     // Fold out or away when the mode or the split changes.
     const auto shouldOpen = wantsOpen();
@@ -408,6 +417,10 @@ void AnchorEditor::Face::refresh()
 
     for (auto* c : second.components())
         c->setVisible (open);
+
+    main.showStage (shownIron);
+    if (open)
+        second.showStage (shownIron);
 
     fold.setVisible (m != ChannelMode::stereo);
     if (m == ChannelMode::midSide) fold.setCaption ("SIDE", "FOLD");
@@ -429,18 +442,18 @@ void AnchorEditor::Face::paintChannel (juce::Graphics& g, float x, const juce::S
     ui::drawLabel (g, "IN",  { x + 170.0f, 166.0f, 44.0f, 12.0f }, 8.5f, ink);
     ui::drawLabel (g, "OUT", { x + 398.0f, 166.0f, 44.0f, 12.0f }, 8.5f, ink);
 
-    for (auto [text, cx] : { std::pair<const char*, float> { "INPUT STAGE", 107.0f }, { "OUTPUT STAGE", 304.0f }, { "SIDECHAIN", 492.0f } })
+    for (auto [text, cx] : { std::pair<const char*, float> { "SATURATION", 82.0f }, { "OUTPUT STAGE", 278.0f }, { "SIDECHAIN", 492.0f } })
         ui::drawLabel (g, text, { x + cx - 70.0f, headerY - 6.0f, 140.0f, 12.0f }, 8.5f, dim, juce::Justification::centred, true, 1.2f);
 
     ui::drawLabel (g, "LISTEN", { x + 530.0f, headerY - 6.0f, 46.0f, 12.0f }, 7.5f, dim, juce::Justification::centredRight, true, 0.6f);
-    ui::drawLed (g, { x + 40.0f, headerY }, 3.0f, juce::Colour (0xffff7a1a), heat[isSecond ? 1 : 0]);
+    ui::drawLed (g, { x + 28.0f, headerY }, 3.0f, juce::Colour (0xffff7a1a), heat[isSecond ? 1 : 0]);
 
     // The iron works on left and right in every mode, so the second panel
     // has no pad of its own.
     if (isSecond)
     {
-        ui::drawLabel (g, "IRON PAD", { x + 312.0f, row3 - 14.0f, 80.0f, 12.0f }, 8.5f, dim);
-        ui::drawLabel (g, "ON THE FIRST PANEL", { x + 302.0f, row3 + 2.0f, 100.0f, 10.0f }, 6.5f, dim);
+        ui::drawLabel (g, "IRON PAD", { x + 290.0f, row3 - 14.0f, 80.0f, 12.0f }, 8.5f, dim);
+        ui::drawLabel (g, "ON THE FIRST PANEL", { x + 280.0f, row3 + 2.0f, 100.0f, 10.0f }, 6.5f, dim);
         ui::drawLabel (g, "EXT KEY", { x + 516.0f, row3 - 14.0f, 60.0f, 12.0f }, 8.5f, dim);
         ui::drawLabel (g, "FIRST PANEL", { x + 511.0f, row3 + 2.0f, 70.0f, 10.0f }, 6.5f, dim);
     }

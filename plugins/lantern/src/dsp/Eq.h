@@ -8,8 +8,9 @@
 namespace lantern
 {
 
-/** The equaliser of one channel: an active high and low pass, then four
-    passive inductor bands, low to high.
+/** The equaliser of one channel: four passive inductor bands, low to high,
+    then the active high and low pass, which the hardware places after the
+    passive section.
 
     Each section is a second order analogue prototype realised as a
     trapezoidal state variable filter (after Simper), so a stepped frequency
@@ -20,41 +21,58 @@ namespace eq
     enum class Shape { bell, lowShelf, highShelf, highPass, lowPass };
 
     // -----------------------------------------------------------------------
-    // The bands. Twelve positions each, overlapping, 22 Hz to 28 kHz in all,
-    // as the hardware's are. The ranges are the hardware's; the positions in
-    // between are this project's, on the usual E-series values.
+    // The bands. Twelve positions each, overlapping, 22 Hz to 28 kHz in all:
+    // the positions printed on the hardware's front panel.
 
     inline constexpr int positions = 12;
     inline constexpr int numBands  = 4;
 
     inline constexpr std::array<std::array<float, positions>, numBands> frequencies { {
-        { 22.0f,  30.0f,  40.0f,  60.0f,  80.0f,  100.0f, 150.0f,  220.0f,  330.0f,   470.0f,   680.0f,   1000.0f  },
-        { 90.0f,  130.0f, 180.0f, 270.0f, 390.0f, 560.0f, 820.0f,  1200.0f, 1800.0f,  2700.0f,  3900.0f,  4800.0f  },
-        { 260.0f, 380.0f, 560.0f, 820.0f, 1200.0f,1600.0f,2200.0f, 3300.0f, 4700.0f,  6800.0f,  8200.0f,  11000.0f },
-        { 600.0f, 1000.0f,1500.0f,2200.0f,3300.0f,4700.0f,6800.0f, 10000.0f,12000.0f, 16000.0f, 20000.0f, 28000.0f },
+        { 22.0f,  33.0f,  60.0f,  100.0f, 150.0f,  220.0f,  300.0f,  410.0f,   500.0f,   730.0f,   860.0f,   1000.0f  },
+        { 90.0f,  120.0f, 180.0f, 290.0f, 430.0f,  620.0f,  1000.0f, 1200.0f,  1900.0f,  2700.0f,  3900.0f,  4800.0f  },
+        { 260.0f, 380.0f, 550.0f, 970.0f, 1200.0f, 1700.0f, 2800.0f, 3800.0f,  5500.0f,  7800.0f,  9000.0f,  11000.0f },
+        { 600.0f, 800.0f, 1200.0f,1800.0f,2800.0f, 4100.0f, 6000.0f, 8200.0f,  10000.0f, 13000.0f, 18000.0f, 28000.0f },
     } };
 
-    inline constexpr std::array<int, numBands> defaultPosition { 5, 4, 6, 7 };   // 100 Hz, 390 Hz, 2.2 kHz, 10 kHz
+    inline constexpr std::array<int, numBands> defaultPosition { 3, 4, 6, 8 };   // 100 Hz, 430 Hz, 2.8 kHz, 10 kHz
 
-    /** The gain knob reads ±15 dB. The RANGE switch's moderate setting makes
-        the same travel worth ±5 dB, as a switch on the hardware changes what
-        a knob position does. */
-    inline constexpr float wideRangeDb     = 15.0f;
-    inline constexpr float moderateScale   = 1.0f / 3.0f;
+    /** The low two bands shelve low, the high two high. */
+    inline constexpr bool shelvesLow (int band) noexcept { return band < 2; }
 
-    /** Bell widths. Normal is the broad curve of an inductor and capacitor;
-        HI-Q is a tighter one. */
-    inline constexpr float bellQ  = 0.7f;
-    inline constexpr float highQ  = 2.0f;
-    inline constexpr float shelfQ = 0.7071f;
+    /** The gain knob moves in 120 steps either way of 0. In the 15 dB gain
+        mode a step is 0.25 dB; in the 5 dB mode the same step is a third of
+        that, about 0.083 dB, as the hardware's manual gives. The parameter
+        holds the 15 dB reading. */
+    inline constexpr float wideRangeDb   = 15.0f;
+    inline constexpr float moderateScale = 1.0f / 3.0f;
 
-    /** Proportional Q: the bell narrows as it is pushed further, reaching its
-        nominal Q at 10 dB. At small gains it is broad, so small moves stay
-        gentle; constant Q keeps one width at every gain. */
-    inline float proportionalQ (float nominal, float gainDb) noexcept
+    /** The Q knob of a bell: 0.5, the widest, to 4.0, as the manual gives for
+        constant Q. */
+    inline constexpr float minQ = 0.5f, maxQ = 4.0f, defaultQ = 1.0f;
+
+    /** Proportional Q: the bell narrows as it is pushed further, reaching the
+        knob's Q at 10 dB. At small gains it is broad, so small moves stay
+        gentle; constant Q keeps the knob's width at every gain. */
+    inline float proportionalQ (float knobQ, float gainDb) noexcept
     {
         const auto amount = std::min (std::abs (gainDb), wideRangeDb);
-        return nominal * (0.4f + 0.06f * amount);
+        return knobQ * (0.4f + 0.06f * amount);
+    }
+
+    /** The Q knob on a shelf sets how sharp its corner is: from a gentle
+        slope (0.5) to a corner with a small bump either side of it (1.4).
+        The Q mode does not touch the shelf, as on the hardware. */
+    inline float shelfQFor (float knobQ) noexcept
+    {
+        const auto t = std::log (std::clamp (knobQ, minQ, maxQ) / minQ) / std::log (maxQ / minQ);
+        return 0.5f + 0.9f * t;
+    }
+
+    /** Bandwidth in octaves of a bell of this Q, between its half gain
+        points. */
+    inline float octavesFor (float q) noexcept
+    {
+        return 2.0f / std::log (2.0f) * std::asinh (1.0f / (2.0f * q));
     }
 
     // -----------------------------------------------------------------------
@@ -139,7 +157,7 @@ namespace eq
     {
         struct Band
         {
-            float hz { 1000.0f }, db { 0.0f }, q { bellQ };
+            float hz { 1000.0f }, db { 0.0f }, q { defaultQ };
             Shape shape { Shape::bell };
             bool in { true };
         };
@@ -221,6 +239,10 @@ namespace eq
                 redesign();
             }
 
+            for (size_t b = 0; b < bands.size(); ++b)
+                if (target.bands[b].in || std::abs (current.db[b]) > 1.0e-4f)
+                    x = bands[b].process (x);
+
             if (target.highPassIn)
             {
                 x = highPass[0].process (x);
@@ -234,10 +256,6 @@ namespace eq
                 if (target.lowPassSteep)
                     x = lowPass[1].process (x);
             }
-
-            for (size_t b = 0; b < bands.size(); ++b)
-                if (target.bands[b].in || std::abs (current.db[b]) > 1.0e-4f)
-                    x = bands[b].process (x);
 
             return x;
         }

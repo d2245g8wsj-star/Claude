@@ -165,11 +165,15 @@ separated by spaces. It deletes each release together with its tag.
 
 ### Anchor
 - **0.3.0** - First public beta. A VCA bus compressor beside Beacon, in the
-  same black panel: stepped ratio, attack and release with AUTO, sidechain
-  high passes and tilts, an external key, THD, mix and the RED/GREEN output.
+  same black panel, after the hardware's manual: stepped ratio, eight attack
+  and eight release positions with AUTO, sidechain high passes and tilts, an
+  external key, THD on the wet path, mix, mute, and the RED/GREEN output
+  with a make up for each.
 
 ### Lantern
 - **0.3.0** - First public beta. A four band passive tube equaliser beside
-  Beacon: twelve positions a band, proportional or constant Q, two gain
-  ranges, active high and low pass, THD and the RED/GREEN output, with the
-  response drawn in the centre.
+  Beacon, after the hardware's manual: twelve positions a band with Q and
+  bell or shelf on every band, proportional or constant Q, 5 or 15 dB gain
+  modes, band focus listen, active high and low pass after the passive
+  section, THD ahead of it, mute, and the RED/GREEN output with a level for
+  each, with the response drawn in the centre.

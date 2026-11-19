@@ -11,12 +11,17 @@ namespace
         return (value > 0.05f ? "+" : "") + juce::String (value, 1) + " dBu";
     }
 
-    juce::String trimStepString (float value, int)
+    juce::String makeUpString (float value, int)
     {
-        if (std::abs (value) < 0.01f)
-            return "0.00 dB";
+        return (value > 0.004f ? "+" : "") + juce::String (value, 2) + " dB";
+    }
 
-        return (value > 0.0f ? "+" : "") + juce::String (value, 2) + " dB";
+    juce::String thdString (float value, int)
+    {
+        if (value < 0.05f)
+            return "0 % (out)";
+
+        return juce::String (juce::roundToInt (value)) + " % (" + juce::String (range::thdPercent (value), 2) + " % THD)";
     }
 
     juce::String padString (float value, int)
@@ -46,15 +51,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnchorProcessor::createParam
                                            static_cast<int> (ChannelMode::stereo)));
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::dualSplit, 1 }, "Dual Split", false));
 
-    const juce::NormalisableRange<float> trimRange (-range::trimDb, range::trimDb, 0.25f);
+    const juce::NormalisableRange<float> makeUpRange (0.0f, range::makeUpMax, 0.25f);
 
     for (const auto isSide : { false, true })
     {
         const auto id   = [isSide] (const char* name) { return juce::ParameterID { isSide ? pid::side (name) : juce::String (name), 1 }; };
         const auto name = [isSide] (const char* text) { return juce::String (isSide ? "Side " : "") + text; };
 
-        layout.add (std::make_unique<FloatP> (id (pid::input), name ("Input"), trimRange, 0.0f,
-                                              Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
         layout.add (std::make_unique<FloatP> (id (pid::threshold), name ("Threshold"),
                                               juce::NormalisableRange<float> (range::thresholdMin, range::thresholdMax, 0.1f),
                                               4.0f,
@@ -62,22 +65,24 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnchorProcessor::createParam
         layout.add (std::make_unique<ChoiceP> (id (pid::ratio), name ("Ratio"),
                                                juce::StringArray { "1.5:1", "2:1", "4:1", "10:1", "INF" }, 2));
         layout.add (std::make_unique<ChoiceP> (id (pid::attack), name ("Attack"),
-                                               juce::StringArray { "0.1 ms", "0.3 ms", "1 ms", "3 ms", "10 ms", "30 ms" }, 4));
+                                               juce::StringArray { "0.1 ms", "0.3 ms", "1 ms", "3 ms", "5 ms", "10 ms", "15 ms", "30 ms" }, 5));
         layout.add (std::make_unique<ChoiceP> (id (pid::release), name ("Release"),
-                                               juce::StringArray { "0.1 s", "0.3 s", "0.6 s", "0.9 s", "1.2 s", "Auto" }, vca::autoRelease));
+                                               juce::StringArray { "50 ms", "0.1 s", "0.3 s", "0.5 s", "0.6 s", "0.9 s", "1.2 s", "Auto" }, vca::autoRelease));
         layout.add (std::make_unique<BoolP>   (id (pid::feedback), name ("Feedback"), false));
         layout.add (std::make_unique<ChoiceP> (id (pid::scFilter), name ("SC Filter"),
                                                juce::StringArray { "Off", "60 Hz", "90 Hz", "150 Hz", "T1", "T2" }, 0));
         layout.add (std::make_unique<BoolP>   (id (pid::listen), name ("SC Listen"), false));
         layout.add (std::make_unique<FloatP>  (id (pid::thd), name ("THD"),
-                                               juce::NormalisableRange<float> (0.0f, range::thdMax, 0.01f, 0.6f), 0.0f,
-                                               Attr().withLabel ("%").withStringFromValueFunction (percentString)));
+                                               juce::NormalisableRange<float> (0.0f, range::thdMax, 1.0f), 0.0f,
+                                               Attr().withLabel ("%").withStringFromValueFunction (thdString)));
         layout.add (std::make_unique<FloatP>  (id (pid::mix), name ("Mix"),
                                                juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 100.0f,
                                                Attr().withLabel ("%").withStringFromValueFunction (percentString)));
-        layout.add (std::make_unique<FloatP>  (id (pid::output), name ("Output"), trimRange, 0.0f,
-                                               Attr().withLabel ("dB").withStringFromValueFunction (trimStepString)));
-        layout.add (std::make_unique<BoolP>   (id (pid::dynLink), name ("Dynamic Link"), false));
+        layout.add (std::make_unique<FloatP>  (id (pid::makeUp), name ("Make Up"), makeUpRange, 0.0f,
+                                               Attr().withLabel ("dB").withStringFromValueFunction (makeUpString)));
+        layout.add (std::make_unique<FloatP>  (id (pid::makeUpIron), name ("Make Up Iron"), makeUpRange, 0.0f,
+                                               Attr().withLabel ("dB").withStringFromValueFunction (makeUpString)));
+        layout.add (std::make_unique<BoolP>   (id (pid::mute), name ("Mute"), false));
     }
 
     layout.add (std::make_unique<BoolP> (juce::ParameterID { pid::external, 1 }, "External Sidechain", false));
@@ -105,7 +110,6 @@ AnchorProcessor::AnchorProcessor()
         auto& s = isSide ? sideParams : params;
         const auto id = [isSide] (const char* name) { return isSide ? pid::side (name) : juce::String (name); };
 
-        s.input     = findParameter<juce::AudioParameterFloat>  (id (pid::input));
         s.threshold = findParameter<juce::AudioParameterFloat>  (id (pid::threshold));
         s.ratio     = findParameter<juce::AudioParameterChoice> (id (pid::ratio));
         s.attack    = findParameter<juce::AudioParameterChoice> (id (pid::attack));
@@ -115,7 +119,9 @@ AnchorProcessor::AnchorProcessor()
         s.listen    = findParameter<juce::AudioParameterBool>   (id (pid::listen));
         s.thd       = findParameter<juce::AudioParameterFloat>  (id (pid::thd));
         s.mix       = findParameter<juce::AudioParameterFloat>  (id (pid::mix));
-        s.output    = findParameter<juce::AudioParameterFloat>  (id (pid::output));
+        s.makeUp     = findParameter<juce::AudioParameterFloat> (id (pid::makeUp));
+        s.makeUpIron = findParameter<juce::AudioParameterFloat> (id (pid::makeUpIron));
+        s.mute       = findParameter<juce::AudioParameterBool>  (id (pid::mute));
     }
 
     externalParam   = findParameter<juce::AudioParameterBool>   (pid::external);
@@ -157,8 +163,8 @@ void AnchorProcessor::ChannelPath::prepare (double innerRate, double hostRate)
     cell.prepare (innerRate);
     outputStage.prepare (innerRate);
 
-    inputGain  .reset (innerRate, 0.02);
     outputGain .reset (innerRate, 0.02);
+    audible    .reset (innerRate, 0.01);
     thresholdDb.reset (innerRate, 0.02);
     thdDrive   .reset (innerRate, 0.02);
     mix        .reset (innerRate, 0.02);
@@ -183,10 +189,10 @@ void AnchorProcessor::ChannelPath::reset()
 
 void AnchorProcessor::ChannelPath::setTargets (const Parameters& p, bool ironOn, float ironPadDb, bool engagedNow)
 {
-    inputGain  .setTargetValue (juce::Decibels::decibelsToGain (p.input ->get()));
-    outputGain .setTargetValue (juce::Decibels::decibelsToGain (p.output->get()));
+    outputGain .setTargetValue (juce::Decibels::decibelsToGain ((ironOn ? p.makeUpIron : p.makeUp)->get()));
+    audible    .setTargetValue (p.mute->get() ? 0.0f : 1.0f);
     thresholdDb.setTargetValue (range::thresholdDbfs (p.threshold->get()));
-    thdDrive   .setTargetValue (tube::ThdCalibration::get().driveFor (p.thd->get()));
+    thdDrive   .setTargetValue (tube::ThdCalibration::get().driveFor (range::thdPercent (p.thd->get())));
     mix        .setTargetValue (p.mix->get() / 100.0f);
     engaged    .setTargetValue (engagedNow ? 1.0f : 0.0f);
 
@@ -207,10 +213,9 @@ void AnchorProcessor::ChannelPath::setTargets (const Parameters& p, bool ironOn,
 
 void AnchorProcessor::ChannelPath::snapToTargets()
 {
-    for (auto* v : { &inputGain, &outputGain })
-        v->setCurrentAndTargetValue (v->getTargetValue());
+    outputGain.setCurrentAndTargetValue (outputGain.getTargetValue());
 
-    for (auto* v : { &thresholdDb, &thdDrive, &mix, &engaged })
+    for (auto* v : { &thresholdDb, &thdDrive, &mix, &engaged, &audible })
         v->setCurrentAndTargetValue (v->getTargetValue());
 
     outputStage.snapToTargets();
@@ -343,7 +348,7 @@ void AnchorProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
             key = { 0.5f * (key[0] + key[1]), 0.5f * (key[0] - key[1]) };
         }
 
-        // Input trim; the dry half of the mix is taken here, before THD.
+        // The dry half of the mix is the input, taken before THD.
         std::array<float, 2> dryIn {}, x {}, sc {};
 
         for (int ch = 0; ch < numChannels; ++ch)
@@ -351,18 +356,17 @@ void AnchorProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
             auto& path = paths[(size_t) ch];
             const auto c = (size_t) ch;
 
-            const auto gain = path.inputGain.getNextValue();
-            dryIn[c] = raw[c] * gain;
+            dryIn[c] = raw[c];
 
             const auto drive = path.thdDrive.getNextValue();
             drivePeak[c] = juce::jmax (drivePeak[c], std::abs (dryIn[c]) * drive);
             x[c] = path.thdStage.process (dryIn[c], drive);
 
-            // Feed-forward listens to what is coming into the cell (or the
-            // key, trimmed with the input so the threshold means the same);
-            // feedback to what has come out of it.
+            // Feed-forward listens to what is coming into the cell, or the
+            // key; feedback to what has come out of it, as the hardware's
+            // feedback adapter feeds the output back into the key input.
             const auto source = path.feedback && ! useKey ? path.lastWetOutput
-                                                         : (useKey ? key[c] * gain : x[c]);
+                                                         : (useKey ? key[c] : x[c]);
             sc[c] = path.sidechain.process (source);
         }
 
@@ -418,7 +422,8 @@ void AnchorProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
             path.lastWetOutput = y;
 
             const auto wet = path.mix.getNextValue();
-            out[c] = (dryIn[c] + wet * (y - dryIn[c])) * path.outputGain.getNextValue();
+            // Make up after the mix, then the channel's mute.
+            out[c] = (dryIn[c] + wet * (y - dryIn[c])) * path.outputGain.getNextValue() * path.audible.getNextValue();
 
             if (path.listening)
             {

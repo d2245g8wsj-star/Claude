@@ -176,6 +176,15 @@ void testPositions()
         check (std::abs (f.front() - spans[(size_t) b].first) < 0.5f && std::abs (f.back() - spans[(size_t) b].second) < 0.5f,
                "band " + juce::String (b) + " spans the published range");
     }
+
+    // The points the manual draws its curves at are positions.
+    const auto has = [] (int b, float hz)
+    {
+        for (auto f : lantern::eq::frequencies[(size_t) b])
+            if (std::abs (f - hz) < 0.5f) return true;
+        return false;
+    };
+    check (has (0, 150.0f) && has (1, 1200.0f) && has (3, 10000.0f), "150 Hz (LF), 1.2 kHz (LMF) and 10 kHz (HF) are positions");
 }
 
 void testSections()
@@ -288,20 +297,40 @@ void testBands()
                                                        + juce::String (hz) + " Hz, got " + juce::String (g, 2));
             }
 
-    // The outer bands are shelves unless BELL is in.
+    // Every band shelves: the low two low, the high two high.
     {
         Settings s { { band (0, "freq"), (float) positionOf (0, 150.0f) }, { band (0, "gain"), 10.0f } };
         const auto low = gainAt (s, 25.0), high = gainAt (s, 5000.0);
         std::cout << "  LF shelf +10 at 150 Hz: " << low << " dB at 25 Hz, " << high << " dB at 5 kHz" << std::endl;
         check (std::abs (low - 10.0) < 0.6 && std::abs (high) < 0.1, "LF shelf lifts the bottom and leaves the top");
 
-        s[band (0, "bell")] = 1.0f;
-        check (std::abs (gainAt (s, 150.0) - 10.0) < 0.15 && gainAt (s, 25.0) < 5.0, "LF with BELL in is a bell");
+        s[band (0, "shelf")] = 0.0f;
+        check (std::abs (gainAt (s, 150.0) - 10.0) < 0.15 && gainAt (s, 25.0) < 5.0, "LF with SHELF out is a bell");
     }
     {
-        Settings s { { band (3, "freq"), (float) positionOf (3, 2200.0f) }, { band (3, "gain"), -8.0f } };
+        Settings s { { band (1, "freq"), (float) positionOf (1, 290.0f) }, { band (1, "gain"), 6.0f }, { band (1, "shelf"), 1.0f } };
+        check (std::abs (gainAt (s, 30.0) - 6.0) < 0.6 && std::abs (gainAt (s, 8000.0)) < 0.1, "LMF shelves low");
+    }
+    {
+        Settings s { { band (2, "freq"), (float) positionOf (2, 2800.0f) }, { band (2, "gain"), 6.0f }, { band (2, "shelf"), 1.0f } };
+        check (std::abs (gainAt (s, 100.0)) < 0.1 && std::abs (gainAt (s, 18000.0) - 6.0) < 0.6, "HMF shelves high");
+    }
+    {
+        Settings s { { band (3, "freq"), (float) positionOf (3, 2800.0f) }, { band (3, "gain"), -8.0f } };
         const auto low = gainAt (s, 100.0), high = gainAt (s, 16000.0);
         check (std::abs (low) < 0.1 && std::abs (high + 8.0) < 0.6, "HF shelf cuts the top and leaves the bottom");
+    }
+
+    // The Q knob on a shelf sharpens its corner: an octave above a low shelf
+    // keeps more of the lift at a high Q.
+    {
+        Settings s { { band (0, "freq"), (float) positionOf (0, 150.0f) }, { band (0, "gain"), 10.0f } };
+        s[band (0, "q")] = lantern::eq::minQ;
+        const auto gentle = gainAt (s, 75.0);
+        s[band (0, "q")] = lantern::eq::maxQ;
+        const auto sharp = gainAt (s, 75.0);
+        std::cout << "  LF shelf +10 at 150 Hz, at 75 Hz: Q min " << gentle << " dB, Q max " << sharp << " dB" << std::endl;
+        check (sharp > gentle + 0.5, "the Q knob shapes the shelf's corner");
     }
 
     // RANGE: moderate makes the same knob worth a third.
@@ -312,7 +341,8 @@ void testBands()
         check (std::abs (g - 4.0) < 0.1, "moderate range: +12 on the knob is +4 dB, got " + juce::String (g, 3));
     }
 
-    // Q: proportional narrows with gain, constant does not; HI-Q is narrower.
+    // Q: proportional narrows with gain, constant does not; the knob spans
+    // 0.5 to 4.
     {
         const auto widthOf = [] (const lantern::eq::Settings::Band& b)
         {
@@ -335,17 +365,19 @@ void testBands()
             return b;
         };
 
-        const auto prop3  = widthOf (bandWith (3.0f,  lantern::eq::proportionalQ (lantern::eq::bellQ, 3.0f)));
-        const auto prop12 = widthOf (bandWith (12.0f, lantern::eq::proportionalQ (lantern::eq::bellQ, 12.0f)));
-        const auto con3   = widthOf (bandWith (3.0f,  lantern::eq::bellQ));
-        const auto con12  = widthOf (bandWith (12.0f, lantern::eq::bellQ));
-        const auto hiq    = widthOf (bandWith (12.0f, lantern::eq::highQ));
+        const auto q = lantern::eq::defaultQ;
+        const auto prop3  = widthOf (bandWith (3.0f,  lantern::eq::proportionalQ (q, 3.0f)));
+        const auto prop12 = widthOf (bandWith (12.0f, lantern::eq::proportionalQ (q, 12.0f)));
+        const auto con3   = widthOf (bandWith (3.0f,  q));
+        const auto con12  = widthOf (bandWith (12.0f, q));
+        const auto widest = widthOf (bandWith (12.0f, lantern::eq::minQ));
+        const auto narrow = widthOf (bandWith (12.0f, lantern::eq::maxQ));
 
         std::cout << "  width at half the boost, octaves: proportional " << prop3 << " (3 dB) / " << prop12
-                  << " (12 dB); constant " << con3 << " / " << con12 << "; HI-Q " << hiq << std::endl;
+                  << " (12 dB); constant " << con3 << " / " << con12 << "; Q 0.5 " << widest << ", Q 4 " << narrow << std::endl;
         check (prop3 > 1.5 * prop12, "proportional Q: a small boost is broader than a large one");
         check (std::abs (con3 - con12) < 0.25 * con12, "constant Q: about one width at every gain");
-        check (hiq < 0.6 * con12, "HI-Q is narrower");
+        check (widest > 4.0 * narrow, "the Q knob runs from broad to narrow");
 
         // And the processor applies the mode.
         Settings s { { band (1, "freq"), (float) positionOf (1, 1200.0f) }, { band (1, "gain"), 3.0f } };
@@ -353,6 +385,18 @@ void testBands()
         s[lantern::pid::qMode] = (float) lantern::QMode::constant;
         const auto constOff = gainAt (s, 600.0);
         check (propOff > constOff + 0.2, "Q MODE reaches the audio: a small proportional boost spreads further");
+    }
+
+    // LISTEN: the filters close in around the band.
+    {
+        Settings s { { band (1, "freq"), (float) positionOf (1, 1200.0f) }, { lantern::pid::listen, 2.0f } };
+        const auto centre = gainAt (s, 1200.0), below = gainAt (s, 150.0), above = gainAt (s, 10000.0);
+        std::cout << "  listen on LMF at 1.2 kHz: " << centre << " dB there, " << below << " at 150 Hz, " << above << " at 10 kHz" << std::endl;
+        check (centre > -7.0 && below < -40.0 && above < -40.0, "listen isolates the band's region");
+
+        s[band (1, "q")] = lantern::eq::maxQ;
+        check (gainAt (s, 1500.0) < gainAt ({ { band (1, "freq"), (float) positionOf (1, 1200.0f) }, { lantern::pid::listen, 2.0f } }, 1500.0) - 3.0,
+               "and narrows with the band's Q");
     }
 }
 
@@ -410,14 +454,36 @@ void testColour()
     {
         Settings red { { lantern::pid::iron, 1.0f } };
         auto plain = render (red, tone (60.0, 0.3f), 48000);
-        red[lantern::pid::output]  = 10.0f;
+        red[lantern::pid::outputIron] = 10.0f;
         red[lantern::pid::ironPad] = 10.0f;
         auto driven = render (red, tone (60.0, 0.3f), 48000);
         const auto level = db (amplitudeAt (driven, 0, 60.0, 24000, 24000) / amplitudeAt (plain, 0, 60.0, 24000, 24000));
         check (std::abs (level) < 1.0 && thdOf (driven, 0, 60.0, 24000, 24000) > 3.0 * thdOf (plain, 0, 60.0, 24000, 24000),
                "Output up into the PAD drives the iron harder at the same level");
 
-        check (std::abs (gainAt ({ { lantern::pid::ironPad, 10.0f } }, 1000.0)) < 0.02, "the PAD does nothing in GREEN");
+        check (std::abs (gainAt ({ { lantern::pid::ironPad, 10.0f }, { lantern::pid::outputIron, 9.0f } }, 1000.0)) < 0.02,
+               "the PAD and the RED output do nothing in GREEN");
+        check (std::abs (gainAt ({ { lantern::pid::output, -6.0f }, { lantern::pid::outputIron, 9.0f } }, 1000.0) + 6.0) < 0.02,
+               "GREEN takes its own output level");
+    }
+
+    // THD comes first: a cut after it removes the harmonics it made.
+    {
+        const Settings driven { { lantern::pid::thd, 100.0f } };
+        auto plain = render (driven, tone (1000.0, nominal), 48000);
+        auto s = driven;
+        s[band (3, "freq")] = (float) positionOf (3, 1800.0f);
+        s[band (3, "gain")] = -15.0f;
+        auto cut = render (s, tone (1000.0, nominal), 48000);
+        const auto before = db (amplitudeAt (plain, 0, 3000.0, 24000, 24000)), after = db (amplitudeAt (cut, 0, 3000.0, 24000, 24000));
+        std::cout << "  3rd harmonic of 1 kHz with THD 100: " << before << " dB, with a 15 dB HF cut " << after << " dB" << std::endl;
+        check (after < before - 8.0, "the equaliser works on what THD made");
+    }
+
+    // Mute.
+    {
+        auto out = render ({ { lantern::pid::mute, 1.0f } }, tone (1000.0, 0.2f), 24000);
+        check (out.getMagnitude (0, 12000, 12000) < 1.0e-6f, "mute silences the channel");
     }
 }
 
@@ -517,7 +583,7 @@ void testRobustness()
 
     Settings extreme { { lantern::pid::hpfIn, 1.0f }, { lantern::pid::hpf, 300.0f }, { lantern::pid::hpfSteep, 1.0f },
                        { lantern::pid::lpfIn, 1.0f }, { lantern::pid::lpf, 6000.0f }, { lantern::pid::lpfSteep, 1.0f },
-                       { lantern::pid::thd, 100.0f }, { lantern::pid::output, 15.0f }, { lantern::pid::iron, 1.0f } };
+                       { lantern::pid::thd, 100.0f }, { lantern::pid::outputIron, 15.0f }, { lantern::pid::iron, 1.0f } };
     for (int b = 0; b < 4; ++b)
     {
         extreme[band (b, "gain")] = 15.0f;
@@ -581,7 +647,7 @@ void testState()
     section ("State survives a save");
 
     lantern::LanternProcessor a;
-    a.apvts.getParameter (band (2, "gain"))->setValueNotifyingHost (0.81f);
+    a.apvts.getParameter (band (2, "gain"))->setValueNotifyingHost (0.8f);
     a.apvts.getParameter (band (3, "freq"))->setValueNotifyingHost (1.0f);
     a.apvts.getParameter (lantern::pid::gainRange)->setValueNotifyingHost (0.0f);
 
@@ -591,7 +657,7 @@ void testState()
     lantern::LanternProcessor b;
     b.setStateInformation (state.getData(), (int) state.getSize());
 
-    check (std::abs (b.apvts.getParameter (band (2, "gain"))->getValue() - 0.81f) < 1.0e-3f, "gain restored");
+    check (std::abs (b.apvts.getParameter (band (2, "gain"))->getValue() - 0.8f) < 1.0e-3f, "gain restored");
     check (b.apvts.getParameter (band (3, "freq"))->getValue() > 0.99f, "frequency restored");
     check (b.apvts.getParameter (lantern::pid::gainRange)->getValue() < 0.01f, "range restored");
 }

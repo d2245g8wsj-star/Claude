@@ -41,11 +41,11 @@ int main (int argc, char* argv[])
     set (anchor::pid::threshold, -8.0f);
     set (anchor::pid::ratio,     2.0f);    // 4:1
     set (anchor::pid::attack,    3.0f);    // 3 ms
-    set (anchor::pid::release,   5.0f);    // auto
+    set (anchor::pid::release,   7.0f);    // auto
     set (anchor::pid::scFilter,  2.0f);    // 90 Hz
-    set (anchor::pid::thd,       1.5f);
+    set (anchor::pid::thd,       35.0f);
     set (anchor::pid::mix,       75.0f);
-    set (anchor::pid::output,    4.0f);
+    set (anchor::pid::makeUpIron, 4.0f);
     set (anchor::pid::iron,      1.0f);
     set (anchor::pid::ironPad,   2.0f);
 
@@ -55,8 +55,8 @@ int main (int argc, char* argv[])
         set (anchor::pid::dualSplit, view == "dual" ? 1.0f : 0.0f);
         set (anchor::pid::side (anchor::pid::threshold), -2.0f);
         set (anchor::pid::side (anchor::pid::ratio),     1.0f);
-        set (anchor::pid::side (anchor::pid::attack),    4.0f);
-        set (anchor::pid::side (anchor::pid::release),   2.0f);
+        set (anchor::pid::side (anchor::pid::attack),    5.0f);
+        set (anchor::pid::side (anchor::pid::release),   3.0f);
         set (anchor::pid::side (anchor::pid::scFilter),  5.0f);
         set (anchor::pid::side (anchor::pid::mix),       100.0f);
         set (anchor::pid::side (anchor::pid::feedback),  1.0f);

@@ -23,18 +23,27 @@ namespace pid
     inline constexpr const char* lpfIn     = "lpf_in";
     inline constexpr const char* lpfSteep  = "lpf_24";
 
-    /** The four bands, low to high. Each has <band>_freq, _gain and _in;
-        the outer two a _bell switch (off is a shelf), the inner two _hiq. */
+    /** The four bands, low to high. Each has <band>_freq, _gain, _q, _in
+        and _shelf (off is a bell). */
     inline constexpr std::array<const char*, eq::numBands> bands { "lf", "lmf", "hmf", "hf" };
 
     inline juce::String band (int index, const char* what) { return juce::String (bands[(size_t) index]) + "_" + what; }
-    inline bool isOuter (int index) noexcept { return index == 0 || index == eq::numBands - 1; }
 
-    inline constexpr const char* thd       = "thd";
-    inline constexpr const char* output    = "output";
+    inline constexpr const char* thd        = "thd";
 
+    /** Output level. The unit keeps one value for each output stage. */
+    inline constexpr const char* output     = "output";
+    inline constexpr const char* outputIron = "output_iron";
+
+    /** Per channel, as on the unit: the 5 or 15 dB gain mode and PROP. Q. */
     inline constexpr const char* gainRange = "range";
     inline constexpr const char* qMode     = "q_mode";
+
+    inline constexpr const char* mute      = "mute";
+
+    /** Band focus: the high and low pass close in around one band so only
+        its region is heard. 0 is off, 1 to 4 the bands. */
+    inline constexpr const char* listen    = "listen";
 
     inline constexpr const char* iron      = "iron";
     inline constexpr const char* ironPad   = "iron_pad";
@@ -49,27 +58,24 @@ namespace pid
     /** Every setting a channel panel has its own of. */
     inline juce::StringArray perChannel()
     {
-        juce::StringArray ids { hpf, hpfIn, hpfSteep, lpf, lpfIn, lpfSteep, thd, output };
+        juce::StringArray ids { hpf, hpfIn, hpfSteep, lpf, lpfIn, lpfSteep, thd, output, outputIron,
+                                gainRange, qMode, mute, listen };
         for (int b = 0; b < eq::numBands; ++b)
-        {
-            ids.add (band (b, "freq"));
-            ids.add (band (b, "gain"));
-            ids.add (band (b, "in"));
-            ids.add (band (b, isOuter (b) ? "bell" : "hiq"));
-        }
+            for (auto* what : { "freq", "gain", "q", "in", "shelf" })
+                ids.add (band (b, what));
         return ids;
     }
 }
 
 enum class ChannelMode { dualMono = 0, stereo, midSide };
 enum class GainRange   { moderate = 0, wide };
-enum class QMode       { proportional = 0, constant };
+enum class QMode       { constant = 0, proportional };   ///< the key lights for proportional, as PROP. Q does
 
 namespace range
 {
     inline constexpr float trimDb     = 15.0f;
     inline constexpr float hpfMin     = 12.0f,   hpfMax = 300.0f;
-    inline constexpr float lpfMin     = 6000.0f, lpfMax = 50000.0f;
+    inline constexpr float lpfMin     = 8000.0f, lpfMax = 50000.0f;
     inline constexpr float thdMax     = 100.0f;      ///< steps
     inline constexpr float thdTopPercent = 8.0f;     ///< THD at +4 dBu with the knob fully up
     inline constexpr float ironPadMax = OutputStage::maxPadDb;
@@ -134,11 +140,12 @@ private:
         juce::AudioParameterBool*  hpfIn { nullptr }, *hpfSteep { nullptr }, *lpfIn { nullptr }, *lpfSteep { nullptr };
 
         std::array<juce::AudioParameterChoice*, eq::numBands> freq {};
-        std::array<juce::AudioParameterFloat*,  eq::numBands> gain {};
-        std::array<juce::AudioParameterBool*,   eq::numBands> in {};
-        std::array<juce::AudioParameterBool*,   eq::numBands> variant {};   ///< bell (outer) or HI-Q (inner)
+        std::array<juce::AudioParameterFloat*,  eq::numBands> gain {}, q {};
+        std::array<juce::AudioParameterBool*,   eq::numBands> in {}, shelf {};
 
-        juce::AudioParameterFloat* thd { nullptr }, *output { nullptr };
+        juce::AudioParameterFloat* thd { nullptr }, *output { nullptr }, *outputIron { nullptr };
+        juce::AudioParameterChoice* gainRange { nullptr }, *qMode { nullptr }, *listen { nullptr };
+        juce::AudioParameterBool* mute { nullptr };
     };
 
     struct ChannelPath
@@ -151,7 +158,7 @@ private:
         using Linear         = juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear>;
 
         Multiplicative outputGain { 1.0f };
-        Linear thdDrive { 0.0f }, engaged { 1.0f };
+        Linear thdDrive { 0.0f }, engaged { 1.0f }, audible { 1.0f };
 
         void prepare (double innerRate, double hostRate);
         void reset();
@@ -166,8 +173,6 @@ private:
     }
 
     Parameters params, sideParams;
-    juce::AudioParameterChoice* rangeParam      { nullptr };
-    juce::AudioParameterChoice* qModeParam      { nullptr };
     juce::AudioParameterBool*   ironParam       { nullptr };
     juce::AudioParameterFloat*  ironPadParam    { nullptr };
     juce::AudioParameterChoice* modeParam       { nullptr };

@@ -16,7 +16,6 @@ namespace anchor
     the side_ prefix, drives the right channel or the side. */
 namespace pid
 {
-    inline constexpr const char* input     = "input";
     inline constexpr const char* threshold = "threshold";
     inline constexpr const char* ratio     = "ratio";
     inline constexpr const char* attack    = "attack";
@@ -25,9 +24,14 @@ namespace pid
     inline constexpr const char* scFilter  = "sc_filter";
     inline constexpr const char* listen    = "sc_listen";
     inline constexpr const char* thd       = "thd";
+    inline constexpr const char* mute      = "mute";
     inline constexpr const char* mix       = "mix";
-    inline constexpr const char* output    = "output";
-    inline constexpr const char* dynLink   = "dynamic_link";
+
+    /** Make up gain. The unit keeps one value for each output stage, so
+        switching between GREEN and RED does not jump in level by whatever
+        the iron was being driven with. */
+    inline constexpr const char* makeUp     = "make_up";
+    inline constexpr const char* makeUpIron = "make_up_iron";
 
     /** The detectors listen to the external sidechain input instead of the
         programme. One switch for the unit: there is one sidechain input. */
@@ -51,11 +55,20 @@ enum class ChannelMode { dualMono = 0, stereo, midSide };
 
 namespace range
 {
-    inline constexpr float trimDb       = 15.0f;    ///< input and output, either way
+    inline constexpr float makeUpMax    = 20.0f;    ///< dB, both output stages
     inline constexpr float thresholdMin = -20.0f;   ///< dBu
     inline constexpr float thresholdMax = 20.0f;    ///< dBu
-    inline constexpr float thdMax       = 8.0f;     ///< %
+    inline constexpr float thdMax       = 100.0f;   ///< the knob, %
+    inline constexpr float thdTopPercent = 8.0f;    ///< THD at +4 dBu with the knob fully up
     inline constexpr float ironPadMax   = OutputStage::maxPadDb;
+
+    /** The THD knob reads 0 to 100 %; the unit's specification gives 0 to 8 %
+        of distortion. A square law joins the two: 25 is 0.5 %, 50 is 2 %. */
+    inline float thdPercent (float knob) noexcept
+    {
+        const auto t = juce::jlimit (0.0f, 1.0f, knob / thdMax);
+        return thdTopPercent * t * t;
+    }
 
     inline float thresholdDbfs (float dbu) noexcept { return dbu + level::dbfsAtZeroDbu; }
 }
@@ -105,7 +118,6 @@ private:
 
     struct Parameters
     {
-        juce::AudioParameterFloat*  input     { nullptr };
         juce::AudioParameterFloat*  threshold { nullptr };
         juce::AudioParameterChoice* ratio     { nullptr };
         juce::AudioParameterChoice* attack    { nullptr };
@@ -115,7 +127,9 @@ private:
         juce::AudioParameterBool*   listen    { nullptr };
         juce::AudioParameterFloat*  thd       { nullptr };
         juce::AudioParameterFloat*  mix       { nullptr };
-        juce::AudioParameterFloat*  output    { nullptr };
+        juce::AudioParameterBool*   mute      { nullptr };
+        juce::AudioParameterFloat*  makeUp     { nullptr };
+        juce::AudioParameterFloat*  makeUpIron { nullptr };
     };
 
     struct ChannelPath
@@ -129,8 +143,8 @@ private:
         using Multiplicative = juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative>;
         using Linear         = juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear>;
 
-        Multiplicative inputGain { 1.0f }, outputGain { 1.0f };
-        Linear thresholdDb { 0.0f }, thdDrive { 0.0f }, mix { 1.0f }, engaged { 1.0f };
+        Multiplicative outputGain { 1.0f };
+        Linear thresholdDb { 0.0f }, thdDrive { 0.0f }, mix { 1.0f }, engaged { 1.0f }, audible { 1.0f };
 
         float slope { 0.75f };
         bool feedback { false }, listening { false };

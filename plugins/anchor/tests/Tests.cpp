@@ -257,7 +257,7 @@ void testCurve()
         for (int r = 0; r < 5; ++r)
         {
             auto s = clean ({ { anchor::pid::threshold, th (-30.0f) }, { anchor::pid::ratio, (float) r },
-                              { anchor::pid::attack, 2.0f }, { anchor::pid::release, 1.0f },
+                              { anchor::pid::attack, 2.0f }, { anchor::pid::release, 2.0f },
                               { anchor::pid::feedback, feedback ? 1.0f : 0.0f } });
             const auto gr = steadyReduction (s, -10.0f);
             const auto expected = 20.0 * anchor::vca::slopeFor (r);
@@ -309,37 +309,51 @@ void testTiming()
 
     const auto loud = 0.5f;
 
-    // Attack: time to half the final reduction scales with the switch.
+    // Attack: time to half the final reduction scales with the switch, all
+    // eight positions.
     {
-        std::map<int, int> times;
-        for (int a : { 2, 3, 4, 5 })   // 1, 3, 10, 30 ms
+        std::vector<int> times;
+        for (int a = 0; a < (int) anchor::vca::attacks.size(); ++a)
         {
             auto s = clean ({ { anchor::pid::threshold, th (-30.0f) }, { anchor::pid::attack, (float) a },
-                              { anchor::pid::release, 4.0f } });
+                              { anchor::pid::release, 6.0f } });
             const auto trace = reductionTrace (s, burst (loud, 100, 2000), 800);
-            times[a] = halfwayTime (trace, 100, 700);
+            times.push_back (halfwayTime (trace, 100, 700));
         }
 
-        std::cout << "  attack to half: 1 ms " << times[2] << ", 3 ms " << times[3] << ", 10 ms " << times[4]
-                  << ", 30 ms " << times[5] << " ms" << std::endl;
-        check (times[2] <= times[3] && times[3] < times[4] && times[4] < times[5], "attack lengthens with the switch");
-        check (times[5] >= 10 && times[5] <= 40, "30 ms attack reaches half way in about 20 ms");
+        juce::String line ("  attack to half, ms:");
+        auto rising = true;
+        for (size_t a = 0; a < times.size(); ++a)
+        {
+            line << " " << juce::String (anchor::vca::attacks[a]) << "->" << times[a];
+            if (a > 0) rising = rising && times[a] >= times[a - 1];
+        }
+        std::cout << line << std::endl;
+        check (rising && times.back() > times[3], "attack lengthens with the switch");
+        check (times.back() >= 10 && times.back() <= 40, "30 ms attack reaches half way in about 20 ms");
     }
 
-    // Release: time to half way back.
+    // Release: time to half way back, every fixed position.
     {
-        std::map<int, int> times;
-        for (int r : { 0, 2, 4 })   // 0.1, 0.6, 1.2 s
+        std::vector<int> times;
+        for (int r = 0; r < anchor::vca::autoRelease; ++r)
         {
             auto s = clean ({ { anchor::pid::threshold, th (-30.0f) }, { anchor::pid::attack, 1.0f },
                               { anchor::pid::release, (float) r } });
             const auto trace = reductionTrace (s, burst (loud, 0, 1000), 5000);
-            times[r] = halfwayTime (trace, 1000, 4999);
+            times.push_back (halfwayTime (trace, 1000, 4999));
         }
 
-        std::cout << "  release to half: 0.1 s " << times[0] << ", 0.6 s " << times[2] << ", 1.2 s " << times[4] << " ms" << std::endl;
-        check (times[0] < times[2] && times[2] < times[4], "release lengthens with the switch");
-        check (std::abs (times[4] - 830) < 150, "1.2 s release halves in about 0.83 s");
+        juce::String line ("  release to half, ms:");
+        auto rising = true;
+        for (size_t r = 0; r < times.size(); ++r)
+        {
+            line << " " << juce::String (anchor::vca::releases[r]) << " s->" << times[r];
+            if (r > 0) rising = rising && times[r] > times[r - 1];
+        }
+        std::cout << line << std::endl;
+        check (rising, "release lengthens with the switch");
+        check (std::abs (times.back() - 830) < 150, "1.2 s release halves in about 0.83 s");
     }
 
     // AUTO: a short burst lets go quickly, a long passage slowly.
@@ -423,17 +437,19 @@ void testColour()
 
     const auto nominal = anchor::level::nominalAmplitude();
 
-    for (float percent : { 0.5f, 2.0f, 8.0f })
+    for (float knob : { 25.0f, 50.0f, 100.0f })
     {
-        auto out = render (clean ({ { anchor::pid::thd, percent } }), tone (1000.0, nominal), 48000);
+        auto out = render (clean ({ { anchor::pid::thd, knob } }), tone (1000.0, nominal), 48000);
         const auto measured = thdOf (out, 0, 1000.0, 24000, 24000);
-        std::cout << "  THD " << percent << " %: measured " << measured << " %" << std::endl;
-        check (std::abs (measured - percent) < 0.15 * percent, "THD knob is calibrated at " + juce::String (percent) + " %");
+        const auto percent = anchor::range::thdPercent (knob);
+        std::cout << "  THD knob " << knob << " %: measured " << measured << " %, reads " << percent << " %" << std::endl;
+        check (std::abs (measured - percent) < 0.15 * percent, "THD knob is calibrated at " + juce::String (knob));
     }
+    check (std::abs (anchor::range::thdPercent (100.0f) - 8.0f) < 1.0e-4f, "the knob's top is the specified 8 %");
 
     // THD is on the wet path only.
     {
-        auto out = render (clean ({ { anchor::pid::thd, 8.0f }, { anchor::pid::mix, 0.0f } }), tone (1000.0, nominal), 48000);
+        auto out = render (clean ({ { anchor::pid::thd, 100.0f }, { anchor::pid::mix, 0.0f } }), tone (1000.0, nominal), 48000);
         check (thdOf (out, 0, 1000.0, 24000, 24000) < 0.004, "mix fully dry has none of the THD");
     }
 
@@ -442,7 +458,7 @@ void testColour()
     {
         auto red = clean ({ { anchor::pid::iron, 1.0f } });
         auto plain = render (red, tone (60.0, 0.3f), 48000);
-        red[anchor::pid::output]  = 10.0f;
+        red[anchor::pid::makeUpIron] = 10.0f;
         red[anchor::pid::ironPad] = 10.0f;
         auto driven = render (red, tone (60.0, 0.3f), 48000);
 
@@ -452,9 +468,9 @@ void testColour()
         check (std::abs (level) < 1.0, "Output +10 into PAD 10 lands at about the same level");
         check (b > 3.0 * a, "and drives the iron harder");
 
-        auto green = clean ({ { anchor::pid::ironPad, 10.0f } });
+        auto green = clean ({ { anchor::pid::ironPad, 10.0f }, { anchor::pid::makeUpIron, 12.0f } });
         auto g = render (green, tone (1000.0, 0.1f), 24000);
-        check (std::abs (db (amplitudeAt (g, 0, 1000.0, 12000, 12000) / 0.1)) < 0.02, "the PAD does nothing in GREEN");
+        check (std::abs (db (amplitudeAt (g, 0, 1000.0, 12000, 12000) / 0.1)) < 0.02, "the PAD and the RED make up do nothing in GREEN");
     }
 }
 
@@ -478,8 +494,8 @@ void testSwitching()
     section ("Switches, modes and links");
 
     const Settings busy {
-        { anchor::pid::input, 6.0f }, { anchor::pid::threshold, th (-30.0f) },
-        { anchor::pid::thd, 4.0f }, { anchor::pid::output, -3.0f }, { anchor::pid::iron, 1.0f }
+        { anchor::pid::threshold, th (-30.0f) }, { anchor::pid::thd, 50.0f },
+        { anchor::pid::makeUp, 3.0f }, { anchor::pid::makeUpIron, 9.0f }, { anchor::pid::iron, 1.0f }
     };
 
     const auto source = tone (220.0, 0.4f);
@@ -497,7 +513,25 @@ void testSwitching()
         s[anchor::pid::iron] = 0.0f;
         auto out = render (s, source, 24000);
         const auto g = db (amplitudeAt (out, 0, 220.0, 12000, 12000) / 0.4);
-        check (std::abs (g - 3.0) < 0.05, "mix at 0 % is the trimmed input, got " + juce::String (g, 3) + " dB");
+        check (std::abs (g - 3.0) < 0.05, "mix at 0 % is the input with the GREEN make up, got " + juce::String (g, 3) + " dB");
+
+        // Each output stage keeps its own make up.
+        s[anchor::pid::iron] = 1.0f;
+        auto red = render (s, source, 24000);
+        const auto r = db (amplitudeAt (red, 0, 220.0, 12000, 12000) / 0.4);
+        check (std::abs (r - 9.0) < 0.3, "RED takes its own make up, got " + juce::String (r, 2) + " dB");
+
+        // Mute silences the channel, and in mid/side only its half.
+        auto muted = s;
+        muted[anchor::pid::mute] = 1.0f;
+        auto silent = render (muted, source, 24000);
+        check (silent.getMagnitude (0, 12000, 12000) < 1.0e-6f, "mute silences the channel");
+
+        auto msMute = clean ({ { anchor::pid::mode, (float) anchor::ChannelMode::midSide },
+                               { anchor::pid::side (anchor::pid::mute), 1.0f } });
+        auto keptMid = render (msMute, source, 24000);
+        check (std::abs (db (amplitudeAt (keptMid, 0, 220.0, 12000, 12000) / 0.4)) < 0.05,
+               "mid/side: muting the side leaves a mono source whole");
     }
 
     {
@@ -617,15 +651,15 @@ void testRobustness()
         for (const auto side : { false, true })
         {
             const auto id = [side] (const char* n) { return side ? anchor::pid::side (n) : juce::String (n); };
-            extreme[id (anchor::pid::input)]     = 15.0f;
             extreme[id (anchor::pid::threshold)] = anchor::range::thresholdMin;
             extreme[id (anchor::pid::ratio)]     = 4.0f;
             extreme[id (anchor::pid::attack)]    = 0.0f;
             extreme[id (anchor::pid::release)]   = 0.0f;
             extreme[id (anchor::pid::feedback)]  = feedback ? 1.0f : 0.0f;
             extreme[id (anchor::pid::scFilter)]  = 5.0f;
-            extreme[id (anchor::pid::thd)]       = 8.0f;
-            extreme[id (anchor::pid::output)]    = 15.0f;
+            extreme[id (anchor::pid::thd)]        = 100.0f;
+            extreme[id (anchor::pid::makeUp)]     = 20.0f;
+            extreme[id (anchor::pid::makeUpIron)] = 20.0f;
         }
         extreme[anchor::pid::iron] = 1.0f;
 

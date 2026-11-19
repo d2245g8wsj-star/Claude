@@ -66,9 +66,10 @@ private:
 
         std::vector<juce::Component*> components();
         void layout (float left);
+        void showStage (bool iron);
 
-        Knob threshold, mix, attack, ratio, release, input, thd, output, scFilter;
-        Key feedback, dynLink, listen;
+        Knob threshold, mix, attack, ratio, release, thd, makeUp, makeUpIron, scFilter;
+        Key feedback, mute, listen;
         indiewave::ui::VuMeter meter;
         indiewave::ui::LedLadder inLadder, outLadder;
 
@@ -105,6 +106,7 @@ private:
 
         float heat[2] {};
         bool open { false };
+        bool shownIron { false };
         int shownMode { -1 };
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)

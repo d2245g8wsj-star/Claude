@@ -213,8 +213,18 @@ def materials():
         M["jewel_" + name + "_p"] = p
 
 
-def lacquer(layer):
-    return printed("lacquer", SPEC["lacquer"], SPEC["ink"], os.path.join(TEX, layer + ".png"), "panel", base_rough=0.34)[0]
+def lacquer(face):
+    m, tex = printed("lacquer", face.get("lacquer", SPEC["lacquer"]), face.get("ink", SPEC["ink"]),
+                     os.path.join(TEX, face["print"] + ".png"), "panel", base_rough=0.34)
+    colour = os.path.join(TEX, face["print"] + "_colour.png")
+    if os.path.exists(colour):
+        # coloured legends: the ink takes its colour from the colour layer
+        nt = m.node_tree
+        ink = [n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"][1]
+        ct = image_node(nt, colour, non_color=False)
+        nt.links.new(tex.inputs[0].links[0].from_socket, ct.inputs[0])
+        nt.links.new(ct.outputs["Color"], ink.inputs["Base Color"])
+    return m
 
 
 # --------------------------------------------------------------------------- geometry helpers
@@ -309,8 +319,9 @@ def sphere(name, r, flat, loc, mat, group):
 # --------------------------------------------------------------------------- the plate and its fixed parts
 def plate(face_name):
     ear_w = wu(SPEC["ears"])
+    face = dict(SPEC["faces"][face_name]); face.setdefault("print", "face_" + face_name)
     p = prism("plate", rrect_pts(W / 100 - 2 * ear_w - 0.02, H / 100 - 0.02, 0.025), -0.14, 0.0,
-              lacquer("face_" + face_name), bevel=0.022, segs=5, group="plate")
+              lacquer(face), bevel=0.022, segs=5, group="plate")
     for side in (-1, 1):
         x = side * (W / 200 - ear_w / 2)
         ear = prism(f"ear{side}", rrect_pts(ear_w, H / 100, 0.02), -0.09, -0.02, SPEC.get("ear_metal", "nickel"),
@@ -332,7 +343,7 @@ def parts(face):
         t = P["type"]
         if t == "badge":
             bx, by, bw, bh = wx(P["cx"]), wy(P["cy"]), wu(P["w"]), wu(P["h"])
-            enamel = printed("enamel_" + P["layer"], "#f4ead2", SPEC["ink"], os.path.join(TEX, P["layer"] + ".png"), "generated",
+            enamel = printed("enamel_" + P["layer"], "#f4ead2", SPEC.get("badge_ink", "#1f2d3d"), os.path.join(TEX, P["layer"] + ".png"), "generated",
                              base_rough=0.12, ink_rough=0.3, coat=1.0)[0]
             prism("badge_back", circle_pts(1, 200, sx=bw / 2 + 0.04, sy=bh / 2 + 0.04), 0.0, 0.03, "chrome", bevel=0.02, segs=5, loc=(bx, by, 0))
             tube("badge_rim", circle_pts(1, 200, sx=bw / 2 - 0.005, sy=bh / 2 - 0.005), 0.045, 0.045, "chrome", loc=(bx, by, 0))

@@ -38,7 +38,7 @@ public:
     juce::Point<int> faceSize (const juce::String& face) const;
     const Sheet* sheet (const juce::String& kind) const;
     const std::vector<Control>& controls() const noexcept { return controlList; }
-    const Control* control (const juce::String& id) const;
+    const Control* control (const juce::String& id, const juce::String& face = {}) const;
 
     /** Fixed parts the editor draws into: windows and meters, by id. */
     juce::var part (const juce::String& face, const juce::String& id) const;
@@ -92,12 +92,61 @@ class Lamp final : public juce::Component
 {
 public:
     explicit Lamp (const Art::Sheet&);
-    void setLit (bool);
+    void setLit (bool on) { setLevel (on ? 1.0f : 0.0f); }
+
+    /** Between dark and lit, for a lamp that glows with how hard something works. */
+    void setLevel (float);
     void paint (juce::Graphics&) override;
 
 private:
     const Art::Sheet& sheet;
-    bool lit { false };
+    float level { 0.0f };
+};
+
+/** A selector not bound to one parameter: a pointer knob whose positions the
+    editor maps to whatever they mean. Drag, or click to step round. */
+class Selector final : public juce::Component,
+                       public juce::SettableTooltipClient
+{
+public:
+    explicit Selector (const Art::Sheet&);
+
+    void setIndex (int);
+    int getIndex() const noexcept { return index; }
+    std::function<void (int)> onChange;
+
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+    void mouseDrag (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override;
+
+private:
+    void choose (int);
+
+    const Art::Sheet& sheet;
+    int index { 0 }, dragStart { 0 };
+    bool dragged { false };
+};
+
+/**
+    The needles of a moving coil meter over the rendered face (a "vu" part).
+    Push levels in dBFS; 0 VU sits at `reference` dBFS. Up to two needles,
+    navy and red, as printed in the legend.
+*/
+class VuNeedles final : public juce::Component
+{
+public:
+    VuNeedles (const Art&, const juce::String& face, const juce::String& id, float reference = -18.0f);
+
+    void setNeedles (int count);
+    void push (float dbFirst, float dbSecond = -100.0f);
+    void paint (juce::Graphics&) override;
+
+private:
+    float reference;
+    int needles { 2 };
+    float pivotX { 0 }, pivotY { 0 }, radius { 0 };
+    std::array<float, 2> shown { -20.0f, -20.0f };
 };
 
 /**

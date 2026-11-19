@@ -79,10 +79,10 @@ const Art::Sheet* Art::sheet (const juce::String& kind) const
     return it == sheets.end() ? nullptr : &it->second;
 }
 
-const Art::Control* Art::control (const juce::String& id) const
+const Art::Control* Art::control (const juce::String& id, const juce::String& face) const
 {
     for (const auto& c : controlList)
-        if (c.id == id)
+        if (c.id == id && (face.isEmpty() || c.face == face))
             return &c;
     return nullptr;
 }
@@ -184,18 +184,127 @@ Lamp::Lamp (const Art::Sheet& s) : sheet (s)
     setInterceptsMouseClicks (false, false);
 }
 
-void Lamp::setLit (bool on)
+void Lamp::setLevel (float l)
 {
-    if (on != lit)
+    l = juce::jlimit (0.0f, 1.0f, l);
+    if (std::abs (l - level) > 0.01f)
     {
-        lit = on;
+        level = l;
         repaint();
     }
 }
 
 void Lamp::paint (juce::Graphics& g)
 {
-    sheet.draw (g, lit ? 1 : 0, getLocalBounds().toFloat().getCentre());
+    const auto c = getLocalBounds().toFloat().getCentre();
+    sheet.draw (g, 0, c);
+    if (level > 0.0f)
+        sheet.draw (g, 1, c, level);
+}
+
+// ---------------------------------------------------------------------------
+
+Selector::Selector (const Art::Sheet& s) : sheet (s) {}
+
+void Selector::setIndex (int i)
+{
+    i = juce::jlimit (0, sheet.n - 1, i);
+    if (i != index)
+    {
+        index = i;
+        repaint();
+    }
+}
+
+void Selector::choose (int i)
+{
+    i = juce::jlimit (0, sheet.n - 1, i);
+    if (i != index)
+    {
+        setIndex (i);
+        if (onChange)
+            onChange (index);
+    }
+}
+
+void Selector::paint (juce::Graphics& g)
+{
+    g.setImageResamplingQuality (juce::Graphics::highResamplingQuality);
+    sheet.draw (g, index, getLocalBounds().toFloat().getCentre());
+}
+
+void Selector::mouseDown (const juce::MouseEvent&)
+{
+    dragStart = index;
+    dragged = false;
+}
+
+void Selector::mouseDrag (const juce::MouseEvent& e)
+{
+    const auto steps = juce::roundToInt ((float) (e.getDistanceFromDragStartX() - e.getDistanceFromDragStartY()) / 28.0f);
+    if (steps != 0)
+        dragged = true;
+    choose (dragStart + steps);
+}
+
+void Selector::mouseUp (const juce::MouseEvent&)
+{
+    if (! dragged)
+        choose ((index + 1) % sheet.n);
+}
+
+// ---------------------------------------------------------------------------
+
+VuNeedles::VuNeedles (const Art& art, const juce::String& face, const juce::String& id, float ref)
+    : reference (ref)
+{
+    setInterceptsMouseClicks (false, false);
+    const auto p = art.part (face, id);
+    const auto fw = (float) (double) p["face"][0], fh = (float) (double) p["face"][1];
+    const auto cx = (float) (double) p["cx"], cy = (float) (double) p["cy"];
+    setBounds (juce::Rectangle<float> (fw, fh).withCentre ({ cx, cy }).toNearestInt());
+    pivotX = (float) (double) p["pivot"][0];
+    pivotY = (float) (double) p["pivot"][1];
+    radius = (float) (double) p["r"];
+}
+
+void VuNeedles::setNeedles (int count)
+{
+    needles = juce::jlimit (1, 2, count);
+    repaint();
+}
+
+void VuNeedles::push (float a, float b)
+{
+    // Moving coil ballistics, about 300 ms to settle at 30 frames a second.
+    const float in[2] { a - reference, b - reference };
+    for (int i = 0; i < 2; ++i)
+        shown[(size_t) i] += (juce::jlimit (-22.0f, 3.5f, in[i]) - shown[(size_t) i]) * 0.3f;
+    repaint();
+}
+
+void VuNeedles::paint (juce::Graphics& g)
+{
+    // The printed scale: the angle for a reading v in VU, as prints.html draws it.
+    const auto angle = [] (float v)
+    {
+        const auto t = juce::jlimit (0.0f, 1.1f, (v + 20.0f) / 23.0f);
+        return juce::degreesToRadians (-44.0f + 88.0f * std::pow (t, 1.35f));
+    };
+
+    g.reduceClipRegion (getLocalBounds());
+    const juce::Colour colours[] { juce::Colour (0xff1f2d3d), juce::Colour (0xffb8352a) };
+
+    for (int i = needles - 1; i >= 0; --i)
+    {
+        const auto a = angle (shown[(size_t) i]);
+        const juce::Point<float> pivot (pivotX, pivotY);
+        const auto tip = pivot + juce::Point<float> (std::sin (a), -std::cos (a)) * (radius + 6.0f);
+        g.setColour (juce::Colours::black.withAlpha (0.18f));
+        g.drawLine ({ pivot.translated (2.0f, 2.5f), tip.translated (2.0f, 2.5f) }, 1.6f);
+        g.setColour (colours[i]);
+        g.drawLine ({ pivot, tip }, 1.4f);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -246,7 +355,7 @@ juce::Component* Face::find (const juce::String& id) const
 
 void Face::place (juce::Component& component, const juce::String& id)
 {
-    if (const auto* c = art.control (id))
+    if (const auto* c = art.control (id, faceName))
         if (const auto* sheet = art.sheet (c->kind))
         {
             component.setBounds (around (c->centre, sheet->w, sheet->h));

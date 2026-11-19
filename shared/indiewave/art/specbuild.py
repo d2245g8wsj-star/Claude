@@ -92,7 +92,7 @@ class Face:
         fw, fh = w - 24, h - 24
         self.spec.layers[layer] = dict(w=fw, h=fh, bg="#f3e7c8", vu=dict(script=script or self.spec.title))
         self.parts.append(dict(type="vu", id=id, cx=cx, cy=cy, w=w, h=h, face=[fw, fh], layer=layer,
-                               pivot=[fw / 2, fh + 30], r=fh * 0.92))
+                               pivot=[fw / 2, fh + 30 * fw / 266], r=fh * 0.92))
 
     def plaque(self, x, y, w, h, rows, script=None):
         layer = f"plaque_{self.name}_{len(self.parts)}"
@@ -113,8 +113,11 @@ class Spec:
         self.ear_metal = ear_metal
         self.faces, self.kinds, self.controls, self.layers = {}, {}, [], {}
 
-    def face(self, name, size):
+    def face(self, name, size, lacquer=None, ink=None, print_from=None):
+        """A face of the unit. lacquer and ink override the unit's for this face;
+        print_from reuses another face's print (a second finish of the same layout)."""
         f = Face(self, name, size)
+        f.lacquer, f.ink, f.print_from = lacquer, ink, print_from
         self.faces[name] = f
         return f
 
@@ -127,10 +130,14 @@ class Spec:
 
     def write(self, art_dir):
         for f in self.faces.values():
-            self.layers["face_" + f.name] = dict(w=f.size[0], h=f.size[1], ops=f.ops)
+            if not f.print_from:
+                self.layers["face_" + f.name] = dict(w=f.size[0], h=f.size[1], ops=f.ops, ink=f.ink or self.ink)
         out = dict(name=self.name, title=self.title, lacquer=self.lacquer, ink=self.ink, ears=self.ears,
                    ear_metal=self.ear_metal,
-                   faces={k: dict(size=f.size, parts=f.parts) for k, f in self.faces.items()},
+                   faces={k: dict(size=f.size, parts=f.parts if not f.print_from else self.faces[f.print_from].parts,
+                                  lacquer=f.lacquer or self.lacquer, ink=f.ink or self.ink,
+                                  print="face_" + (f.print_from or f.name))
+                          for k, f in self.faces.items()},
                    kinds=self.kinds, controls=self.controls, layers=self.layers)
         os.makedirs(art_dir, exist_ok=True)
         with open(os.path.join(art_dir, "spec.json"), "w") as fh:

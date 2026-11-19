@@ -9,7 +9,7 @@ have their own folder under `plugins/` and their own workflow.
 | **Breakwater** | Mastering limiter | 0.6.0 beta | `plugins/breakwater` | `breakwater.yml` | `Brkw` | `audio.indiewave.breakwater` |
 | **Beacon** | Vari-mu tube compressor | 0.6.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
 | **Swell** | Two channel harmonic equaliser | 0.4.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
-| **Hinge** | Two channel Baxandall shelving equaliser | 0.4.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
+| **Hinge** | Two channel Baxandall shelving equaliser | 0.5.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.4.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
 | **Tide** | Three band mastering equaliser with mid/side | 0.4.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
 
@@ -144,6 +144,10 @@ separated by spaces. It deletes each release together with its tag.
   as a new plugin).
 
 ### Hinge
+- **0.5.0** - Rendered panel in the range's Nazaré style: sage lacquer, cream
+  bakelite knobs, a pointer selector for STEREO / DUAL / M·S and a moving coil
+  meter per row, with a lamp that glows as the dynamic shelves work. Same
+  parameters as 0.4.0, so sessions open as they were.
 - **0.4.0** - New panel in the range's look, with the IndieWave mark: sand
   enamel, bakelite knobs with red, blue and olive scales. STEREO folds the
   unit to one row; DUAL and M/S fold out the second. Same switches as before

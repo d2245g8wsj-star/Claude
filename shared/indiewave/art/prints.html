@@ -29,11 +29,11 @@ function txt(g,o){
   g.restore();
 }
 
-function run(g,ops){
+function run(g,ops,mask){
   for(const o of ops){
-    g.save();g.globalAlpha=o.alpha??1;g.strokeStyle=g.fillStyle=o.color||'#fff';g.lineCap='round';g.lineJoin='round';
+    g.save();g.globalAlpha=o.alpha??1;g.strokeStyle=g.fillStyle=(mask?null:o.color)||'#fff';g.lineCap='round';g.lineJoin='round';
     switch(o.op){
-      case 'text': txt(g,o); break;
+      case 'text': txt(g,mask?Object.assign({},o,{color:'#fff'}):o); break;
       case 'dot': g.beginPath();g.arc(o.x,o.y,o.r||1.8,0,Math.PI*2);g.fill(); break;
       case 'line': g.lineWidth=o.w||1;g.beginPath();g.moveTo(o.x0,o.y0);g.lineTo(o.x1,o.y1);g.stroke(); break;
       case 'arc': g.lineWidth=o.w||1;g.beginPath();g.arc(o.cx,o.cy,o.r,(o.a0-90)*Math.PI/180,(o.a1-90)*Math.PI/180);g.stroke(); break;
@@ -50,10 +50,12 @@ function run(g,ops){
 }
 
 // A moving coil meter face, in colour. The needle pivot sits below the face,
-// at (w/2, h + 30), with the scale at radius 0.92 h: the editor draws the
-// needles to match.
+// at (w/2, h + 30 k) with k = w/266, with the scale at radius 0.92 h: the
+// editor draws the needles to match.
 function vuFace(g,L){
-  const w=L.w,h=L.h,px=w/2,py=h+30,r=h*0.92,NAVY='#1f2d3d',RED='#b8352a';
+  // drawn on Nazaré's 266 wide face and scaled to this one
+  const k=L.w/266;g.save();g.scale(k,k);
+  const w=266,h=L.h/k,px=w/2,py=h+30,r=h*0.92,NAVY='#1f2d3d',RED='#b8352a';
   const grd=g.createRadialGradient(w/2,h*1.1,10,w/2,h*1.1,h*1.25);
   grd.addColorStop(0,'#fff8e2');grd.addColorStop(.7,'#f3e6c5');grd.addColorStop(1,'#e4d2a8');g.fillStyle=grd;g.fillRect(0,0,w,h);
   const vd=v=>{const t=(v+20)/23;return -44+88*Math.pow(Math.min(Math.max(t,0),1.1),1.35)};
@@ -66,6 +68,7 @@ function vuFace(g,L){
   txt(g,{s:'VU',x:w/2,y:h-58,size:17,ls:4,color:NAVY});
   txt(g,{s:L.vu.script,x:w/2,y:h-36,font:'Yellowtail',weight:400,size:15,color:'rgba(31,45,61,.7)'});
   g.fillStyle=NAVY;g.beginPath();g.ellipse(px,h,28,15,0,Math.PI,2*Math.PI);g.fill();
+  g.restore();
 }
 
 async function build(layers){
@@ -75,7 +78,16 @@ async function build(layers){
     const c=document.createElement('canvas');c.width=L.w*2;c.height=L.h*2;
     const g=c.getContext('2d');g.fillStyle=L.bg||'#000';g.fillRect(0,0,c.width,c.height);g.scale(2,2);
     if(L.vu)vuFace(g,L);
-    run(g,L.ops||[]);out[name]=c.toDataURL();
+    run(g,L.ops||[],true);out[name]=c.toDataURL();
+    // Ops with their own colour also go on a colour layer: the ink colour
+    // everywhere, and each coloured op in its colour. The mask stays white.
+    const ops=L.ops||[];
+    if(ops.some(o=>o.color)){
+      const k=document.createElement('canvas');k.width=L.w*2;k.height=L.h*2;
+      const q=k.getContext('2d');q.fillStyle=L.ink||'#000';q.fillRect(0,0,k.width,k.height);q.scale(2,2);
+      run(q,ops.filter(o=>o.color).map(o=>Object.assign({},o,{alpha:1})));
+      out[name+'_colour']=k.toDataURL();
+    }
   }
   return out;
 }

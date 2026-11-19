@@ -3,6 +3,7 @@
 #include "Tube.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace beacon
@@ -20,6 +21,17 @@ namespace beacon
     material passes untouched; loud bass comes out with a rounded, mostly odd
     series, which is the sound of iron.
 
+    Under that sits hysteresis: the core's magnetisation lags the field and
+    only follows it once the change is large enough to move the domains.
+    That is followed with play operators on the flux, memories that stay put
+    until the flux moves more than their width away from them; a small share
+    of each difference is taken off the output. Three widths a factor of four
+    apart stand in for the spread of domain sizes in a real core, so the
+    effect sets in gradually from low levels up rather than at one level: a
+    quiet bass note through iron gets a little odd distortion and phase lag,
+    a larger share at moderate levels, and then the core starts to
+    saturate.
+
     The rest is linear: the coupling capacitor's high pass at the bottom and
     the leakage inductance resonating with the winding capacitance at the top.
 */
@@ -28,18 +40,20 @@ class Transformer
 public:
     struct Voicing
     {
-        float coreSoftness;   ///< 1 / the flux the core carries before bending
+        float coreSoftness;      ///< 1 / the flux the core carries before bending
         float couplingHz;
         float resonanceHz;
         float resonanceQ;
+        float hysteresisWidth;   ///< flux change before the widest domains follow
+        float hysteresisAmount;  ///< share of the lag taken off the output, at that width
     };
 
     /** The input side runs at line level with plenty of core; the overall
         response of the unit is 12 Hz to 150 kHz at -3 dB. */
-    static constexpr Voicing input  { 0.45f, 8.0f, 150000.0f, 0.70f };
+    static constexpr Voicing input  { 0.45f, 8.0f, 150000.0f, 0.70f, 0.03f, 0.004f };
 
     /** The output side is driven by the tube stage and is meant to be heard. */
-    static constexpr Voicing output { 0.80f, 5.0f, 48000.0f, 0.85f };
+    static constexpr Voicing output { 0.80f, 5.0f, 48000.0f, 0.85f, 0.05f, 0.008f };
 
     static constexpr float fluxCornerHz = 25.0f;
 
@@ -66,7 +80,11 @@ public:
         reset();
     }
 
-    void reset() noexcept { flux = coupling = h1 = h2 = 0.0f; }
+    void reset() noexcept
+    {
+        flux = coupling = h1 = h2 = 0.0f;
+        magnetisation.fill (0.0f);
+    }
 
     float process (float x) noexcept
     {
@@ -78,7 +96,25 @@ public:
         const auto k = voicing.coreSoftness;
         const auto lost = f - std::tanh (f * k) / k;
 
-        auto y = x - lost;
+        // Each part of the magnetisation follows the flux only once it is
+        // far enough away. Each lags by at most its own width, so at low
+        // levels only the narrow ones contribute and the effect fades out
+        // with level; the sum is scaled so that, with all of them lagging
+        // fully, it is the size the voicing sets.
+        constexpr float widthRatio = 0.25f;
+        constexpr float fullLag    = 1.0f + widthRatio + widthRatio * widthRatio;
+
+        auto lag = 0.0f;
+        auto width = voicing.hysteresisWidth;
+
+        for (auto& m : magnetisation)
+        {
+            m = std::clamp (m, f - width, f + width);
+            lag += f - m;
+            width *= widthRatio;
+        }
+
+        auto y = x - lost - voicing.hysteresisAmount * lag / fullLag;
 
         // Coupling capacitor.
         const auto v = (y - coupling) * couplingCoeff;
@@ -103,6 +139,7 @@ private:
     float fluxCoeff { 0.0f }, couplingCoeff { 0.0f };
     float g { 0.0f }, r { 0.5f }, norm { 1.0f };
     float flux { 0.0f }, coupling { 0.0f }, h1 { 0.0f }, h2 { 0.0f };
+    std::array<float, 3> magnetisation {};
 };
 
 /** The two output paths of the unit. RED: a tube line amplifier into a

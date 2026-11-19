@@ -1,19 +1,16 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "indiewave/ui/Panel.h"
+#include "indiewave/ui/Rendered.h"
 
 namespace anchor
 {
 
-/** Every coordinate in the editor is in these units; the face is scaled as one.
-    Folded, the unit is one channel panel and the centre; unfolded (dual mono
-    split, or mid/side) it carries a second channel panel to the right. The
-    proportions are Beacon's, so the two sit together in a rack. */
-inline constexpr int designHeight      = 450;
-inline constexpr int designWidthFolded = 1000;
-inline constexpr int designWidthOpen   = 1640;
-
+/**
+    The rendered panel, in the range's Nazaré style (plugins/anchor/art/spec.py).
+    Folded, one half and the centre for stereo; open, the side (or right) half
+    beside it, on the side_* parameters, for mid/side or a split dual mono.
+*/
 class AnchorEditor final : public juce::AudioProcessorEditor,
                            private juce::Timer
 {
@@ -24,99 +21,33 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    /** The size in points of the face for the current state. */
+    juce::Point<int> designSize() const;
+
 private:
     void timerCallback() override;
+    void splitClicked();
+    bool wantsOpen() const;
+    void showFace (bool open);
 
-    /** Moves other parameters along with a knob while a hand is on it, as the
-        unit's linking does. Each follower moves by the knob's travel since
-        the drag began, times its sign, so stepped targets such as the IRON
-        PAD land on whole steps rather than losing small moves to rounding.
-        Automation and recalled state set each parameter as it was saved. */
-    class Follow
+    using Face = indiewave::ui::rendered::Face;
+
+    struct Extras
     {
-    public:
-        Follow (juce::Slider& source, juce::RangedAudioParameter* enable,
-                std::vector<std::pair<juce::RangedAudioParameter*, float>> followers,
-                std::function<bool()> extraCondition = {});
+        Extras (Face&, int halves);
 
-    private:
-        void begin();
-        void update();
-        void end();
-
-        juce::Slider& source;
-        juce::RangedAudioParameter* enable;
-        std::vector<std::pair<juce::RangedAudioParameter*, float>> followers;
-        std::function<bool()> extraCondition;
-
-        bool dragging { false };
-        float sourceStart { 0.0f };
-        std::vector<float> followerStart;
+        indiewave::ui::rendered::Switch split;
+        std::vector<std::unique_ptr<indiewave::ui::rendered::VuNeedles>> meters;
     };
 
-    using Knob = indiewave::ui::RingKnob;
-    using Key  = indiewave::ui::Key;
-
-    /** One channel panel: the controls of one signal path. The first panel
-        holds the main set (left, mid, or both in stereo); the second the
-        second set (right when dual mono is split, side in mid/side). */
-    struct ChannelControls
-    {
-        ChannelControls (AnchorProcessor&, bool second);
-
-        std::vector<juce::Component*> components();
-        void layout (float left);
-        void showStage (bool iron);
-
-        Knob threshold, mix, attack, ratio, release, thd, makeUp, makeUpIron, scFilter;
-        Key feedback, mute, listen;
-        indiewave::ui::VuMeter meter;
-        indiewave::ui::LedLadder inLadder, outLadder;
-
-        std::vector<std::unique_ptr<Follow>> links;
-    };
-
-    class Face final : public juce::Component
-    {
-    public:
-        explicit Face (AnchorProcessor&);
-
-        void paint (juce::Graphics&) override;
-        void resized() override;
-
-        void refresh();
-
-        bool isOpen() const noexcept { return open; }
-        std::function<void()> onFoldChanged;
-
-    private:
-        ChannelMode currentMode() const;
-        bool wantsOpen() const;
-        void foldTabClicked();
-        void paintChannel (juce::Graphics&, float left, const juce::String& title, bool second);
-
-        AnchorProcessor& processor;
-        ChannelControls main, second;
-
-        Knob ironPad;
-        Key ironLink, iron, bypass, external;
-        indiewave::ui::ChoiceKeys mode;
-        indiewave::ui::Display display;
-        indiewave::ui::FoldTab fold;
-
-        float heat[2] {};
-        bool open { false };
-        bool shownIron { false };
-        int shownMode { -1 };
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
-    };
-
-    void applyFold();
-
-    AnchorProcessor&    processor;
+    AnchorProcessor& processor;
     juce::TooltipWindow tooltips { this, 650 };
-    Face                face;
+    Face folded, opened;
+    Extras foldedExtras, openExtras;
+    std::vector<std::unique_ptr<indiewave::ui::rendered::Follow>> links;
+
+    bool open { false }, shownWant { false };
+    int shownMode { -1 }, shownIron { -1 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnchorEditor)
 };

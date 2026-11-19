@@ -1,0 +1,283 @@
+{
+ "name": "tide",
+ "scale": 2.0,
+ "faces": {
+  "front": {
+   "size": [
+    1800,
+    520
+   ]
+  }
+ },
+ "kinds": {
+  "freq": {
+   "type": "skirted",
+   "w": 117.5,
+   "h": 118.0,
+   "n": 6,
+   "cols": 6,
+   "angles": [
+    -125.0,
+    -75.0,
+    -25.0,
+    25.0,
+    75.0,
+    125.0
+   ],
+   "steps": null
+  },
+  "gain": {
+   "type": "skirted",
+   "w": 144.0,
+   "h": 144.0,
+   "n": 11,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -108.0,
+    -81.0,
+    -54.0,
+    -27.0,
+    0.0,
+    27.0,
+    54.0,
+    81.0,
+    108.0,
+    135.0
+   ],
+   "steps": null
+  },
+  "switch": {
+   "type": "toggle",
+   "w": 83.5,
+   "h": 83.5,
+   "n": 2,
+   "cols": 2,
+   "angles": null,
+   "steps": null
+  },
+  "shelf": {
+   "type": "toggle",
+   "w": 83.5,
+   "h": 83.5,
+   "n": 2,
+   "cols": 2,
+   "angles": null,
+   "steps": null
+  },
+  "cue": {
+   "type": "chicken",
+   "w": 114.5,
+   "h": 114.5,
+   "n": 3,
+   "cols": 3,
+   "angles": [
+    -50,
+    0,
+    50
+   ],
+   "steps": null
+  }
+ },
+ "controls": [
+  {
+   "id": "a_lo_freq",
+   "kind": "freq",
+   "face": "front",
+   "cx": 185,
+   "cy": 140
+  },
+  {
+   "id": "a_lo_gain",
+   "kind": "gain",
+   "face": "front",
+   "cx": 185,
+   "cy": 375
+  },
+  {
+   "id": "a_mid_freq",
+   "kind": "freq",
+   "face": "front",
+   "cx": 357,
+   "cy": 140
+  },
+  {
+   "id": "a_mid_gain",
+   "kind": "gain",
+   "face": "front",
+   "cx": 357,
+   "cy": 375
+  },
+  {
+   "id": "a_hi_freq",
+   "kind": "freq",
+   "face": "front",
+   "cx": 529,
+   "cy": 140
+  },
+  {
+   "id": "a_hi_gain",
+   "kind": "gain",
+   "face": "front",
+   "cx": 529,
+   "cy": 375
+  },
+  {
+   "id": "a_hpf_freq",
+   "kind": "freq",
+   "face": "front",
+   "cx": 701,
+   "cy": 140
+  },
+  {
+   "id": "a_level",
+   "kind": "gain",
+   "face": "front",
+   "cx": 701,
+   "cy": 375
+  },
+  {
+   "id": "a_lo_shelf",
+   "kind": "shelf",
+   "face": "front",
+   "cx": 185,
+   "cy": 262
+  },
+  {
+   "id": "a_hi_shelf",
+   "kind": "shelf",
+   "face": "front",
+   "cx": 529,
+   "cy": 262
+  },
+  {
+   "id": "a_hpf_in",
+   "kind": "switch",
+   "face": "front",
+   "cx": 671,
+   "cy": 262
+  },
+  {
+   "id": "a_hpf_x5",
+   "kind": "switch",
+   "face": "front",
+   "cx": 731,
+   "cy": 262
+  },
+  {
+   "id": "b_lo_freq",
+   "kind": "freq",
+   "face": "front",
+   "cx": 1099,
+   "cy": 140
+  },
+  {
+   "id": "b_lo_gain",
+   "kind": "gain",
+   "face": "front",
+   "cx": 1099,
+   "cy": 375
+  },
+  {
+   "id": "b_mid_freq",
+   "kind": "freq",
+   "face": "front",
+   "cx": 1271,
+   "cy": 140
+  },
+  {
+   "id": "b_mid_gain",
+   "kind": "gain",
+   "face": "front",
+   "cx": 1271,
+   "cy": 375
+  },
+  {
+   "id": "b_hi_freq",
+   "kind": "freq",
+   "face": "front",
+   "cx": 1443,
+   "cy": 140
+  },
+  {
+   "id": "b_hi_gain",
+   "kind": "gain",
+   "face": "front",
+   "cx": 1443,
+   "cy": 375
+  },
+  {
+   "id": "b_hpf_freq",
+   "kind": "freq",
+   "face": "front",
+   "cx": 1615,
+   "cy": 140
+  },
+  {
+   "id": "b_level",
+   "kind": "gain",
+   "face": "front",
+   "cx": 1615,
+   "cy": 375
+  },
+  {
+   "id": "b_lo_shelf",
+   "kind": "shelf",
+   "face": "front",
+   "cx": 1099,
+   "cy": 262
+  },
+  {
+   "id": "b_hi_shelf",
+   "kind": "shelf",
+   "face": "front",
+   "cx": 1443,
+   "cy": 262
+  },
+  {
+   "id": "b_hpf_in",
+   "kind": "switch",
+   "face": "front",
+   "cx": 1585,
+   "cy": 262
+  },
+  {
+   "id": "b_hpf_x5",
+   "kind": "switch",
+   "face": "front",
+   "cx": 1645,
+   "cy": 262
+  },
+  {
+   "id": "eq_in",
+   "kind": "switch",
+   "face": "front",
+   "cx": 840,
+   "cy": 300
+  },
+  {
+   "id": "link",
+   "kind": "switch",
+   "face": "front",
+   "cx": 900,
+   "cy": 300
+  },
+  {
+   "id": "mid_side",
+   "kind": "switch",
+   "face": "front",
+   "cx": 960,
+   "cy": 300
+  },
+  {
+   "id": "cue",
+   "kind": "cue",
+   "face": "front",
+   "cx": 900,
+   "cy": 410
+  }
+ ],
+ "parts": {
+  "front": []
+ }
+}

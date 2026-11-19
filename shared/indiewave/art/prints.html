@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>IndieWave print layers</title>
+<!--
+  Draws a plugin's silkscreen layers from the list of drawing operations in its
+  spec. Masks are white ink on black at 2x; the Blender scene lays them on the
+  lacquer as ink. Run through gen_prints.js.
+-->
+<style>
+@font-face{font-family:Jost; src:url(fonts/Jost-500.woff2) format("woff2"); font-weight:500}
+@font-face{font-family:Yellowtail; src:url(fonts/Yellowtail.woff2) format("woff2")}
+body{margin:0; background:#333}
+</style>
+<script>
+const IW="M8.5 20 C 11.5 11, 16 11, 20 20 S 28.5 29, 31.5 20";
+
+function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+
+function txt(g,o){
+  g.save();
+  g.font=`${o.weight||500} ${o.size||10}px ${o.font||'Jost'}`;
+  g.fillStyle=o.color||'#fff';g.globalAlpha=o.alpha??1;g.textBaseline='middle';
+  const ls=o.ls||0;g.letterSpacing=ls+'px';
+  let w=g.measureText(o.s).width;if(ls)w-=ls;
+  const ax=o.align==='left'?o.x:o.align==='right'?o.x-w:o.x-w/2;
+  g.textAlign='left';
+  if(o.rot){g.translate(o.x,o.y);g.rotate(o.rot*Math.PI/180);g.fillText(o.s,-w/2,0)}
+  else g.fillText(o.s,ax,o.y);
+  g.restore();
+}
+
+function run(g,ops){
+  for(const o of ops){
+    g.save();g.globalAlpha=o.alpha??1;g.strokeStyle=g.fillStyle=o.color||'#fff';g.lineCap='round';g.lineJoin='round';
+    switch(o.op){
+      case 'text': txt(g,o); break;
+      case 'dot': g.beginPath();g.arc(o.x,o.y,o.r||1.8,0,Math.PI*2);g.fill(); break;
+      case 'line': g.lineWidth=o.w||1;g.beginPath();g.moveTo(o.x0,o.y0);g.lineTo(o.x1,o.y1);g.stroke(); break;
+      case 'arc': g.lineWidth=o.w||1;g.beginPath();g.arc(o.cx,o.cy,o.r,(o.a0-90)*Math.PI/180,(o.a1-90)*Math.PI/180);g.stroke(); break;
+      case 'rect': g.lineWidth=o.w||1;
+        if(o.fill){g.beginPath();g.roundRect(o.x,o.y,o.wd,o.ht,o.rad||0);g.fill()}
+        else{g.beginPath();g.roundRect(o.x,o.y,o.wd,o.ht,o.rad||0);g.stroke()} break;
+      case 'path': g.translate(o.x||0,o.y||0);g.scale(o.s||1,o.s||1);g.lineWidth=(o.w||1.6)/(o.s||1);
+        if(o.fill)g.fill(new Path2D(o.d));else g.stroke(new Path2D(o.d)); break;
+      case 'iw': g.translate(o.x,o.y);g.scale(o.s,o.s);g.lineWidth=1.8;g.beginPath();g.arc(20,20,17.5,0,Math.PI*2);g.stroke();
+        g.lineWidth=2;g.stroke(new Path2D(IW)); break;
+    }
+    g.restore();
+  }
+}
+
+// A moving coil meter face, in colour. The needle pivot sits below the face,
+// at (w/2, h + 30), with the scale at radius 0.92 h: the editor draws the
+// needles to match.
+function vuFace(g,L){
+  const w=L.w,h=L.h,px=w/2,py=h+30,r=h*0.92,NAVY='#1f2d3d',RED='#b8352a';
+  const grd=g.createRadialGradient(w/2,h*1.1,10,w/2,h*1.1,h*1.25);
+  grd.addColorStop(0,'#fff8e2');grd.addColorStop(.7,'#f3e6c5');grd.addColorStop(1,'#e4d2a8');g.fillStyle=grd;g.fillRect(0,0,w,h);
+  const vd=v=>{const t=(v+20)/23;return -44+88*Math.pow(Math.min(Math.max(t,0),1.1),1.35)};
+  const arc=(rr,a0,a1,col,wd)=>{g.strokeStyle=col;g.lineWidth=wd;g.beginPath();g.arc(px,py,rr,(a0-90)*Math.PI/180,(a1-90)*Math.PI/180);g.stroke()};
+  arc(r,vd(-20),vd(0),NAVY,1);arc(r+3,vd(0),vd(3),RED,6);
+  for(let v=-20;v<=3;v++){if(v<-10&&v!==-20)continue;const a=vd(v),M=v%5===0||v===-3||v===3||v===-7||v===-20;
+    const [x0,y0]=polar(px,py,r,a),[x1,y1]=polar(px,py,r+(M?9:5),a);
+    g.strokeStyle=v>0?RED:NAVY;g.lineWidth=1.1;g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.stroke()}
+  for(const v of [-20,-10,-7,-5,-3,0,3]){const [x,y]=polar(px,py,r+21,vd(v));txt(g,{s:v>0?'+'+v:String(Math.abs(v)),x,y,size:10,color:v>0?RED:NAVY})}
+  txt(g,{s:'VU',x:w/2,y:h-58,size:17,ls:4,color:NAVY});
+  txt(g,{s:L.vu.script,x:w/2,y:h-36,font:'Yellowtail',weight:400,size:15,color:'rgba(31,45,61,.7)'});
+  g.fillStyle=NAVY;g.beginPath();g.ellipse(px,h,28,15,0,Math.PI,2*Math.PI);g.fill();
+}
+
+async function build(layers){
+  await document.fonts.load('500 10px Jost');await document.fonts.load('10px Yellowtail');
+  const out={};
+  for(const [name,L] of Object.entries(layers)){
+    const c=document.createElement('canvas');c.width=L.w*2;c.height=L.h*2;
+    const g=c.getContext('2d');g.fillStyle=L.bg||'#000';g.fillRect(0,0,c.width,c.height);g.scale(2,2);
+    if(L.vu)vuFace(g,L);
+    run(g,L.ops||[]);out[name]=c.toDataURL();
+  }
+  return out;
+}
+</script>

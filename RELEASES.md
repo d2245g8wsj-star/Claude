@@ -11,7 +11,7 @@ have their own folder under `plugins/` and their own workflow.
 | **Swell** | Two channel harmonic equaliser | 0.4.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.4.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.4.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
-| **Tide** | Three band mastering equaliser with mid/side | 0.3.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
+| **Tide** | Three band mastering equaliser with mid/side | 0.4.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
 
 All seven build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
 and Standalone for macOS and a 64 bit VST3 and Standalone for Windows, and
@@ -159,4 +159,8 @@ separated by spaces. It deletes each release together with its tag.
   finishes.
 
 ### Tide
+- **0.4.0** - Rendered panel in the range's Nazaré style: seafoam lacquer,
+  nickel rack ears, an enamel badge, cream bakelite knobs, chrome toggles and
+  a pointer selector for the cue. Same parameters as 0.3.0, so sessions open
+  as they were.
 - **0.3.0** - First public beta.

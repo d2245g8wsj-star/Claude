@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Swell VERSION 0.4.0 LANGUAGES C CXX)
+project(Swell VERSION 0.5.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,11 +52,13 @@ juce_add_plugin(Swell
 
 target_sources(Swell PRIVATE
     src/PluginProcessor.cpp
-    src/PluginEditor.cpp
-    src/gui/Modern.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp)
+    src/PluginEditor.cpp)
 
 target_include_directories(Swell PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+
+# The rendered panel, made by shared/indiewave/art from art/spec.py.
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/panel.cmake)
+indiewave_add_panel(Swell)
 
 target_compile_definitions(Swell PUBLIC
     JUCE_WEB_BROWSER=0

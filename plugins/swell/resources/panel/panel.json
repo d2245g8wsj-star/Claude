@@ -1,0 +1,655 @@
+{
+ "name": "swell",
+ "scale": 2.0,
+ "faces": {
+  "folded": {
+   "size": [
+    1960,
+    320
+   ]
+  },
+  "open": {
+   "size": [
+    1960,
+    570
+   ]
+  }
+ },
+ "kinds": {
+  "trim": {
+   "type": "skirted",
+   "w": 114.0,
+   "h": 114.0,
+   "n": 61,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -130.5,
+    -126.0,
+    -121.5,
+    -117.0,
+    -112.5,
+    -108.0,
+    -103.5,
+    -99.0,
+    -94.5,
+    -90.0,
+    -85.5,
+    -81.0,
+    -76.5,
+    -72.0,
+    -67.5,
+    -63.0,
+    -58.5,
+    -54.0,
+    -49.5,
+    -45.0,
+    -40.5,
+    -36.0,
+    -31.5,
+    -27.0,
+    -22.5,
+    -18.0,
+    -13.5,
+    -9.0,
+    -4.5,
+    0.0,
+    4.5,
+    9.0,
+    13.5,
+    18.0,
+    22.5,
+    27.0,
+    31.5,
+    36.0,
+    40.5,
+    45.0,
+    49.5,
+    54.0,
+    58.5,
+    63.0,
+    67.5,
+    72.0,
+    76.5,
+    81.0,
+    85.5,
+    90.0,
+    94.5,
+    99.0,
+    103.5,
+    108.0,
+    112.5,
+    117.0,
+    121.5,
+    126.0,
+    130.5,
+    135.0
+   ],
+   "steps": null
+  },
+  "level": {
+   "type": "skirted",
+   "w": 140.0,
+   "h": 140.0,
+   "n": 61,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -130.5,
+    -126.0,
+    -121.5,
+    -117.0,
+    -112.5,
+    -108.0,
+    -103.5,
+    -99.0,
+    -94.5,
+    -90.0,
+    -85.5,
+    -81.0,
+    -76.5,
+    -72.0,
+    -67.5,
+    -63.0,
+    -58.5,
+    -54.0,
+    -49.5,
+    -45.0,
+    -40.5,
+    -36.0,
+    -31.5,
+    -27.0,
+    -22.5,
+    -18.0,
+    -13.5,
+    -9.0,
+    -4.5,
+    0.0,
+    4.5,
+    9.0,
+    13.5,
+    18.0,
+    22.5,
+    27.0,
+    31.5,
+    36.0,
+    40.5,
+    45.0,
+    49.5,
+    54.0,
+    58.5,
+    63.0,
+    67.5,
+    72.0,
+    76.5,
+    81.0,
+    85.5,
+    90.0,
+    94.5,
+    99.0,
+    103.5,
+    108.0,
+    112.5,
+    117.0,
+    121.5,
+    126.0,
+    130.5,
+    135.0
+   ],
+   "steps": null
+  },
+  "freq": {
+   "type": "skirted",
+   "w": 98.0,
+   "h": 98.0,
+   "n": 61,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -130.5,
+    -126.0,
+    -121.5,
+    -117.0,
+    -112.5,
+    -108.0,
+    -103.5,
+    -99.0,
+    -94.5,
+    -90.0,
+    -85.5,
+    -81.0,
+    -76.5,
+    -72.0,
+    -67.5,
+    -63.0,
+    -58.5,
+    -54.0,
+    -49.5,
+    -45.0,
+    -40.5,
+    -36.0,
+    -31.5,
+    -27.0,
+    -22.5,
+    -18.0,
+    -13.5,
+    -9.0,
+    -4.5,
+    0.0,
+    4.5,
+    9.0,
+    13.5,
+    18.0,
+    22.5,
+    27.0,
+    31.5,
+    36.0,
+    40.5,
+    45.0,
+    49.5,
+    54.0,
+    58.5,
+    63.0,
+    67.5,
+    72.0,
+    76.5,
+    81.0,
+    85.5,
+    90.0,
+    94.5,
+    99.0,
+    103.5,
+    108.0,
+    112.5,
+    117.0,
+    121.5,
+    126.0,
+    130.5,
+    135.0
+   ],
+   "steps": null
+  },
+  "sw": {
+   "type": "toggle",
+   "w": 78.5,
+   "h": 78.5,
+   "n": 2,
+   "cols": 2,
+   "angles": null,
+   "steps": null
+  },
+  "drive": {
+   "type": "jewel",
+   "w": 42.0,
+   "h": 42.0,
+   "n": 2,
+   "cols": 2,
+   "angles": null,
+   "steps": null
+  },
+  "mode": {
+   "type": "chicken",
+   "w": 110.5,
+   "h": 110.5,
+   "n": 3,
+   "cols": 3,
+   "angles": [
+    -50,
+    0,
+    50
+   ],
+   "steps": null
+  }
+ },
+ "controls": [
+  {
+   "id": "mode",
+   "kind": "mode",
+   "face": "folded",
+   "cx": 200,
+   "cy": 262
+  },
+  {
+   "id": "a_input",
+   "kind": "trim",
+   "face": "folded",
+   "cx": 410,
+   "cy": 170
+  },
+  {
+   "id": "a_output",
+   "kind": "trim",
+   "face": "folded",
+   "cx": 1530,
+   "cy": 170
+  },
+  {
+   "id": "a_lo_gain",
+   "kind": "level",
+   "face": "folded",
+   "cx": 560,
+   "cy": 170
+  },
+  {
+   "id": "a_lo_freq",
+   "kind": "freq",
+   "face": "folded",
+   "cx": 680,
+   "cy": 176
+  },
+  {
+   "id": "a_lo_in",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 765,
+   "cy": 184
+  },
+  {
+   "id": "drive_a_lo",
+   "kind": "drive",
+   "face": "folded",
+   "cx": 765,
+   "cy": 126
+  },
+  {
+   "id": "a_mid_gain",
+   "kind": "level",
+   "face": "folded",
+   "cx": 880,
+   "cy": 170
+  },
+  {
+   "id": "a_mid_freq",
+   "kind": "freq",
+   "face": "folded",
+   "cx": 1000,
+   "cy": 176
+  },
+  {
+   "id": "a_mid_in",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1085,
+   "cy": 184
+  },
+  {
+   "id": "drive_a_mid",
+   "kind": "drive",
+   "face": "folded",
+   "cx": 1085,
+   "cy": 126
+  },
+  {
+   "id": "a_hi_gain",
+   "kind": "level",
+   "face": "folded",
+   "cx": 1200,
+   "cy": 170
+  },
+  {
+   "id": "a_hi_freq",
+   "kind": "freq",
+   "face": "folded",
+   "cx": 1320,
+   "cy": 176
+  },
+  {
+   "id": "a_hi_in",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1405,
+   "cy": 184
+  },
+  {
+   "id": "drive_a_hi",
+   "kind": "drive",
+   "face": "folded",
+   "cx": 1405,
+   "cy": 126
+  },
+  {
+   "id": "a_in",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1635,
+   "cy": 176
+  },
+  {
+   "id": "mode",
+   "kind": "mode",
+   "face": "open",
+   "cx": 200,
+   "cy": 262
+  },
+  {
+   "id": "a_input",
+   "kind": "trim",
+   "face": "open",
+   "cx": 410,
+   "cy": 170
+  },
+  {
+   "id": "a_output",
+   "kind": "trim",
+   "face": "open",
+   "cx": 1530,
+   "cy": 170
+  },
+  {
+   "id": "a_lo_gain",
+   "kind": "level",
+   "face": "open",
+   "cx": 560,
+   "cy": 170
+  },
+  {
+   "id": "a_lo_freq",
+   "kind": "freq",
+   "face": "open",
+   "cx": 680,
+   "cy": 176
+  },
+  {
+   "id": "a_lo_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 765,
+   "cy": 184
+  },
+  {
+   "id": "drive_a_lo",
+   "kind": "drive",
+   "face": "open",
+   "cx": 765,
+   "cy": 126
+  },
+  {
+   "id": "a_mid_gain",
+   "kind": "level",
+   "face": "open",
+   "cx": 880,
+   "cy": 170
+  },
+  {
+   "id": "a_mid_freq",
+   "kind": "freq",
+   "face": "open",
+   "cx": 1000,
+   "cy": 176
+  },
+  {
+   "id": "a_mid_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1085,
+   "cy": 184
+  },
+  {
+   "id": "drive_a_mid",
+   "kind": "drive",
+   "face": "open",
+   "cx": 1085,
+   "cy": 126
+  },
+  {
+   "id": "a_hi_gain",
+   "kind": "level",
+   "face": "open",
+   "cx": 1200,
+   "cy": 170
+  },
+  {
+   "id": "a_hi_freq",
+   "kind": "freq",
+   "face": "open",
+   "cx": 1320,
+   "cy": 176
+  },
+  {
+   "id": "a_hi_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1405,
+   "cy": 184
+  },
+  {
+   "id": "drive_a_hi",
+   "kind": "drive",
+   "face": "open",
+   "cx": 1405,
+   "cy": 126
+  },
+  {
+   "id": "a_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1635,
+   "cy": 176
+  },
+  {
+   "id": "b_input",
+   "kind": "trim",
+   "face": "open",
+   "cx": 410,
+   "cy": 420
+  },
+  {
+   "id": "b_output",
+   "kind": "trim",
+   "face": "open",
+   "cx": 1530,
+   "cy": 420
+  },
+  {
+   "id": "b_lo_gain",
+   "kind": "level",
+   "face": "open",
+   "cx": 560,
+   "cy": 420
+  },
+  {
+   "id": "b_lo_freq",
+   "kind": "freq",
+   "face": "open",
+   "cx": 680,
+   "cy": 426
+  },
+  {
+   "id": "b_lo_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 765,
+   "cy": 434
+  },
+  {
+   "id": "drive_b_lo",
+   "kind": "drive",
+   "face": "open",
+   "cx": 765,
+   "cy": 376
+  },
+  {
+   "id": "b_mid_gain",
+   "kind": "level",
+   "face": "open",
+   "cx": 880,
+   "cy": 420
+  },
+  {
+   "id": "b_mid_freq",
+   "kind": "freq",
+   "face": "open",
+   "cx": 1000,
+   "cy": 426
+  },
+  {
+   "id": "b_mid_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1085,
+   "cy": 434
+  },
+  {
+   "id": "drive_b_mid",
+   "kind": "drive",
+   "face": "open",
+   "cx": 1085,
+   "cy": 376
+  },
+  {
+   "id": "b_hi_gain",
+   "kind": "level",
+   "face": "open",
+   "cx": 1200,
+   "cy": 420
+  },
+  {
+   "id": "b_hi_freq",
+   "kind": "freq",
+   "face": "open",
+   "cx": 1320,
+   "cy": 426
+  },
+  {
+   "id": "b_hi_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1405,
+   "cy": 434
+  },
+  {
+   "id": "drive_b_hi",
+   "kind": "drive",
+   "face": "open",
+   "cx": 1405,
+   "cy": 376
+  },
+  {
+   "id": "b_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1635,
+   "cy": 426
+  }
+ ],
+ "parts": {
+  "folded": [
+   {
+    "type": "vu",
+    "id": "vu_a",
+    "cx": 1795,
+    "cy": 170,
+    "w": 230,
+    "h": 146,
+    "face": [
+     206,
+     122
+    ],
+    "layer": "vu_folded_vu_a",
+    "pivot": [
+     103.0,
+     145.2330827067669
+    ],
+    "r": 112.24000000000001
+   }
+  ],
+  "open": [
+   {
+    "type": "vu",
+    "id": "vu_a",
+    "cx": 1795,
+    "cy": 170,
+    "w": 230,
+    "h": 146,
+    "face": [
+     206,
+     122
+    ],
+    "layer": "vu_open_vu_a",
+    "pivot": [
+     103.0,
+     145.2330827067669
+    ],
+    "r": 112.24000000000001
+   },
+   {
+    "type": "vu",
+    "id": "vu_b",
+    "cx": 1795,
+    "cy": 420,
+    "w": 230,
+    "h": 146,
+    "face": [
+     206,
+     122
+    ],
+    "layer": "vu_open_vu_b",
+    "pivot": [
+     103.0,
+     145.2330827067669
+    ],
+    "r": 112.24000000000001
+   }
+  ]
+ }
+}

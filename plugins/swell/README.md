@@ -87,7 +87,7 @@ mid/side operation.
 
 It is **not** a measured model of that unit. No hardware was measured, so the
 shapes of the curves, the drive calibration and the exact Q are this project's
-own choices. The interface is a modern take on the IndieWave house style, and no name, logo or panel
+own choices. The interface is the IndieWave range's rendered panel, and no name, logo or panel
 artwork of any other product is used.
 
 ## Building
@@ -108,8 +108,8 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DSWELL_BUILD_TESTS=ON -DSWELL_BUILD_TOOLS=ON
 cmake --build build --target swell_tests swell_shot --parallel
 ./build/swell_tests_artefacts/Release/swell_tests
-./build/swell_shot_artefacts/Release/swell_shot docs/ui.png 1640 stereo
-./build/swell_shot_artefacts/Release/swell_shot docs/ui-ms.png 1640 ms
+./build/swell_shot_artefacts/Release/swell_shot docs/ui.png 1500 stereo
+./build/swell_shot_artefacts/Release/swell_shot docs/ui-ms.png 1500 ms
 ```
 
 The checks assert: unity slope and monotonic curves, a null against the input
@@ -125,7 +125,6 @@ src/dsp/Saturation.h    the three curves
 src/dsp/HarmonicBand.h  one band: filter, curve, smoothing, drive meter
 src/dsp/Meters.h        audio thread to editor
 src/PluginProcessor.*   parameters, routing, oversampling, the strips
-src/gui/Modern.*        aluminium knobs with value arcs, pill switches, LED bar meters
 ../../shared/indiewave  the IndieWave mark, plate, rack ears and fold tab; the session checks
 src/PluginEditor.*      layout, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
@@ -135,3 +134,8 @@ tools/Snapshot.cpp      offscreen editor render
 ## Licence
 
 As for the rest of this repository; see `../../LICENSE` and `../../NOTICE.md`.
+
+## Re-rendering the panel
+
+The panel is rendered in Blender from `art/spec.py` with the range's kit, see
+`shared/indiewave/art/README.md`.

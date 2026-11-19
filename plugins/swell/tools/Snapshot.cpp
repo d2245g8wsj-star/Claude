@@ -21,7 +21,7 @@ int main (int argc, char* argv[])
                                       : juce::File::getCurrentWorkingDirectory()
                                             .getChildFile ("swell.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : swell::designWidth;
+    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : 1960;
 
     swell::SwellProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
@@ -61,7 +61,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * editor->getHeight() / editor->getWidth()));
+    editor->setSize (width, juce::roundToInt ((double) width * dynamic_cast<swell::SwellEditor&> (*editor).designSize().y / dynamic_cast<swell::SwellEditor&> (*editor).designSize().x));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.

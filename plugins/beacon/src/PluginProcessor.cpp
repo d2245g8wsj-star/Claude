@@ -80,6 +80,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout BeaconProcessor::createParam
     layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { pid::mode, 1 }, "Mode",
                                                               juce::StringArray { "Dual Mono", "Stereo", "Mid/Side" },
                                                               static_cast<int> (ChannelMode::stereo)));
+    layout.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { pid::dualSplit, 1 }, "Dual Split", false));
 
     // Quarter dB steps, as the encoders on the unit move.
     const juce::NormalisableRange<float> trimRange (-range::trimDb, range::trimDb, 0.25f);
@@ -176,6 +177,7 @@ BeaconProcessor::BeaconProcessor()
     ironPadParam = findParameter<juce::AudioParameterFloat> (pid::ironPad);
 
     modeParam       = findParameter<juce::AudioParameterChoice> (pid::mode);
+    dualSplitParam  = findParameter<juce::AudioParameterBool>   (pid::dualSplit);
     bypassParameter = findParameter<juce::AudioParameterBool>   (pid::bypass);
 
     // Build the lookup tables here rather than on the audio thread.
@@ -311,9 +313,12 @@ void BeaconProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     // cannot shift. In dual mono and mid/side the detectors are unlinked.
     const auto linked = mode == ChannelMode::stereo && numChannels == 2;
 
-    // In mid/side the second path is the side, with its own controls.
+    // In mid/side the second path is the side, with its own controls; in
+    // dual mono, split, the right channel has them.
+    const auto ownSecondSet = midSide || (mode == ChannelMode::dualMono && numChannels == 2 && dualSplitParam->get());
+
     for (size_t ch = 0; ch < paths.size(); ++ch)
-        paths[ch].setTargets (midSide && ch == 1 ? sideParams : params,
+        paths[ch].setTargets (ownSecondSet && ch == 1 ? sideParams : params,
                               ironParam->get(), ironPadParam->get(), ! bypassed);
 
     if (! pathsSnapped)
@@ -326,6 +331,9 @@ void BeaconProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
 
     const auto numSamples = buffer.getNumSamples();
     dryBuffer.setSize (2, numSamples, false, false, true);
+
+    for (int ch = 0; ch < numChannels; ++ch)
+        MeterSource::raise (meters.channels[(size_t) ch].inPeak, buffer.getMagnitude (ch, 0, numSamples));
 
     for (int ch = 0; ch < numChannels; ++ch)
     {
@@ -458,6 +466,8 @@ void BeaconProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
             const auto wet = path.engaged.getNextValue();
             out[i] = dry[i] + wet * (out[i] - dry[i]);
         }
+
+        MeterSource::raise (meters.channels[(size_t) ch].outPeak, buffer.getMagnitude (ch, 0, numSamples));
     }
 }
 

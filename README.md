@@ -310,11 +310,13 @@ checks, and uploads an installable zip. Open the run under the repository's
 the bottom. Run artifacts expire after 90 days and can only be downloaded by
 someone signed in to GitHub with access to the repository.
 
-**Tag a version for a public release.** Pushing a `v*` tag attaches the same
-zip to a GitHub release, which anyone can download without an account:
+**Tag a version for a release.** Pushing a `crest-v*` tag attaches the same
+zip to a GitHub release. The tag must match the version in `CMakeLists.txt`,
+and anything below 1.0 is published as a beta; see [RELEASES.md](RELEASES.md)
+for how the suite is versioned.
 
 ```bash
-git tag v1.0.0 && git push origin v1.0.0
+git tag crest-v0.9.0 && git push origin crest-v0.9.0
 ```
 
 ### Installing on macOS
@@ -392,7 +394,7 @@ without opening a window:
 ```bash
 cmake -B build -DCREST_BUILD_TOOLS=ON
 cmake --build build --target crest_shot --parallel
-./build/crest_shot_artefacts/Release/crest_shot docs/ui.png 880
+./build/crest_shot_artefacts/Release/crest_shot docs/ui.png 1640
 ```
 
 ---
@@ -408,8 +410,10 @@ src/PluginProcessor.*   parameters, gain staging, oversampling, the audio chain
 src/dsp/ClipEnvelope.h  how long the clipper has been working, which drives Adapt
 src/dsp/HarmonicStage.h the band limited harmonic generator
 src/dsp/LowSplit.h      the sidechain low pass
-src/gui/Panel.*         the panel: filmstrip knobs, LED meters, scope, plate switches
-resources/gui/          the rendered plate and filmstrips, compiled in as binary data
+src/PluginEditor.*      the panel: bakelite knobs, LED ladders, lit keys, the display
+src/gui/Panel.*         the two live views in the display: waveform and transfer curve
+shared/indiewave/       the range's shared panel parts and the session checks
+resources/gui/          the rendered plate of the panel before 0.10 (no longer compiled in)
 src/PluginEditor.*      layout, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render

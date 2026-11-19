@@ -11,6 +11,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "PluginProcessor.h"
+#include "indiewave/SessionCompat.h"
 #include "dsp/Shaper.h"
 #include "dsp/Quantizer.h"
 #include "dsp/ClipEnvelope.h"
@@ -590,11 +591,11 @@ void testLoudnessAndComparison()
         const auto momentary  = meter.momentary();
         const auto integrated = meter.integrated();
 
-        check (std::abs (momentary - -20.0f) < 0.6f,
+        check (std::abs (momentary - -20.0f) < 0.1f,
                juce::String (rate, 0) + " Hz: momentary reads "
                    + juce::String (momentary, 2) + " LUFS on a -20 LUFS tone");
 
-        check (std::abs (integrated - -20.0f) < 0.6f,
+        check (std::abs (integrated - -20.0f) < 0.1f,
                juce::String (rate, 0) + " Hz: integrated reads "
                    + juce::String (integrated, 2) + " LUFS on a -20 LUFS tone");
     }
@@ -1279,6 +1280,10 @@ int main()
     testBypassAndDelta();
     testStabilityAcrossConfigurations();
     testStateRoundTrip();
+
+    section ("Sessions saved by released versions open unchanged");
+    indiewave::compat::run ([] { return std::make_unique<crest::CrestProcessor>(); },
+                            juce::File (INDIEWAVE_COMPAT_DIR), INDIEWAVE_VERSION, check);
 
     std::cout << "\n" << (failures == 0 ? "PASS" : "FAIL")
               << " - " << (checks - failures) << "/" << checks << " checks" << std::endl;

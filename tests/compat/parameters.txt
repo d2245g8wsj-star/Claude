@@ -1,0 +1,20 @@
+adapt | float | 0..100 step 0.1 skew 1 | default 25
+autogain | bool | default 0
+bias | float | -100..100 step 0.1 skew 1 | default 0
+bypass | bool | default 0
+ceiling | float | -24..0 step 0.01 skew 1 | default -0.3
+colour | float | 0..100 step 0.1 skew 1 | default 35
+delta | bool | default 0
+dither | choice | OFF;TPDF;SHAPED | default 1
+harmonics | float | 0..100 step 0.1 skew 1 | default 25
+input | float | -12..18 step 0.01 skew 1 | default 0
+knee | float | 0..24 step 0.1 skew 1 | default 6
+link | bool | default 1
+mix | float | 0..100 step 0.1 skew 1 | default 100
+mode | choice | GLASS;EDGE;SILK;TUBE | default 0
+os | choice | OFF;2x;4x;8x;16x | default 2
+output | float | -24..12 step 0.01 skew 1 | default 0
+sclpf | float | 15..800 step 1 skew 0.37725 | default 15
+series | float | -100..100 step 1 skew 1 | default 0
+tpsafe | bool | default 1
+word | choice | OFF;24;20;16 | default 0

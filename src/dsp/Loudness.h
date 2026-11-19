@@ -115,36 +115,34 @@ private:
         return stage2;
     }
 
+    /** The BS.1770 shelf in its bilinear form, which reproduces the
+        specification's 48 kHz coefficient table exactly. */
     void designHighShelf (double frequency, double gainDb, double q, Biquad& target) const noexcept
     {
-        const auto a  = std::pow (10.0, gainDb / 40.0);
-        const auto w  = 2.0 * 3.14159265358979323846 * frequency / sampleRate;
-        const auto cw = std::cos (w);
-        const auto alpha = std::sin (w) / (2.0 * q);
-        const auto beta  = 2.0 * std::sqrt (a) * alpha;
+        const auto k  = std::tan (3.14159265358979323846 * frequency / sampleRate);
+        const auto vh = std::pow (10.0, gainDb / 20.0);
+        const auto vb = std::pow (vh, 0.4996667741545416);
+        const auto a0 = 1.0 + k / q + k * k;
 
-        const auto a0 = (a + 1.0) - (a - 1.0) * cw + beta;
-
-        target.b0 =        a * ((a + 1.0) + (a - 1.0) * cw + beta) / a0;
-        target.b1 = -2.0 * a * ((a - 1.0) + (a + 1.0) * cw)        / a0;
-        target.b2 =        a * ((a + 1.0) + (a - 1.0) * cw - beta) / a0;
-        target.a1 =  2.0 *     ((a - 1.0) - (a + 1.0) * cw)        / a0;
-        target.a2 =            ((a + 1.0) - (a - 1.0) * cw - beta) / a0;
+        target.b0 = (vh + vb * k / q + k * k) / a0;
+        target.b1 = 2.0 * (k * k - vh)        / a0;
+        target.b2 = (vh - vb * k / q + k * k) / a0;
+        target.a1 = 2.0 * (k * k - 1.0)       / a0;
+        target.a2 = (1.0 - k / q + k * k)     / a0;
     }
 
+    /** The RLB high pass. Its numerator is 1, -2, 1 as published, not
+        normalised to unity in the passband. */
     void designHighPass (double frequency, double q, Biquad& target) const noexcept
     {
-        const auto w  = 2.0 * 3.14159265358979323846 * frequency / sampleRate;
-        const auto cw = std::cos (w);
-        const auto alpha = std::sin (w) / (2.0 * q);
+        const auto k  = std::tan (3.14159265358979323846 * frequency / sampleRate);
+        const auto a0 = 1.0 + k / q + k * k;
 
-        const auto a0 = 1.0 + alpha;
-
-        target.b0 =  (1.0 + cw) * 0.5 / a0;
-        target.b1 = -(1.0 + cw)       / a0;
-        target.b2 =  (1.0 + cw) * 0.5 / a0;
-        target.a1 = -2.0 * cw         / a0;
-        target.a2 =  (1.0 - alpha)    / a0;
+        target.b0 =  1.0;
+        target.b1 = -2.0;
+        target.b2 =  1.0;
+        target.a1 = 2.0 * (k * k - 1.0)   / a0;
+        target.a2 = (1.0 - k / q + k * k) / a0;
     }
 
     void pushSubBlock (double meanSquare) noexcept

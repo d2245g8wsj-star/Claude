@@ -1,0 +1,26 @@
+a_hi_freq | float | 5000..25000 step 0 skew 1 | default 12000
+a_hi_gain | float | -10..10 step 0.1 skew 1 | default 0
+a_hi_in | bool | default 1
+a_in | bool | default 1
+a_input | float | -20..20 step 1 skew 1 | default 0
+a_lo_freq | float | 20..420 step 0 skew 1 | default 90
+a_lo_gain | float | -10..10 step 0.1 skew 1 | default 0
+a_lo_in | bool | default 1
+a_mid_freq | float | 200..6200 step 0 skew 1 | default 1200
+a_mid_gain | float | -10..10 step 0.1 skew 1 | default 0
+a_mid_in | bool | default 1
+a_output | float | -20..20 step 1 skew 1 | default 0
+b_hi_freq | float | 5000..25000 step 0 skew 1 | default 12000
+b_hi_gain | float | -10..10 step 0.1 skew 1 | default 0
+b_hi_in | bool | default 1
+b_in | bool | default 1
+b_input | float | -20..20 step 1 skew 1 | default 0
+b_lo_freq | float | 20..420 step 0 skew 1 | default 90
+b_lo_gain | float | -10..10 step 0.1 skew 1 | default 0
+b_lo_in | bool | default 1
+b_mid_freq | float | 200..6200 step 0 skew 1 | default 1200
+b_mid_gain | float | -10..10 step 0.1 skew 1 | default 0
+b_mid_in | bool | default 1
+b_output | float | -20..20 step 1 skew 1 | default 0
+bypass | bool | default 0
+mode | choice | Dual Mono;Stereo;Mid/Side | default 1

@@ -1,6 +1,6 @@
 # IndieWave Audio plugin suite: versions and releases
 
-Nine plugins live in this repository. Crest sits at the root; the others each
+Nine plugins live in this repository, and a tenth, Nazaré, is in development. Crest sits at the root; the others each
 have their own folder under `plugins/` and their own workflow.
 
 | Plugin | What it is | Version | Folder | Workflow | Plugin code | Bundle id |
@@ -12,8 +12,9 @@ have their own folder under `plugins/` and their own workflow.
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.5.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.5.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
 | **Tide** | Three band mastering equaliser with mid/side | 0.4.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
-| **Anchor** | VCA bus compressor | 0.3.0 beta | `plugins/anchor` | `anchor.yml` | `Ancr` | `audio.indiewave.anchor` |
-| **Lantern** | Passive tube equaliser | 0.3.0 beta | `plugins/lantern` | `lantern.yml` | `Lntn` | `audio.indiewave.lantern` |
+| **Anchor** | VCA bus compressor | 0.4.0 beta | `plugins/anchor` | `anchor.yml` | `Ancr` | `audio.indiewave.anchor` |
+| **Lantern** | Passive tube equaliser | 0.4.0 beta | `plugins/lantern` | `lantern.yml` | `Lntn` | `audio.indiewave.lantern` |
+| **Nazaré** | Large format analog console | in development | `plugins/nazare` | not yet | `Nzre` | `audio.indiewave.nazare` |
 
 All nine build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
 and Standalone for macOS and a 64 bit VST3 and Standalone for Windows, and
@@ -200,6 +201,10 @@ separated by spaces. It deletes each release together with its tag.
 - **0.3.0** - First public beta.
 
 ### Anchor
+- **0.4.0** - Rendered panel in the range's Nazaré style: lavender lacquer,
+  stepped bakelite knobs, a moving coil gain reduction meter per half, and
+  the side (or right) half folding out beside the centre for mid/side or a
+  split dual mono. Same parameters as 0.3.0, so sessions open as they were.
 - **0.3.0** - First public beta. A VCA bus compressor beside Beacon, in the
   same black panel, after the hardware's manual: stepped ratio, eight attack
   and eight release positions with AUTO, sidechain high passes and tilts, an
@@ -207,9 +212,21 @@ separated by spaces. It deletes each release together with its tag.
   with a make up for each.
 
 ### Lantern
+- **0.4.0** - Rendered panel in the range's Nazaré style: sand lacquer, the
+  four bands in their colours, a pointer selector for the listen focus, and
+  the response drawn live behind the centre glass; the side (or right) half
+  folds out beside it. Same parameters as 0.3.0, so sessions open as they
+  were.
 - **0.3.0** - First public beta. A four band passive tube equaliser beside
   Beacon, after the hardware's manual: twelve positions a band with Q and
   bell or shelf on every band, proportional or constant Q, 5 or 15 dB gain
   modes, band focus listen, active high and low pass after the passive
   section, THD ahead of it, mute, and the RED/GREEN output with a level for
   each, with the response drawn in the centre.
+
+### Nazaré
+- **In development** - A large format analog console: six console models
+  fitted to reference measurements (`plugins/nazare/dsp`), the rendered panel
+  that set the range's style (`plugins/nazare/art`) and the concept page
+  (`plugins/nazare/docs`). There is no plugin build yet; plugin code `Nzre`
+  and bundle id `audio.indiewave.nazare` are reserved for it.

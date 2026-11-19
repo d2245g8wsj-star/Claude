@@ -96,25 +96,65 @@ on the static curve to a fraction of a dB and the output never falls as the
 input rises. LIMIT reaches about 10:1 at 12 to 24 dB over.
 
 **The rectifier** is full wave with a timing capacitor, not an RMS detector, so
-a fast attack on a low note ripples the gain, as it does on the hardware.
+a fast attack on a low note ripples the gain, as it does on the hardware: at
+10 dB of reduction a 40 Hz tone measures 0.38 % THD with a 30 ms attack and
+1 s release, 3.6 % with 0.5 ms and 0.1 s. The release is program dependent:
+a second, larger capacitor charges only on sustained compression and holds
+part of the reduction for longer. With the release at 0.3 s, a 60 ms peak is
+90 % recovered in 0.24 s, three seconds of compression in 1.2 s.
 
-**The tube** is push-pull, so mostly odd harmonics. It is always in the path:
-at rest it measures **0.006 % at 1 kHz, 0 dBu** (the manual specifies THD+N
-below 0.01 %). TUBE +15 dB takes it from 0.012 % to 1.8 % at +4 dBu without
-moving the compression (checked to 0.5 dB). Its curvature also grows with the
-reduction: 0.003 % at light reduction, 0.34 % at heavy (TUBE saturation off).
+**The vari-mu tube** is modelled as one, not as a curve. A remote cutoff tube
+has a grid wound at a varying pitch, so it behaves like many triodes in
+parallel that cut off one after another as the bias goes negative. Beacon
+sums 24 such sections, each following the 3/2 power law, with cutoffs from
+1.5 to 30 V, and runs two of these tubes in push-pull, matched to 3 %. The
+control voltage is a real bias on both grids, found from the reduction the
+law asks for through a table made from the same characteristic. Everything
+else follows from that rather than being added:
 
-**THD** is a biased triode curve, calibrated: the knob reads the distortion it
-produces on a 1 kHz sine at the +4 dBu operating level (−14 dBFS; 0 dBu =
-−18 dBFS and the +26 dBu ceiling = +8 dBFS throughout). 0.5 / 1 / 4 / 8 %
-measure 0.50 / 1.00 / 4.00 / 8.00 %.
+- the curvature grows as the tube nears cutoff, so distortion rises with
+  reduction, and with the swing on the grid, so with input level;
+- push-pull cancels most of the even series; the mismatch lets some 2nd
+  through, so the result is a mixed 2nd and 3rd, as on real units;
+- TUBE changes the swing on the grids and the output is made up after the
+  cell, so it changes the colour and not the compression;
+- the mismatch also leaves a little control voltage in the output when the
+  bias moves: thump. Trimmed, as on the unit, to almost nothing: about
+  −69 dBFS below 50 Hz after a −10 dBFS burst into fast compression.
+
+Measured at 1 kHz into a −30 dBFS threshold, tube in:
+
+| Input | −30 dBFS | −24 dBFS | −18 dBFS | −12 dBFS | −6 dBFS | 0 dBFS |
+| --- | --- | --- | --- | --- | --- | --- |
+| Gain reduction | 0 dB | 2.3 dB | 5.8 dB | 10 dB | 14.6 dB | 19.5 dB |
+| THD | < 0.001 % | 0.007 % | 0.055 % | 0.10 % | 0.17 % | 0.34 % |
+| H2 / H3 | | −88 / −86 dBc | −66 / −74 | −61 / −65 | −59 / −58 | −57 / −50 |
+
+At rest it measures **0.006 % at 1 kHz, 0 dBu** (the manual specifies THD+N
+below 0.01 %). TUBE +15 dB takes it from 0.013 % to 0.39 % at +4 dBu without
+moving the compression (checked to 0.5 dB).
+
+**THD and the output tube** are triodes, modelled the same way: the 3/2 power
+law with a rounded cutoff on the negative swing and grid conduction on the
+positive one. Grid current charges the coupling capacitor and shifts the
+bias negative after a loud passage, so a stage driven hard sags a little
+and adds more 2nd harmonic until the capacitor drains (about 60 ms): the
+bloom of a tube run hot. The THD knob is calibrated against the whole
+stage, bias shift included: it reads the distortion produced on a 1 kHz sine
+at the +4 dBu operating level (−14 dBFS; 0 dBu = −18 dBFS and the +26 dBu
+ceiling = +8 dBFS throughout). 0.5 / 1 / 4 / 8 % measure 0.50 / 1.00 / 4.00 /
+7.90 %.
 
 **The transformers** saturate on flux, the integral of the voltage, so a loud
 bass note pushes the core far harder than the same level at 1 kHz. RED at
 −2 dBFS: 1.1 % at 30 Hz against 0.4 % at 1 kHz (the latter is the tube line
 amp), and 5.4 % at 30 Hz with Output +10 and PAD 10 at about the same level.
-The input transformers are always in circuit and set the low end: −1.6 dB at
-12 Hz (the manual gives −3 dB at 12 Hz for the whole unit).
+Under the saturation sits hysteresis, from play operators on the flux at
+three widths, so the iron colours quiet bass too: at 30 Hz the output
+transformer measures about 0.06 % from −40 to −20 dBFS, the input
+transformer about 0.02 %, and neither does anything to the mids. The input
+transformers are always in circuit and set the low end: −1.6 dB at 12 Hz
+(the manual gives −3 dB at 12 Hz for the whole unit).
 
 Latency: 61 samples at every rate, reported to the host.
 
@@ -134,7 +174,11 @@ descriptions and specifications:
 * the level reference (0 dBu = −18 dBFS);
 * the sidechain HPF slope (6 dB/oct, as on the same maker's bus compressor) and the
   bell's gain and width, which the manual does not give;
-* the curves of the THD stage, the tube and the transformers;
+* the tube and transformer parameters: section spread and matching of the
+  vari-mu pair, the triodes' bias and grid conduction, the cores' hysteresis
+  and saturation, and the thump trim;
+* the program dependent release (the manual says the timing is program
+  dependent, not how);
 * the dry tap for the mix (after the input transformer, before THD).
 
 Features of the unit left out: separate settings for its two channels outside
@@ -168,11 +212,15 @@ cmake --build build --target beacon_tests beacon_shot --parallel
 ./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 944
 ```
 
-The checks assert: the THD table inverts; the idle response is flat and the
+The checks assert: the THD table inverts; the triode's bias shifts after a
+loud burst, the stage sags and recovers; the vari-mu bias table gives the
+reduction asked for; the idle response is flat and the
 resting tube stays under the specified 0.01 % at 0 dBu; the ratio rises with
 level and the output never falls as the input rises; FF and FB share one
-static curve; LIMIT is harder; attack and release times scale; the THD knob
-reads true; TUBE saturates without changing the compression; the iron
+static curve; LIMIT is harder; attack and release times scale and the release
+is program dependent; the THD knob reads true; with the tube in, distortion
+rises with reduction as a mixed 2nd and 3rd series; thump is present but
+about 60 dB down; the iron colours quiet bass and not the mids; TUBE saturates without changing the compression; the iron
 saturates on bass, Output up with PAD down drives it harder at the same level,
 and the PAD is a plain attenuator in RED only; the sidechain filters, their
 switches and listen work; bypass and mix at 0 % behave; stereo linking
@@ -183,8 +231,8 @@ and block sizes; and state surviving a save.
 ## Source
 
 ```
-src/dsp/VariMu.h        gain law, rectifier, the vari-mu tube, sidechain filter
-src/dsp/Tube.h          triode curve, THD calibration, level reference
+src/dsp/VariMu.h        gain law, rectifier, the remote cutoff push-pull pair, sidechain filter
+src/dsp/Tube.h          triode with grid conduction and bias shift, THD calibration, level reference
 src/dsp/OutputStage.h   transformers, tube line amp, RED/GREEN, iron pad
 src/dsp/Meters.h        audio thread to editor
 src/PluginProcessor.*   parameters, channel modes, linking, oversampling, the signal path

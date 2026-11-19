@@ -238,9 +238,55 @@ void testCurves()
 {
     section ("Curves and calibration");
 
-    const auto slope = (beacon::tube::triode (1.0e-4f) - beacon::tube::triode (-1.0e-4f)) / 2.0e-4f;
-    check (std::abs (slope - 1.0f) < 1.0e-3f, "triode has unity slope at zero");
-    check (std::abs (beacon::tube::triode (2.0f) + beacon::tube::triode (-2.0f)) > 0.05f, "triode is asymmetric");
+    {
+        beacon::tube::Triode t;
+        t.prepare (192000.0);
+        const auto slope = (t.process (1.0e-4f) - t.process (-1.0e-4f)) / 2.0e-4f;
+        check (std::abs (slope - 1.0f) < 1.0e-2f, "triode has unity slope at rest, got " + juce::String (slope, 4));
+        check (std::abs (t.process (1.0f) + t.process (-1.0f)) > 0.05f, "triode is asymmetric");
+    }
+
+    {
+        // Grid conduction charges the coupling capacitor: after a loud burst
+        // the bias has moved, the stage has less gain, and it comes back.
+        beacon::tube::Triode t;
+        t.prepare (192000.0);
+
+        const auto smallGain = [&t] { return (t.process (1.0e-3f) - t.process (-1.0e-3f)) / 2.0e-3f; };
+        const auto before = smallGain();
+
+        for (int n = 0; n < 19200; ++n)   // 100 ms at twice the rest bias
+            t.process (3.0f * (float) std::sin (2.0 * juce::MathConstants<double>::pi * n / 192.0));
+
+        const auto shifted = t.biasShift();
+        const auto during  = smallGain();
+
+        for (int n = 0; n < 192000; ++n)  // a second of silence
+            t.process (0.0f);
+
+        const auto after = smallGain();
+        std::cout << "  triode: bias shift after a loud burst " << shifted << " V, small signal gain "
+                  << before << " -> " << during << " -> " << after << std::endl;
+        check (shifted > 0.3f, "a loud burst shifts the bias");
+        check (during < 0.95f * before, "the stage sags while the bias is shifted");
+        check (std::abs (after - before) < 0.01f, "and recovers when the capacitor drains");
+    }
+
+    {
+        // The vari-mu pair: the bias table turns a reduction into exactly that
+        // reduction of small signal gain.
+        const auto& pair = beacon::varimu::Cell::Pair::get();
+        for (float gr : { 3.0f, 10.0f, 20.0f, 30.0f })
+        {
+            const auto bias = pair.biasFor (gr);
+            const auto u = 1.0e-5;
+            const auto slope = (pair.output (bias, u) - pair.output (bias, -u)) / (2.0 * u);
+            const auto measured = (float) (-20.0 * std::log10 (slope / pair.restSlope));
+            check (std::abs (measured - gr) < 0.1f, "bias table gives " + juce::String (gr) + " dB, got " + juce::String (measured, 3));
+        }
+        check (pair.biasFor (20.0f) > pair.biasFor (10.0f) && pair.biasFor (10.0f) > beacon::varimu::Cell::restBias,
+               "more reduction is more negative bias");
+    }
 
     for (float percent : { 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f })
     {
@@ -303,7 +349,7 @@ void testTransparentWhenIdle()
 
     auto o = render (idle, tone (1000.0, beacon::level::nominalAmplitude()), 48000);
     const auto t = thdOf (o, 0, 1000.0, 24000, 24000);
-    check (t < 0.002, "tube out, no reduction: next to no distortion, got " + juce::String (t, 5) + " %");
+    check (t < 0.001, "tube out, no reduction: next to no distortion, got " + juce::String (t, 5) + " %");
 }
 
 void testStaticCurve()
@@ -421,6 +467,26 @@ void testTiming()
     std::cout << "  release 0.1 s: half way back in " << fast << " ms; 3 s: " << slow << " ms" << std::endl;
     check (fast < 200, "0.1 s release recovers quickly");
     check (slow > 10 * fast, "3 s release is much slower");
+
+    // Program dependent: after a short peak the reduction lets go at the set
+    // release; after a long passage part of it is held and lets go slowly.
+    auto releaseAfter = [&] (int burstMs)
+    {
+        const auto trace = reductionTrace (clean ({ { beacon::pid::threshold, th (-30.0f) },
+                                                    { beacon::pid::release, 0.3f } }),
+                                           stepped (0, burstMs), burstMs + 6000);
+        // Time until 90 % of the reduction has gone.
+        const auto start = trace[(size_t) burstMs];
+        for (size_t i = (size_t) burstMs; i < trace.size(); ++i)
+            if (trace[i] <= 0.1f * start)
+                return (int) i - burstMs;
+        return 6000;
+    };
+
+    const auto afterShort = releaseAfter (60), afterLong = releaseAfter (3000);
+    std::cout << "  release 0.3 s, 90 % recovered after a 60 ms burst in " << afterShort
+              << " ms, after 3 s of compression in " << afterLong << " ms" << std::endl;
+    check (afterLong > 2 * afterShort, "release is program dependent: slower after sustained compression");
 }
 
 void testColour()
@@ -539,6 +605,82 @@ void testColour()
         const auto a = thdOf (light, 0, 1000.0, 72000, 24000), b = thdOf (heavy, 0, 1000.0, 72000, 24000);
         std::cout << "  gain cell THD, light / heavy reduction: " << a << " % / " << b << " %" << std::endl;
         check (b > 3.0 * a, "the cell distorts more as it is pushed towards cutoff");
+    }
+
+    // The same with the tube in, as the unit always runs: rising all the way
+    // up the curve, and a mixed series, not a pure odd one.
+    {
+        const Settings s { { beacon::pid::threshold, th (-30.0f) }, { beacon::pid::attack, 30.0f },
+                           { beacon::pid::release, 1.0f } };
+        double previous = 0.0;
+
+        for (float level : { -24.0f, -12.0f, 0.0f })
+        {
+            auto out = render (s, tone (1000.0, juce::Decibels::decibelsToGain (level)), 144000);
+            const auto t  = thdOf (out, 0, 1000.0, 96000, 48000);
+            const auto f1 = amplitudeAt (out, 0, 1000.0, 96000, 48000);
+            const auto h2 = db (amplitudeAt (out, 0, 2000.0, 96000, 48000) / f1);
+            const auto h3 = db (amplitudeAt (out, 0, 3000.0, 96000, 48000) / f1);
+
+            std::cout << "  tube in, " << level << " dBFS into -30 dBFS threshold: " << t << " %, H2 " << h2
+                      << " dBc, H3 " << h3 << " dBc" << std::endl;
+            check (t > previous, "distortion rises with reduction at " + juce::String (level) + " dBFS");
+            check (std::abs (h2 - h3) < 15.0, "both 2nd and 3rd harmonics present");
+            previous = t;
+        }
+
+        check (previous > 0.1 && previous < 2.0, "about a few tenths of a percent at 20 dB of reduction");
+    }
+
+    // Thump: what is left of the control voltage in the output when a burst
+    // drives the bias, below 50 Hz. Trimmed to almost nothing, not to zero.
+    {
+        const Settings s { { beacon::pid::threshold, th (-30.0f) }, { beacon::pid::attack, 0.5f },
+                           { beacon::pid::release, 0.3f } };
+        const auto a = juce::Decibels::decibelsToGain (-10.0f);
+
+        auto burst = [a] (int n)
+        {
+            constexpr int start = 24000, length = 2400, edge = 480;
+            if (n < start || n >= start + length)
+                return std::pair { 0.0f, 0.0f };
+
+            const auto k = n - start;
+            const auto w = k < edge ? 0.5 - 0.5 * std::cos (juce::MathConstants<double>::pi * k / edge)
+                         : k > length - edge ? 0.5 - 0.5 * std::cos (juce::MathConstants<double>::pi * (length - k) / edge)
+                         : 1.0;
+            const auto v = (float) (a * w * std::sin (juce::MathConstants<double>::twoPi * 5000.0 * n / 48000.0));
+            return std::pair { v, v };
+        };
+
+        auto out = render (s, burst, 96000);
+
+        double y[4] {}, peak = 0.0;
+        const auto k = 1.0 - std::exp (-juce::MathConstants<double>::twoPi * 50.0 / 48000.0);
+
+        for (int i = 0; i < out.getNumSamples(); ++i)
+        {
+            double v = out.getSample (0, i);
+            for (auto& state : y) { state += k * (v - state); v = state; }
+            peak = juce::jmax (peak, std::abs (v));
+        }
+
+        std::cout << "  thump after a -10 dBFS burst, below 50 Hz: " << db (peak) << " dBFS" << std::endl;
+        check (db (peak) < -60.0 && db (peak) > -80.0, "a trace of thump, about 60 dB below the burst");
+    }
+
+    // Hysteresis: iron colours the bass at levels well below saturation, and
+    // leaves the mids alone.
+    {
+        const Settings green { { beacon::pid::threshold, 0.0f }, { beacon::pid::tubeIn, 0.0f } };
+        const auto a = juce::Decibels::decibelsToGain (-30.0f);
+        auto quietBass = render (green, tone (30.0, a), 192000);
+        auto quietMids = render (green, tone (1000.0, a), 96000);
+        const auto quietBassThd = thdOf (quietBass, 0, 30.0, 96000, 96000);
+        const auto quietMidsThd = thdOf (quietMids, 0, 1000.0, 48000, 48000);
+        std::cout << "  input iron at -30 dBFS: 30 Hz " << quietBassThd << " %, 1 kHz " << quietMidsThd << " %" << std::endl;
+        check (quietBassThd > 0.005 && quietBassThd < 0.1, "a little hysteresis distortion on quiet bass");
+        check (quietMidsThd < 0.001, "none in the mids");
     }
 }
 

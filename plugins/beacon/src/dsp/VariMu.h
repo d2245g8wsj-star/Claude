@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Tube.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -102,41 +104,58 @@ namespace varimu
         std::array<float, size> table {};
     };
 
-    /** The rectifier and its timing capacitor. Full wave, so a low note that
-        is attacked quickly ripples the gain, as it does on the hardware. */
+    /** The rectifier and its timing network. Full wave, so a low note that
+        is attacked quickly ripples the gain, as it does on the hardware.
+
+        The release is program dependent, from a second, larger capacitor fed
+        from the first through a resistor. It only charges on sustained
+        compression, to a little below the first, and drains several times
+        more slowly. After a short peak the first capacitor lets go at the
+        set release time and the second has hardly charged; after a long
+        passage the second holds part of the reduction and lets it go
+        slowly, so a sustained mix is not pumped back up all at once. */
     class Envelope
     {
     public:
+        static constexpr float holdFraction = 0.8f;   ///< how far the second capacitor charges, of the first
+        static constexpr float holdCharge   = 0.5f;   ///< its charging time, seconds
+        static constexpr float holdRelease  = 5.0f;   ///< its release, as a multiple of the set release
+
         void prepare (double newSampleRate) noexcept
         {
             sampleRate = newSampleRate;
             setTimes (attackSeconds, releaseSeconds);
+            holdChargeCoeff = 1.0f - std::exp (-1.0f / (holdCharge * (float) sampleRate));
             reset();
         }
 
-        void reset() noexcept { value = 0.0f; }
+        void reset() noexcept { value = held = 0.0f; }
 
         void setTimes (float attack, float release) noexcept
         {
             attackSeconds  = attack;
             releaseSeconds = release;
-            attackCoeff  = 1.0f - std::exp (-1.0f / (attack  * (float) sampleRate));
-            releaseCoeff = 1.0f - std::exp (-1.0f / (release * (float) sampleRate));
+            attackCoeff      = 1.0f - std::exp (-1.0f / (attack  * (float) sampleRate));
+            releaseCoeff     = 1.0f - std::exp (-1.0f / (release * (float) sampleRate));
+            holdReleaseCoeff = 1.0f - std::exp (-1.0f / (holdRelease * release * (float) sampleRate));
         }
 
         float process (float rectified) noexcept
         {
             value += (rectified > value ? attackCoeff : releaseCoeff) * (rectified - value);
-            return value;
-        }
 
-        float get() const noexcept { return value; }
+            const auto target = holdFraction * value;
+            held += (target > held ? holdChargeCoeff : holdReleaseCoeff) * (target - held);
+
+            return std::max (value, held);
+        }
 
     private:
         double sampleRate { 48000.0 };
         float attackSeconds { 0.01f }, releaseSeconds { 0.5f };
         float attackCoeff { 0.01f }, releaseCoeff { 0.001f };
-        float value { 0.0f };
+        float holdChargeCoeff { 0.0001f }, holdReleaseCoeff { 0.0001f };
+        float value { 0.0f }, held { 0.0f };
     };
 
     /** Gain reduction for an envelope value, in dB. */
@@ -154,61 +173,241 @@ namespace varimu
         return reductionForExcess (limiting ? limit : compress, envelope / threshold - 1.0f);
     }
 
-    /** The gain cell: the vari-mu tube itself. It is always in the signal
-        path, compressing or not, so it always colours a little.
+    /** A remote cutoff tube: the grid is wound with a variable pitch, so the
+        tube behaves like many triodes in parallel, each cutting off at a
+        different grid voltage. As the bias goes more negative the close
+        wound sections cut off one after another and the gain falls smoothly
+        over tens of volts instead of all at once. Each section follows the
+        3/2 power law; their cutoffs are spread from 1.5 to 30 volts, the
+        remote ones carrying less current.
 
-        Push-pull, so mostly odd harmonics, with a small imbalance that lets
-        some even through. The curvature has two parts: the tube's own, which
-        the TUBE control drives into (up to 15 dB harder, made up again after
-        the cell, the way the unit's adaptive circuit keeps the compression
-        unchanged), and a part that grows with the reduction because the grid
-        is being pushed towards cutoff.
+        The characteristic is tabulated once, current and slope, and read
+        back with cubic Hermite interpolation, which is exact to far below
+        anything audible and much cheaper than summing the sections. */
+    class RemoteCutoff
+    {
+    public:
+        static constexpr int    sections    = 24;
+        static constexpr double nearCutoff  = 1.5, farCutoff = 30.0;
+        static constexpr double weightPower = 2.5;
+        static constexpr double knee        = 0.15;
 
-        The curve acts on the cell's output swing rather than its input: the
-        reduction is already a compression of the input, and bending the input
-        as well would compress it a second time, past what the law says. */
+        static constexpr float lowest = -32.0f, highest = 2.0f, step = 0.004f;
+        static constexpr int   points = (int) ((highest - lowest) / step) + 2;
+
+        static const RemoteCutoff& get()
+        {
+            static const RemoteCutoff tube;
+            return tube;
+        }
+
+        /** Plate current at a grid voltage. In double precision: the cell
+            works on the difference of two nearly equal currents, and a
+            quiet signal's share of that difference is below what a float
+            can resolve. */
+        double current (double vg) const noexcept
+        {
+            const auto position = (std::clamp (vg, (double) lowest, (double) (highest - step)) - lowest) / step;
+            const auto index    = (size_t) position;
+            const auto t        = position - (double) index;
+
+            const auto p0 = table[index].current, p1 = table[index + 1].current;
+            const auto m0 = table[index].slope * step, m1 = table[index + 1].slope * step;
+
+            const auto t2 = t * t, t3 = t2 * t;
+            return (2.0 * t3 - 3.0 * t2 + 1.0) * p0 + (t3 - 2.0 * t2 + t) * m0
+                 + (-2.0 * t3 + 3.0 * t2) * p1 + (t3 - t2) * m1;
+        }
+
+        static double exactCurrent (double vg)
+        {
+            double sum = 0.0;
+
+            for (int k = 0; k < sections; ++k)
+            {
+                const auto c = nearCutoff * std::pow (farCutoff / nearCutoff, (double) k / (sections - 1));
+                const auto v = vg + c;
+                const auto s = v > 30.0 * knee ? v : knee * std::log1p (std::exp (v / knee));
+                sum += std::pow (c, -weightPower) * s * std::sqrt (s);
+            }
+
+            return sum;
+        }
+
+        static double exactSlope (double vg)
+        {
+            constexpr double h = 1.0e-5;
+            return (exactCurrent (vg + h) - exactCurrent (vg - h)) / (2.0 * h);
+        }
+
+    private:
+        RemoteCutoff()
+        {
+            for (size_t i = 0; i < table.size(); ++i)
+            {
+                const auto vg = (double) lowest + (double) i * step;
+                table[i] = { exactCurrent (vg), exactSlope (vg) };
+            }
+        }
+
+        struct Point { double current, slope; };
+        std::array<Point, (size_t) points> table {};
+    };
+
+    /** The gain cell: a pair of remote cutoff tubes in push-pull, the audio
+        on their grids in opposite phase and the control voltage on both as
+        bias. It is always in the signal path, compressing or not.
+
+        Everything the cell does follows from that:
+        - the gain at a given bias is the slope of the characteristic there,
+          so the reduction the law asks for is turned into a bias voltage
+          through a table made from the same characteristic;
+        - push-pull cancels the even harmonics of a matched pair, leaving a
+          mostly odd series; the pair is matched to a few percent, which lets
+          a little 2nd harmonic through, more as the tubes near cutoff;
+        - the curvature grows as the bias nears cutoff, so the distortion
+          rises with the reduction, and with the swing on the grid, so it
+          rises with input level too;
+        - TUBE changes the swing on the grid, and the output is made up
+          again after the cell, so the compression does not move;
+        - the mismatch also leaves a little of the control voltage in the
+          output when the bias moves: thump. On the unit it is trimmed out
+          to almost nothing; here it is left at 1 % of the untrimmed amount.
+
+        The grid swing is set so that the cell at rest measures 0.005 % THD
+        on a 1 kHz sine at 0 dBu, inside the unit's specification of 0.01 %.
+    */
     class Cell
     {
     public:
-        /** Calibrated to the unit's specification of below 0.01 % THD+N at
-            0 dBu with the tube at rest; driven 15 dB harder it reaches a
-            couple of percent at the operating level. */
-        static constexpr float tubeCurvature  = 0.18f;
-        static constexpr float curvaturePerDb = 0.12f;
-        static constexpr float imbalance      = 0.003f;
+        static constexpr float restBias    = 1.0f;    ///< volts, with no reduction
+        static constexpr float gainMismatch = 0.03f;  ///< second tube's current, relative
+        static constexpr float biasMismatch = 0.03f;  ///< second tube's bias offset, volts
+        static constexpr float thumpTrim    = 0.01f;  ///< control voltage left in the output
+        static constexpr float tubeOutSwing = 0.1f;   ///< TUBE IN off: the grid driven 20 dB softer
 
         void prepare (double sampleRate) noexcept
         {
             dcCoeff = 1.0f - std::exp (-2.0f * 3.14159265f * 5.0f / (float) sampleRate);
-            dcState = 0.0f;
+            reset();
         }
 
         void reset() noexcept { dcState = 0.0f; }
 
-        /** drive is the TUBE gain, linear; tubeOn false leaves only the
-            curvature the reduction itself brings. */
+        /** drive is the TUBE gain, linear. */
         float process (float x, float reductionDb, float drive, bool tubeOn) noexcept
         {
-            const auto gain = std::pow (10.0f, -reductionDb / 20.0f);
-            const auto v    = gain * x;
-            // A tube driven harder bends faster than in proportion.
-            const auto h = (tubeOn ? tubeCurvature * drive * std::sqrt (drive) : 0.0f) + curvaturePerDb * reductionDb;
+            const auto& pair  = Pair::get();
+            const auto gain   = std::pow (10.0f, -reductionDb / 20.0f);
+            const auto bias   = (double) pair.biasFor (reductionDb);
+            const auto swing  = (double) pair.gridScale * (tubeOn ? drive : tubeOutSwing);
+            const auto u      = (double) x * swing;
 
-            if (h <= 1.0e-5f)
-            {
-                dcState *= 1.0f - dcCoeff;
-                return v;
-            }
+            const auto rest   = pair.output (bias, 0.0);
+            const auto signal = (pair.output (bias, u) - rest) / (pair.restSlope * swing);
+            const auto thump  = thumpTrim * (rest - pair.restOutput) / (pair.restSlope * pair.gridScale);
 
-            static const float offset = std::tanh (imbalance);
-            static const float slope  = 1.0f - offset * offset;
-
-            auto residual = (std::tanh (v * h + imbalance) - offset) / (slope * h) - v;
+            auto residual = (float) (signal + thump - (double) gain * x);
             dcState += dcCoeff * (residual - dcState);
             residual -= dcState;
 
-            return v + residual;
+            return gain * x + residual;
         }
+
+        /** The push-pull pair, its bias table and grid scale, made once. */
+        struct Pair
+        {
+            static const Pair& get()
+            {
+                static const Pair pair;
+                return pair;
+            }
+
+            /** Difference of the two plate currents for a bias and a grid swing. */
+            double output (double bias, double u) const noexcept
+            {
+                const auto& tube = RemoteCutoff::get();
+                return tube.current (-bias + u) - (1.0 + gainMismatch) * tube.current (-bias - u + biasMismatch);
+            }
+
+            float biasFor (float reductionDb) const noexcept
+            {
+                const auto position = std::clamp (reductionDb, 0.0f, maxReductionDb) / biasStep;
+                const auto index    = std::min ((size_t) position, biases.size() - 2);
+                const auto t        = position - (float) index;
+                return biases[index] + t * (biases[index + 1] - biases[index]);
+            }
+
+            static constexpr float biasStep = 0.05f;
+
+            double restSlope { 1.0 }, restOutput { 0.0 }, gridScale { 1.0 };
+            std::array<float, (size_t) (maxReductionDb / biasStep) + 2> biases {};
+
+        private:
+            Pair()
+            {
+                const auto slope = [] (double bias)
+                {
+                    return RemoteCutoff::exactSlope (-bias) + (1.0 + gainMismatch) * RemoteCutoff::exactSlope (-bias + biasMismatch);
+                };
+
+                const auto atRest = slope (restBias);
+                restSlope  = atRest;
+                restOutput = output (restBias, 0.0);
+
+                // Bias for each reduction, by bisection on the slope.
+                for (size_t i = 0; i < biases.size(); ++i)
+                {
+                    const auto target = atRest * std::pow (10.0, -(double) i * biasStep / 20.0);
+                    double lo = restBias, hi = -RemoteCutoff::lowest - 1.0;
+
+                    for (int n = 0; n < 60; ++n)
+                    {
+                        const auto mid = 0.5 * (lo + hi);
+                        (slope (mid) > target ? lo : hi) = mid;
+                    }
+
+                    biases[i] = (float) (0.5 * (lo + hi));
+                }
+
+                // Grid volts per unit of signal, for 0.005 % at rest on a
+                // 1 kHz sine at 0 dBu.
+                const auto zeroDbu = std::pow (10.0, level::dbfsAtZeroDbu / 20.0);
+                double lo = 1.0e-3, hi = 10.0;
+
+                for (int n = 0; n < 50; ++n)
+                {
+                    const auto mid = std::sqrt (lo * hi);
+                    (thdAtRest (mid * zeroDbu) < 0.005 ? lo : hi) = mid;
+                }
+
+                gridScale = lo;
+            }
+
+            double thdAtRest (double swing) const
+            {
+                constexpr int points = 512;
+                std::array<double, 13> re {}, im {};
+
+                for (int i = 0; i < points; ++i)
+                {
+                    const auto phase = 2.0 * 3.14159265358979323846 * i / points;
+                    const auto y = output (restBias, swing * std::sin (phase));
+
+                    for (int h = 1; h < (int) re.size(); ++h)
+                    {
+                        re[(size_t) h] += y * std::cos (phase * h);
+                        im[(size_t) h] += y * std::sin (phase * h);
+                    }
+                }
+
+                double sum = 0.0;
+                for (size_t h = 2; h < re.size(); ++h)
+                    sum += re[h] * re[h] + im[h] * im[h];
+
+                return 100.0 * std::sqrt (sum) / std::hypot (re[1], im[1]);
+            }
+        };
 
     private:
         float dcCoeff { 0.001f };

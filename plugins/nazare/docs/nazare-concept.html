@@ -1,0 +1,617 @@
+<title>Nazaré Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Yellowtail&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: the rendered unit sits on the page like a product shot, scaled to fit; the proposal reads below in one quiet column. */
+:root{
+  --bg:#f4efe7; --surface:#fffdf8; --fg:#1d2733; --muted:#66707a; --line:#e2dbd0; --accent:#c4766c; --chip:#efe8dd;
+  --navy:#1f2d3d; --cream:#f6eedc;
+  --f-panel:"Jost", "Futura", "Avenir Next", "Century Gothic", sans-serif;
+  --f-script:"Yellowtail", "Brush Script MT", cursive;
+  --f-body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121416; --surface:#1a1d20; --fg:#ece6dc; --muted:#a0a39f; --line:#2a2e31; --accent:#e5a49c; --chip:#1f2326; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121416; --surface:#1a1d20; --fg:#ece6dc; --muted:#a0a39f; --line:#2a2e31; --accent:#e5a49c; --chip:#1f2326; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg); color:var(--fg)}
+body{font-family:var(--f-body); font-size:15px; line-height:1.6; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:36px 72px}
+.wrap{max-width:1180px; margin:0 auto}
+:focus-visible{outline:1.5px solid var(--accent); outline-offset:3px}
+.intro{margin-bottom:28px; max-width:70ch}
+.eyebrow{font-family:var(--f-panel); font-weight:500; font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--accent)}
+.intro h1{font-family:var(--f-panel); font-weight:300; font-size:clamp(26px,3.4vw,38px); line-height:1.15; margin:8px 0; text-wrap:balance}
+.intro p{margin:0; color:var(--muted)}
+
+/* ---------- the unit ---------- */
+.stage-outer{overflow-x:auto; -webkit-overflow-scrolling:touch; padding:4px 0 26px}
+.stage-box{position:relative}
+.stage{position:absolute; left:0; top:0; width:1600px; height:440px; transform-origin:0 0; perspective:3000px; user-select:none; -webkit-user-select:none; font-family:var(--f-panel)}
+.unit{position:absolute; inset:0; transform-style:preserve-3d; transition:transform 1s cubic-bezier(.6,.05,.25,1)}
+.unit.flipped{transform:rotateY(180deg)}
+.face{position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; background-size:100% 100%; border-radius:3px;
+  box-shadow:0 34px 48px -26px rgba(60,25,25,.55), 0 10px 18px -10px rgba(60,25,25,.35)}
+.face.front{background-image:url(renders/plate_front.jpg)}
+.face.rear{background-image:url(renders/plate_rear.jpg); transform:rotateY(180deg)}
+.sprite{position:absolute; background-repeat:no-repeat; pointer-events:none}
+.hit{position:absolute; border-radius:50%; cursor:ns-resize; touch-action:none; outline:none}
+.hit:focus-visible{box-shadow:0 0 0 2px rgba(31,45,61,.55)}
+.press{all:unset; position:absolute; cursor:pointer; border-radius:4px}
+.press:focus-visible{box-shadow:0 0 0 2px rgba(31,45,61,.55)}
+.needles{position:absolute; pointer-events:none; overflow:visible}
+.glare{position:absolute; pointer-events:none; border-radius:5px;
+  background:linear-gradient(158deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.08) 32%, rgba(255,255,255,0) 46%), radial-gradient(120% 90% at 50% 120%, rgba(60,30,10,.0) 55%, rgba(60,30,10,.16) 100%)}
+.digits{position:absolute; display:grid; place-items:center; font-family:var(--f-mono); font-size:21px; font-weight:500; letter-spacing:.06em; color:#ffd9a0; text-shadow:0 0 6px rgba(255,170,80,.75), 0 0 1px #ffe8c4; pointer-events:none}
+.tip{position:absolute; transform:translate(-50%,0); padding:3px 9px 2px; border-radius:2px; background:rgba(31,45,61,.92); color:#f6eedc; font-size:10px; letter-spacing:.22em; font-weight:500; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s}
+.tip.on{opacity:1}
+
+/* ---------- transport ---------- */
+.transport{display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin:4px 0}
+.btn{all:unset; cursor:pointer; font-size:13.5px; font-weight:500; padding:9px 18px; border-radius:999px; background:var(--fg); color:var(--bg)}
+.btn.ghost{background:transparent; color:var(--fg); box-shadow:inset 0 0 0 1px var(--line)}
+.btn:focus-visible{outline:1.5px solid var(--fg); outline-offset:2px}
+.transport small{color:var(--muted); font-size:13px}
+#file{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none}
+
+/* ---------- proposal ---------- */
+.doc{display:grid; grid-template-columns:190px minmax(0,1fr); gap:48px; margin-top:56px; padding-top:28px; border-top:1px solid var(--line)}
+@media (max-width:860px){.doc{grid-template-columns:minmax(0,1fr); gap:0}.toc{display:none}}
+.toc{position:sticky; top:calc(env(safe-area-inset-top, 0px) + 20px); align-self:start; font-size:13px}
+.toc ol{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:8px}
+.toc a{color:var(--muted); text-decoration:none} .toc a:hover{color:var(--fg)}
+article{max-width:72ch; min-width:0}
+article section{margin-bottom:44px}
+article h2{font-family:var(--f-panel); font-weight:400; font-size:22px; line-height:1.25; margin:0 0 12px; text-wrap:balance}
+article h2 .n{font-family:var(--f-mono); font-size:12px; color:var(--accent); margin-right:12px; vertical-align:3px}
+article h3{font-family:var(--f-panel); font-weight:500; font-size:16px; margin:24px 0 6px}
+article p{margin:0 0 12px} article ul{margin:0 0 12px; padding-left:20px} article li{margin-bottom:5px}
+article a{color:var(--fg); text-decoration-color:var(--accent); text-underline-offset:3px}
+code{font-family:var(--f-mono); font-size:.87em}
+.lead{font-size:17px; line-height:1.55}
+.tw{overflow-x:auto; margin:6px 0 16px; border-top:1px solid var(--fg); border-bottom:1px solid var(--line)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:620px}
+th,td{text-align:left; padding:9px 12px 9px 0; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-family:var(--f-panel); font-weight:500; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+.spot{font-family:var(--f-panel); font-weight:500; letter-spacing:.18em; font-size:12px; white-space:nowrap}
+.flow{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin:10px 0 16px; font-size:12.5px}
+.flow span{padding:5px 10px; border:1px solid var(--line); border-radius:999px}
+.flow span.nl{border-color:var(--accent)}
+.flow i{font-style:normal; color:var(--muted)}
+.note{border-left:2px solid var(--accent); padding:4px 0 4px 16px; margin:14px 0}
+.shots{display:grid; grid-template-columns:1fr; gap:10px; margin:12px 0 16px}
+.shots img{width:100%; height:auto; display:block; border-radius:3px}
+.shots figcaption{font-size:13px; color:var(--muted)}
+.logo-row{display:flex; flex-wrap:wrap; gap:12px; margin:12px 0 14px}
+.logo-tile{flex:1 1 150px; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:22px 10px; border-radius:4px}
+.logo-tile svg{width:100%; max-width:120px; height:auto}
+.logo-tile .script{font-family:var(--f-script); font-size:30px; line-height:1}
+.logo-tile.pk{background:linear-gradient(#f4c6bd,#eab3a9); color:#1f2d3d} .logo-tile.cr{background:#f3ead6; color:#1f2d3d} .logo-tile.nv{background:#1f2d3d; color:#f4c6bd}
+.qa{display:grid; border-top:1px solid var(--line)}
+.qa div{padding:12px 0; border-bottom:1px solid var(--line)}
+.qa b{display:block; font-weight:600; margin-bottom:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="nazare-mark" viewBox="0 0 120 84">
+      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 76 H116" stroke-width="2"/>
+        <path d="M112 76 C 100 72, 96 44, 84 24 C 78 14, 70 9, 60 9 C 46 9, 34 16, 31 28 C 29 37, 35 43, 42 41 C 48 39, 49 32, 45 29 C 42 27, 38 29, 39 33" stroke-width="2.4"/>
+        <path d="M10 76 C 30 75, 46 68, 54 56 C 60 47, 62 36, 58 27" stroke-width="2"/>
+        <path d="M70 18 C 82 26, 88 46, 94 64" stroke-width="1.2" opacity=".5"/>
+      </g>
+      <g transform="translate(38 70) rotate(-22)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-5 0.9 C -2 1.6, 3 1.5, 5.4 0.2" stroke-width="1.5"/>
+        <g stroke-width="1.05"><path d="M-1.6 0.2 L -0.6 -2.6 L 1.6 0.2"/><path d="M-0.6 -2.6 L -1.3 -5.6"/><path d="M-1.3 -5.0 L -4.4 -4.1 M -1.2 -5.1 L 1.8 -6.5"/></g>
+        <circle cx="-1.6" cy="-7" r="1.05" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow">IndieWave Audio · voorstel · concept 0.5</div>
+    <h1>Nazaré, large format analog console</h1>
+    <p>Gerenderd in Blender: gelakt aluminium, crème bakeliet, verchroomd messing. Voorop alleen console, drive, breedte en volume. Draai aan de knoppen, druk op play, of draai het apparaat om via REAR PANEL.</p>
+  </header>
+
+  <div class="stage-outer" id="stageOuter">
+    <div class="stage-box" id="stageBox">
+      <div class="stage" id="stage" role="group" aria-label="Nazaré plugin">
+        <div class="unit" id="unit">
+          <div class="face front" id="front"></div>
+          <div class="face rear" id="rear"></div>
+        </div>
+        <div class="tip" id="tip"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button class="btn" id="play">Speel demo-loop</button>
+    <button class="btn ghost" id="loadBtn">Eigen audio laden</button>
+    <input type="file" id="file" accept="audio/*">
+    <small id="tstat">Het geluid is een schets van de DSP in de browser, niet het eindproduct.</small>
+  </div>
+
+  <div class="doc">
+    <nav class="toc" aria-label="Inhoud">
+      <div class="eyebrow">Voorstel</div>
+      <ol>
+        <li><a href="#idee">Het idee</a></li>
+        <li><a href="#consoles">Zes consoles</a></li>
+        <li><a href="#drive">De drive-knop</a></li>
+        <li><a href="#dsp">De non-lineaire kern</a></li>
+        <li><a href="#stereo">Stereobeeld</a></li>
+        <li><a href="#gui">Paneel en logo</a></li>
+        <li><a href="#slate">Analyse van Slate VCC</a></li>
+        <li><a href="#plan">Plan en fases</a></li>
+        <li><a href="#vragen">Open vragen</a></li>
+      </ol>
+    </nav>
+    <article>
+      <section id="idee">
+        <h2><span class="n">01</span>Het idee</h2>
+        <p class="lead">Nazaré zet op elk spoor en op de mixbus het kanaal van een grote analoge tafel. Niet als effect dat je hoort, maar als het medium waar alles doorheen gaat: kleine verschillen tussen links en rechts, harmonischen die met het niveau meebewegen, laag dat iets dikker wordt omdat de ingangstrafo als eerste verzadigt.</p>
+        <p>Het wordt de achtste plugin in de suite, naast Crest, Breakwater, Beacon, Swell, Hinge, Lacquer en Tide. Waar de rest van de suite strak en technisch is, mag Nazaré een eigen karakter hebben: een vintage apparaat in surfkleuren, met dezelfde rack-oren en hetzelfde IndieWave-merkje.</p>
+        <p>Werktitel en identiteit: <b>IndieWave Audio Nazaré, large format analog console</b>. Plugin code <code>Nzre</code>, bundle id <code>audio.indiewave.nazare</code>, map <code>plugins/nazare</code>. JUCE 8, VST3, AU en Standalone, net als de rest.</p>
+      </section>
+
+      <section id="consoles">
+        <h2><span class="n">02</span>Zes consoles, genoemd naar golven</h2>
+        <p>Elke console is vernoemd naar een beroemde surfspot. Op het paneel staat alleen een generieke omschrijving; merknamen komen niet op de GUI of in de plugin. Vijf van de zes zijn gekalibreerd op een gemeten referentieconsole met een vergelijkbaar karakter. GLASS is een eigen ontwerp.</p>
+        <div class="tw"><table>
+          <thead><tr><th>Console</th><th>Op het paneel</th><th>Gekalibreerd op</th><th>Karakter, zoals gemeten</th></tr></thead>
+          <tbody>
+            <tr><td class="spot">GLASS</td><td>Modern transformerless</td><td>eigen ontwerp</td><td>De referentie. Alleen oneven, onder −100 dB bij nominaal niveau, een zachte grens net boven 0 dBFS.</td></tr>
+            <tr><td class="spot">PIPELINE</td><td>British VCA</td><td>VCC Channel 0</td><td>Een vaste H2-glans van −60 dB die ook bij zachte signalen blijft, plus kleur die met het niveau groeit. Warme tilt: −1 dB bij 20 Hz, −0,5 dB bij 20 kHz.</td></tr>
+            <tr><td class="spot">MAVERICKS</td><td>American discrete</td><td>VCC Channel 2</td><td>Schoon tot de muur: −82 dB bij nominaal, en vlak boven 0 dBFS een harde knik. Het laag heeft al eerder H3.</td></tr>
+            <tr><td class="spot">JAWS</td><td>British class A</td><td>VCC Channel 3</td><td>Transformator-laag: +5 dB bij 20 Hz, H3 die bij 100 Hz snel groeit terwijl 1 kHz schoon blijft.</td></tr>
+            <tr><td class="spot">TEAHUPO'O</td><td>Germanium</td><td>VCC Channel 4</td><td>HF-glans: de vervorming neemt toe met de frequentie, met een high shelf tot +0,6 dB, en is relatief ruwer bij zachte signalen.</td></tr>
+            <tr><td class="spot">SUPERTUBES</td><td>British valve</td><td>VCC Channel 5</td><td>Buis: H2 en H3 even sterk met een lange staart, comprimeert 1,4 dB bij 0 dBFS, en drive is echte ingangsgain.</td></tr>
+          </tbody>
+        </table></div>
+        <p>De koppeling is op karakter gekozen; de referentie geeft alleen consolenummers door. De meting en de fit staan in <code>plugins/nazare/measure/reference/vcc/</code> en <code>plugins/nazare/dsp/</code>.</p>
+      </section>
+
+      <section id="drive">
+        <h2><span class="n">03</span>De drive-knop: geijkt in vervorming, niet in dB</h2>
+        <p>Dit is het hart van het ontwerp. Bij de meeste console-plugins draait de drive-knop aan de versterking. Daardoor zit al het interessante in een klein stukje van de draaiweg, en klinkt dezelfde knopstand op elke console anders hard.</p>
+        <p>Nazaré ijkt de knop in <b>totale harmonische vervorming</b> (THD) op nominaal niveau. Elke stap in de draaiweg is een vaste stap in vervorming, logaritmisch van 0,0005 % tot 25 %. De plugin rekent per console uit hoeveel niveau er in de trap moet om daar te komen. Dat geeft drie dingen:</p>
+        <ul>
+          <li><b>Eerlijk vergelijken.</b> Wissel van console bij dezelfde knopstand en je hoort het karakter, niet een niveauverschil of een andere hoeveelheid vervorming.</li>
+          <li><b>Gelijk verdeelde draaiweg.</b> Van ongerept naar verzopen zijn zeven zones van ieder 0,67 decade vervorming. Geen dood stuk aan het begin, geen klif aan het eind.</li>
+          <li><b>Eenvoudig.</b> Eén knop, één woord dat zegt waar je bent, en twee getallen voor wie wil weten wat er gebeurt: het niveau in de trap in dB en de THD.</li>
+        </ul>
+        <div class="tw"><table>
+          <thead><tr><th>Zone</th><th>THD op 0 VU</th><th>Wat je hoort</th></tr></thead>
+          <tbody id="zoneRows"></tbody>
+        </table></div>
+        <h3>Fijn regelen zonder extra knoppen</h3>
+        <ul>
+          <li>Shift ingedrukt bij slepen of scrollen geeft tien keer fijnere stappen. Pijltjestoetsen werken ook.</li>
+          <li>Dubbelklik zet de knop op het begin van WARM, de standaardstand voor een kanaal.</li>
+          <li>De dB-waarde onder de knop is het niveau in de trap ten opzichte van nominaal. Daar kun je ook direct een waarde intikken (in de plugin).</li>
+          <li><b>0 VU =</b> (achterop) bepaalt waar je digitale niveau op de console landt: −24, −18, −14 of −12 dBFS. Dit is de echte gain staging; de drive-knop doet de rest.</li>
+          <li><b>AUTO GAIN</b> (achterop, standaard aan) compenseert het luidheidsverlies van verzadiging, zodat luider nooit beter lijkt. Drive is daarnaast altijd intern gecompenseerd: in de lineaire zone komt het signaal er bit-voor-bit even hard uit als het erin ging.</li>
+        </ul>
+        <div class="note"><b>Belofte, net als bij Crest:</b> op PRISTINE is de THD kleiner dan 0,002 % en de versterking exact 1,0 bij elk model. De offline tests controleren dat bij elke build.</div>
+        <h3>Character, achterop</h3>
+        <p>Twee instelschroeven op het achterpaneel. <b>AGE</b> maakt de componenten ouder: meer ruis, minder hoog, meer spreiding tussen kanalen, iets meer 2e harmonische. <b>NOISE</b> stelt de ruisvloer van het model in, van uit tot overdreven. Het evenwicht tussen even en oneven harmonischen ligt per console vast en staat niet op het paneel.</p>
+      </section>
+
+      <section id="dsp">
+        <h2><span class="n">04</span>De non-lineaire kern</h2>
+        <p>De VCC-metingen lieten zien dat het karakter van zo'n console uit een statische waveshaper met lineaire filters eromheen komt, en niet uit ingewikkelde circuitmodellen. Nazaré gebruikt daarom één keten met zes gefitte parametersets:</p>
+        <div class="flow" aria-label="Signaalketen">
+          <span>in</span><i>→</i><span>0 VU-ijking</span><i>→</i><span>pre-shelves</span><i>→</i><span class="nl">4× shaper</span><i>→</i><span>inverse shelves</span><i>→</i><span>toon-EQ</span><i>→</i><span>gain + spreiding</span><i>→</i><span>overspraak (BUS)</span><i>→</i><span>ruis met gate</span>
+        </div>
+        <ul>
+          <li><b>De shaper</b> heeft vijf ingrediënten. Een |x|-term voor vaste even kleur, die niet van het niveau afhangt (H4 precies 14 dB onder H2). Een x²-term en een x³-term voor kleur die groeit. Een tanh met bias voor de buis. En een zachte clip.</li>
+          <li><b>Frequentie-afhankelijke vervorming</b> zonder frequentierespons te veranderen. Een shelf vóór de shaper en het exacte inverse filter erna laten het laag een transformator harder raken, of het hoog een slew-beperkte trap.</li>
+          <li><b>Drive</b> schaalt per dB drive de vervorming met ongeveer 1 dB en laat het clippunt staan, zoals gemeten. Alleen de buis krijgt echte ingangsgain met gedeeltelijke make-up.</li>
+        </ul>
+        <h3>Wat Nazaré beter doet dan de referentie</h3>
+        <ul>
+          <li><b>Geen aliasing.</b> De referentie rekent zonder oversampling en laat aliases tot −27 dB toe. Nazaré oversamplet 4× met een filter dat vlak is tot 21 kHz. Het gevouwen product ligt daardoor onder −90 dB.</li>
+          <li><b>Een echt stereobeeld.</b> De referentie is links en rechts bit-identiek. Nazaré geeft elk kanaalnummer eigen componentwaarden.</li>
+          <li><b>Geheugen.</b> De referentie is volledig statisch. Bij Nazaré zwellen de even kleur en de buis-bias ongeveer 100 ms na een transiënt en zakken dan terug. Bij stilstaande tonen is dat effect nul, zodat de kalibratie blijft kloppen.</li>
+          <li><b>Stilte blijft stil.</b> De ruis loopt alleen mee zolang er signaal is, net als bij de referentie.</li>
+        </ul>
+        <p>De demo hierboven gebruikt dezelfde shaper, dezelfde filtercoëfficiënten en dezelfde drive-wet als het Python-referentiemodel, maar zonder het geheugen. Dat kan een WaveShaper in de browser niet.</p>
+      </section>
+
+      <section id="stereo">
+        <h2><span class="n">05</span>Stereobeeld</h2>
+        <p>Een echte tafel is nooit links en rechts gelijk. Die kleine ongelijkheid, opgeteld over 24 of 48 kanalen, is een groot deel van "de breedte en diepte van analoog". Nazaré bouwt dat bewust na:</p>
+        <ul>
+          <li><b>SPREAD</b> op de voorkant regelt het allemaal tegelijk: van MONO (twee identieke kanalen, geen overspraak) tot WIDE.</li>
+          <li>Onder die knop krijgt elk kanaal eigen componentwaarden: ±0,25 dB versterking, ±1,5 dB headroom, ±30 % in de even harmonischen en ±12 % in de hoge afrol, plus overspraak die sterker is in het hoog, zoals bij echte capacitieve overspraak.</li>
+          <li><b>CHANNEL 1–48</b> (achterop) kiest welk kanaal van de tafel je gebruikt. Zet elk spoor op een ander kanaal en de mix krijgt de spreiding van een echte tafel. Een latere versie kan instanties dit zelf laten regelen.</li>
+          <li><b>MATCHED PAIR</b> (achterop) maakt links en rechts identiek, voor mastering of mono-kritische bronnen.</li>
+          <li>In de <b>BUS</b>-stand (achterop) is de overspraak hoger en zit er een summing-versterker in de keten.</li>
+        </ul>
+      </section>
+
+      <section id="gui">
+        <h2><span class="n">06</span>Paneel en logo</h2>
+        <p>Het paneel is gebouwd en gerenderd in Blender, op dezelfde manier als de rest van de suite: een plaat zonder bewegende delen, en per knop een filmstrip waarin de knop draait terwijl het licht stil blijft staan. Elke filmstrip neemt zijn eigen schaduw mee op de plaat.</p>
+        <ul>
+          <li><b>Materialen:</b> pastelroze lak met een lichte sinaasappelhuid-structuur en zeefdruk in navy, crème bakeliet-knoppen met geribbelde rand en een verchroomd inzetstuk, chromen rack-oren met rackschroeven, een emaille badge in een chromen rand, een VU-meter met chromen lijst en een rood juweellampje.</li>
+          <li><b>Voorop vier regelaars:</b> CONSOLE (chicken-head), DRIVE (de grote knop met de zeven zones eromheen gedrukt), SPREAD en OUTPUT. Plus een hendelschakelaar voor ON en BYPASS.</li>
+          <li><b>Achterop:</b> AGE en NOISE als messing instelschroeven, oversampling en 0 VU als standenschakelaars, drie hendelschakelaars voor MODE, AUTO GAIN en MATCHED PAIR, en het kanaalnummer in een verlicht venster. Plus het typeplaatje met serienummer.</li>
+          <li><b>Geen schermen en geen getallen.</b> Alleen als je een knop aanraakt verschijnt een klein label met de stand.</li>
+          <li>Alle posities staan in één bestand, <code>plugins/nazare/art/layout.json</code>. De Blender-scène, de zeefdruk en de editor lezen dat bestand, dus een knop verplaatsen is één regel aanpassen en opnieuw renderen.</li>
+        </ul>
+        <h3>Het logo</h3>
+        <p>De golf met het kleine surfertje staat samen met de naam in script op een crème emaille badge met een chromen rand, zoals het logo op een oude versterker of surfboard. Los werkt het teken in één kleur op roze, crème en navy.</p>
+        <div class="logo-row">
+          <div class="logo-tile pk"><svg viewBox="0 0 120 84" role="img" aria-label="Nazaré logo op roze"><use href="#nazare-mark"/></svg><span class="script">Nazaré</span></div>
+          <div class="logo-tile cr"><svg viewBox="0 0 120 84" role="img" aria-label="Nazaré logo op crème"><use href="#nazare-mark"/></svg><span class="script">Nazaré</span></div>
+          <div class="logo-tile nv"><svg viewBox="0 0 120 84" role="img" aria-label="Nazaré logo op navy"><use href="#nazare-mark"/></svg><span class="script">Nazaré</span></div>
+        </div>
+      </section>
+
+      <section id="slate">
+        <h2><span class="n">07</span>Analyse van Slate Virtual Console Collection</h2>
+        <p>Ik ga de plugin zelf niet decompileren; dat mag volgens de licentie niet en levert ook weinig op. Wat wel werkt, en precies is wat we nodig hebben, is meten wat hij met signaal doet. Deze cloudomgeving draait Linux en kan een macOS- of Windows-plugin niet laden, dus de handigste route is:</p>
+        <ul>
+          <li>Ik maak een set testbestanden (WAV, 48 kHz, 32-bit float): sinussen op 50 Hz, 1 kHz en 10 kHz in stappen van 1 dB, een logaritmische sweep, twee-toon IMD (60 Hz + 7 kHz), roze ruis, impulsen, en een stereobestand met alleen links.</li>
+          <li>Jij stuurt die door VCC op elke console, met drive op een paar vaste standen, en exporteert de renders.</li>
+          <li>Ik bereken per console THD en de afzonderlijke harmonischen tegen niveau, de frequentierespons, IMD, crosstalk, ruisvloer, het verschil tussen kanalen en het tijdsgedrag (dynamische bias) uit de bursts.</li>
+        </ul>
+        <p>Met die curves kalibreren we de zes modellen en zie je precies waar Nazaré anders of beter doet. Hetzelfde kan voor Waves NLS en, nog beter, voor echte hardware als je ergens toegang toe hebt.</p>
+      </section>
+
+      <section id="plan">
+        <h2><span class="n">08</span>Plan en fases</h2>
+        <div class="tw"><table>
+          <thead><tr><th>Versie</th><th>Wat</th><th>Klaar als</th></tr></thead>
+          <tbody>
+            <tr><td class="num">0.1</td><td>Projectskelet in <code>plugins/nazare</code>, parameters, paneel uit deze GUI in JUCE met de gedeelde paneelset, eenvoudige modellen zoals in de demo.</td><td>Bouwt op macOS en Windows in CI, laadt in een DAW, alle knoppen werken.</td></tr>
+            <tr><td class="num">0.2</td><td>Meetsuite op de Slate-renders, de echte trapketen per model, ADAA en oversampling.</td><td>Harmonischen per model binnen 2 dB van de doelcurve van 1 tot 7 kHz.</td></tr>
+            <tr><td class="num">0.3</td><td>Dynamische bias, transformator-hysterese, tolerance en crosstalk, BUS-mode.</td><td>Offline tests op PRISTINE-belofte, latency, reproduceerbare kanalen.</td></tr>
+            <tr><td class="num">0.5</td><td>Presets, schaalbare GUI, CPU-optimalisatie, beta.</td><td>Onder 1 % CPU per instantie op 2× bij 48 kHz op een M1.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="vragen">
+        <h2><span class="n">09</span>Open vragen voor jou</h2>
+        <div class="qa">
+          <div><b>Zes consoles, of liever vier sterke?</b>Minder modellen betekent sneller beter. Mijn voorstel is starten met GLASS, PIPELINE, JAWS en SUPERTUBES.</div>
+          <div><b>Kanaal en bus in één plugin, of twee?</b>Slate splitst ze niet, Waves wel. Eén plugin met een MODE-schakelaar houdt de suite overzichtelijk.</div>
+          <div><b>Testbestanden of plugin?</b>Stuur liever de renders dan de plugin zelf. Zeg het, en ik maak de testbestanden als eerste stap.</div>
+        </div>
+      </section>
+    </article>
+  </div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+
+/* ------------------------------------------------------------------ models (fitted: plugins/nazare/dsp/models.json) */
+const MODELS=[{"name":"GLASS","desc":"Modern transformerless","drive_mode":"coef","eq":{"hp_f":7.3527611293756685,"hp_order":1,"ls_f":59.40519351128062,"ls_g":-0.01881219129798317,"pk_f":244.21213124257673,"pk_g":0.0028131983637066284,"pk_q":0.7531711152721102,"hs_f":3135.2947951903006,"hs_g":-9.259034258623287e-07,"dc_f":3.0},"gain_db":0.0,"bump":0.02,"pre":{"lf_f":150.0,"lf_g":0.0,"hf_f":3000.0,"hf_g":0.0},"shaper":{"k1":0.0,"a2":2e-05,"a3":-0.0004,"clip_c":1.25,"clip_p":6.0},"xtalk":{"flat":-2.081072526197097e-05,"lf":5.3220485627491794e-05,"hf":-1.1290426156285076e-05,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-107,"memory":0.1,"reference":{"designed":true},"fit_rms":0.0},{"name":"PIPELINE","desc":"British VCA","drive_mode":"coef","eq":{"hp_f":7.167381412469503,"hp_order":1,"ls_f":45.59284937900688,"ls_g":-0.38929892818562745,"pk_f":192.5138587432797,"pk_g":-0.1461520973181828,"pk_q":2.999999593037681,"hs_f":7776.923832699424,"hs_g":-0.5336157199257107,"dc_f":3.0},"gain_db":0.6372485447684337,"bump":0.1711343184770443,"pre":{"lf_f":599.9999999999999,"lf_g":-0.9262002602437294,"hf_f":5229.853632346045,"hf_g":-0.6159029395313824},"shaper":{"k1":0.002342161369893672,"a2":0.004213604161786043,"a3":0.0029342719843573058,"clip_c":1.5717515884201236,"clip_p":6.641109710536647,"xover":-9.999999999999999e-10},"xtalk":{"flat":-0.00024899817101708624,"lf":0.00040444501881006204,"hf":0.0003869244254743183,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-98,"memory":0.25,"reference":{"plugin":"Channel","console":0},"fit_rms":1.1},{"name":"MAVERICKS","desc":"American discrete","drive_mode":"coef","eq":{"hp_f":35.832556647327806,"hp_order":1,"ls_f":30.660700881516902,"ls_g":7.999999999971139,"pk_f":245.83743002145638,"pk_g":-0.6239718484331844,"pk_q":0.3000000000001833,"hs_f":15486.365055052172,"hs_g":-0.27605458175968617,"dc_f":3.0},"gain_db":0.6088585748873334,"bump":0.016137303696987716,"pre":{"lf_f":599.9999999992035,"lf_g":-3.1722957187856218,"hf_f":6818.815887356708,"hf_g":-8.444840749557512},"shaper":{"k1":-9.660197427049888e-06,"a2":-0.0021424125446440003,"a3":0.0017352899119983398,"clip_c":1.0758531096694366,"clip_p":9.354844871419226,"xover":-9.999999999999999e-10},"xtalk":{"flat":-2.8813265589546483e-06,"lf":1.8523086840344288e-05,"hf":1.360670497349856e-05,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-97,"memory":0.25,"reference":{"plugin":"Channel","console":2},"fit_rms":9.066},{"name":"JAWS","desc":"British class A","drive_mode":"coef","eq":{"hp_f":1.0000000000810267,"hp_order":1,"ls_f":41.0859738209994,"ls_g":5.800552390172699,"pk_f":923.3858206028441,"pk_g":-0.19997326049339934,"pk_q":0.30000000000000004,"hs_f":14565.347874153364,"hs_g":0.10228757153237426,"dc_f":3.0},"gain_db":0.31772328294006064,"bump":0.09592849712465017,"pre":{"lf_f":124.55565772433344,"lf_g":17.999999999999996,"hf_f":5368.698786996767,"hf_g":-6.879259020809671},"shaper":{"k1":4.5361622071235596e-05,"a2":0.0001389165480743611,"a3":0.00010338032411041829,"clip_c":3.9999999999999996,"clip_p":39.99977327103019,"xover":-9.999999999999999e-10},"xtalk":{"flat":0.0002794968370506167,"lf":0.0003053625990891614,"hf":-0.000112453203580481,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-95,"memory":0.35,"reference":{"plugin":"Channel","console":3},"fit_rms":4.486},{"name":"TEAHUPO\u2019O","desc":"Germanium","drive_mode":"coef","eq":{"hp_f":6.534605026669444,"hp_order":1,"ls_f":155.8374168297437,"ls_g":-0.3306024624589997,"pk_f":584.1809166618023,"pk_g":-0.44781407956683233,"pk_q":0.3517155190417404,"hs_f":10468.814986027928,"hs_g":0.16827772511718742,"dc_f":3.0},"gain_db":0.5492439902167757,"bump":-0.018468208132217116,"pre":{"lf_f":116.88271044139024,"lf_g":-17.91563028765716,"hf_f":2976.5994234079117,"hf_g":-3.2238354127502835},"shaper":{"k1":-0.00011846555786231073,"a2":-0.0002066824983764041,"a3":0.0005282060547874406,"clip_c":2.3506911297249116,"clip_p":8.210204717692973,"xover":-0.0024970247800801195},"xtalk":{"flat":-3.720881560292675e-05,"lf":0.00010017040124018509,"hf":0.00031397805468397216,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-93,"memory":0.3,"reference":{"plugin":"Channel","console":4},"fit_rms":7.684},{"name":"SUPERTUBES","desc":"British valve","drive_mode":"pregain","eq":{"hp_f":5.889595468927962,"hp_order":1,"ls_f":121.9100654346009,"ls_g":0.2335472450919447,"pk_f":3226.1244814389956,"pk_g":2.40826124222943,"pk_q":2.999999117874265,"hs_f":11756.291754762698,"hs_g":0.6571423120963191,"dc_f":3.0},"gain_db":0.2090770673882272,"bump":0.0,"pre":{"lf_f":284.89417205017565,"lf_g":-0.9782434582248543,"hf_f":2218.587310936159,"hf_g":5.293972042405226},"shaper":{"k1":-0.008615502552882131,"a2":-0.1437540346537668,"a3":0.0013165016217090407,"clip_c":2.7637827136462114,"clip_p":12.362220051182755,"xover":9.999999999999999e-10,"tube_g":0.9095754755390976,"tube_b":-0.2127173426325697,"pre_gain":0.95078494188802,"makeup":0.8760401462735152},"xtalk":{"flat":0.0019222421655730824,"lf":0.0074959237476845035,"hf":0.006299212226721951,"lf_f":300.0,"hf_f":3000.0},"noise_dbfs":-93,"memory":0.5,"reference":{"plugin":"Channel","console":5},"fit_rms":11.753}].map(m=>Object.assign(m,{noise:m.noise_dbfs}));
+const ZONES=[
+ {n:'PRISTINE',txt:'Niets te horen, ook niet in een null-test. Alleen de lineaire kleur van het model.'},
+ {n:'CLEAN',txt:'Je meet het, je hoort het nauwelijks. Goed voor elk spoor in een volle mix.'},
+ {n:'SILK',txt:'Hoog wordt zachter, transiënten iets ronder. De "console op elk kanaal"-stand.'},
+ {n:'WARM',txt:'Duidelijk dikker laag en midden. De standaard voor bus en drums.'},
+ {n:'RICH',txt:'De console doet mee: harmonischen zijn hoorbaar, pieken worden ingehouden.'},
+ {n:'SATURATED',txt:'Bewust gekleurd. Synths, bas, room-mics, parallel op drums.'},
+ {n:'DROWNED',txt:'Zompig en verzadigd. De tafel ligt in het rood en klinkt daar ook naar.'},
+];
+const THD_LO=-3.3, THD_HI=1.4; // log10 of THD % across the knob travel
+const S={model:3, drive:.5, harm:.5, age:.2, noise:.3, tol:.45, xt:.35, out:.5, mix:1, ch:7, os:'4x', cal:'-18', mode:'channel', matched:false, auto:true, bypass:false};
+
+/* RBJ biquads, identical to dsp/model.py */
+function biquad(kind,f,fs,g=0,q=Math.SQRT1_2){
+  const A=Math.pow(10,g/40),w=2*Math.PI*f/fs,c=Math.cos(w),s=Math.sin(w),al=s/(2*q);let b,a;
+  if(kind==='hp1'){const k=Math.tan(w/2);b=[1,-1,0];a=[1+k,k-1,0]}
+  else if(kind==='lp1'){const k=Math.tan(w/2);b=[k,k,0];a=[1+k,k-1,0]}
+  else if(kind==='hp'){b=[(1+c)/2,-(1+c),(1+c)/2];a=[1+al,-2*c,1-al]}
+  else if(kind==='peak'){b=[1+al*A,-2*c,1-al*A];a=[1+al/A,-2*c,1-al/A]}
+  else{const sq=2*Math.sqrt(A)*al;
+    if(kind==='ls'){b=[A*((A+1)-(A-1)*c+sq),2*A*((A-1)-(A+1)*c),A*((A+1)-(A-1)*c-sq)];a=[(A+1)+(A-1)*c+sq,-2*((A-1)+(A+1)*c),(A+1)+(A-1)*c-sq]}
+    else{b=[A*((A+1)+(A-1)*c+sq),-2*A*((A-1)+(A+1)*c),A*((A+1)+(A-1)*c-sq)];a=[(A+1)-(A-1)*c+sq,2*((A-1)-(A+1)*c),(A+1)-(A-1)*c-sq]}}
+  return [b.map(v=>v/a[0]),a.map(v=>v/a[0])];
+}
+function preFilters(P,fs){const o=[];if(P.pre.lf_g)o.push(biquad('ls',P.pre.lf_f,fs,P.pre.lf_g,.6));if(P.pre.hf_g)o.push(biquad('hs',P.pre.hf_f,fs,P.pre.hf_g,.6));return o}
+function postFilters(P,fs){return preFilters(P,fs).map(([b,a])=>[a,b])}
+function eqFilters(P,fs){const e=P.eq,o=[];
+  if(e.hp_f)o.push(biquad(e.hp_order===2?'hp':'hp1',e.hp_f,fs));if(e.ls_g)o.push(biquad('ls',e.ls_f,fs,e.ls_g,.6));
+  if(e.pk_g)o.push(biquad('peak',e.pk_f,fs,e.pk_g,e.pk_q||.8));if(e.hs_g)o.push(biquad('hs',e.hs_f,fs,e.hs_g,.6));o.push(biquad('hp1',e.dc_f||3,fs));return o}
+function mag(filters,f,fs){let re=1,im=0;for(const [b,a] of filters){const w=2*Math.PI*f/fs,c1=Math.cos(w),s1=Math.sin(w),c2=Math.cos(2*w),s2=Math.sin(2*w);
+  const nr=b[0]+b[1]*c1+b[2]*c2,ni=-(b[1]*s1+b[2]*s2),dr=a[0]+a[1]*c1+a[2]*c2,di=-(a[1]*s1+a[2]*s2);const d=dr*dr+di*di,hr=(nr*dr+ni*di)/d,hi=(ni*dr-nr*di)/d;
+  const r2=re*hr-im*hi;im=re*hi+im*hr;re=r2}return Math.hypot(re,im)}
+
+/* the stage, identical to dsp/model.py shaper(); sp = per-channel component spread */
+function shapeN(u,P,d,sp){
+  const s=P.shaper,D=Math.pow(10,(d-6)/20),age=1+S.age*.6;
+  let k1=s.k1*age,a2=s.a2*age,a3=s.a3,cc=s.clip_c;if(sp){k1*=sp.k1;a2*=sp.k1;cc*=sp.clip}
+  let G=1,Gb=1,bs=1;if(P.drive_mode==='coef'){k1*=D;a2*=D;a3*=D}
+  else{bs=Math.pow(10,Math.min(d,0)/20);Gb=Math.pow(10,(Math.max(d,0)-6)/20)*(s.pre_gain||1);G=Gb*bs;k1*=bs;a2*=bs;a3*=bs}
+  const x=u*G;let v=x+k1*Math.abs(x)+a2*x*x+a3*x*x*x;
+  if(s.xover){const e=1e-3;v+=s.xover*e*Math.tanh(x/e)}
+  if(s.tube_g>0){const g=s.tube_g,b=s.tube_b*bs,t0=Math.tanh(g*s.tube_b);v=(Math.tanh(g*(v+b))-Math.tanh(g*b))/(g*(1-t0*t0))}
+  v=v/Math.pow(1+Math.pow(Math.abs(v)/cc,s.clip_p),1/s.clip_p);
+  if(P.drive_mode!=='coef')v=v/(Math.pow(Gb,s.makeup||1)*bs);
+  return v;
+}
+function outGainDb(P,d){let g=P.gain_db;if(P.drive_mode==='coef')g+=(P.bump||0)*(Math.pow(10,Math.min(d,24)/20)-Math.pow(10,6/20));return g}
+function spreadFor(ch,amt){const fr=(x)=>x-Math.floor(x);
+  const r=[fr(ch*.6180339887+.13)*2-1,fr(ch*.7548776662+.29)*2-1,fr(ch*.569840291+.61)*2-1];
+  return {gain_db:.15*amt*r[0],k1:Math.pow(10,2*amt*r[1]/20),clip:1+.04*amt*r[2]}}
+
+/* drive knob: position -> internal drive that gives the zone's THD for a 1 kHz tone at 0 VU (-18 dBFS) */
+const N=512,SIN=new Float64Array(N),COS=new Float64Array(N);for(let i=0;i<N;i++){SIN[i]=Math.sin(2*Math.PI*i/N);COS[i]=Math.cos(2*Math.PI*i/N)}
+function analyse(d,P){
+  const A=Math.pow(10,-18/20)*mag(preFilters(P,48000),1000,48000),y=new Float64Array(N);
+  for(let i=0;i<N;i++)y[i]=shapeN(A*SIN[i],P,d);
+  const h=[];for(let k=1;k<=10;k++){let re=0,im=0;for(let i=0;i<N;i++){const j=(k*i)%N;re+=y[i]*COS[j];im+=y[i]*SIN[j]}h.push(Math.hypot(re,im))}
+  let s=0;for(let k=1;k<10;k++)s+=h[k]*h[k];
+  let r1=0,r2=0;for(let i=0;i<N;i++){r1+=(A*SIN[i])**2;r2+=y[i]*y[i]}
+  return {h,thd:Math.sqrt(s)/h[0]*100,comp:Math.sqrt(r1/Math.max(r2,1e-30))*Math.pow(10,-outGainDb(P,d)/20)};
+}
+function solveD(t,P){const target=Math.pow(10,THD_LO+t*(THD_HI-THD_LO));let lo=-140,hi=60;
+  for(let i=0;i<36;i++){const mid=(lo+hi)/2;if(analyse(mid,P).thd<target)lo=mid;else hi=mid}return (lo+hi)/2}
+let cur={D:6,an:null,P:null};
+function compute(){const P=MODELS[S.model];const D=solveD(S.drive,P);cur={D,an:analyse(D,P),P}}
+
+/* ------------------------------------------------------------------ the rendered unit */
+const LAYOUT={"size":[1600,440],"ears":56,"front":{"badge":{"cx":186,"cy":180,"w":222,"h":122},"console":{"cx":440,"cy":205,"len":112,"labelR":76,"dotR":60,"angles":[-110,-66,-22,22,66,110]},"drive":{"cx":815,"cy":196,"d":228,"dotR":132,"labelR":150,"frames":61},"vu":{"cx":1180,"cy":198,"w":290,"h":184,"face":[266,160],"pivot":[133,190],"r":146},"spread":{"cx":1405,"cy":118,"d":96,"dotR":62,"frames":41},"output":{"cx":1405,"cy":296,"d":96,"dotR":62,"frames":41},"jewel":{"cx":1500,"cy":112,"d":30},"power":{"cx":1500,"cy":262},"flip":{"x":1520,"y":402}},"rear":{"serial":{"x":112,"y":116,"w":288,"h":208},"age":{"cx":520,"cy":200,"d":52},"noise":{"cx":650,"cy":200,"d":52},"os":{"cx":810,"cy":200,"d":52,"frames":[6,14,22,30],"angles":[-90,-30,30,90]},"cal":{"cx":970,"cy":200,"d":52,"frames":[6,14,22,30],"angles":[-90,-30,30,90]},"mode":{"cx":1110,"cy":200},"auto":{"cx":1210,"cy":200},"matched":{"cx":1310,"cy":200},"channel":{"cx":1440,"cy":200,"w":76,"h":44},"flip":{"x":1520,"y":402}},"trimFrames":37}, STRIPS={"scale":2.0,"strips":{"drive":{"w":296.0,"h":296.0,"n":61,"cols":8,"rows":8},"small":{"w":144.0,"h":144.0,"n":41,"cols":8,"rows":6},"console":{"w":184.0,"h":184.0,"n":6,"cols":6,"rows":1},"trim":{"w":80.0,"h":80.0,"n":37,"cols":8,"rows":5},"toggle":{"w":116.0,"h":116.0,"n":2,"cols":2,"rows":1},"jewel":{"w":60.0,"h":60.0,"n":2,"cols":2,"rows":1}}};
+const LF=LAYOUT.front, LR=LAYOUT.rear;
+function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+S.spread=.45;
+const front=$('#front'),rear=$('#rear'),tip=$('#tip');
+
+function sprite(face,key,cx,cy){
+  const m=STRIPS.strips[key],d=document.createElement('div');d.className='sprite';
+  d.style.cssText+=`left:${cx-m.w/2}px;top:${cy-m.h/2}px;width:${m.w}px;height:${m.h}px;background-image:url(renders/${key}.webp);background-size:${m.w*m.cols}px ${m.h*m.rows}px`;
+  face.appendChild(d);
+  return i=>{i=Math.max(0,Math.min(m.n-1,i));d.style.backgroundPosition=`${-(i%m.cols)*m.w}px ${-Math.floor(i/m.cols)*m.h}px`};
+}
+function showTip(text,x,y){tip.textContent=text;tip.style.left=x+'px';tip.style.top=y+'px';tip.classList.add('on')}
+function hideTip(){tip.classList.remove('on')}
+
+/* a continuous knob: drag, wheel, keys, double click to reset */
+function knob(face,o){
+  const set=sprite(face,o.strip,o.cx,o.cy),n=STRIPS.strips[o.strip].n;
+  const h=document.createElement('div');h.className='hit';h.tabIndex=0;h.setAttribute('role','slider');h.setAttribute('aria-label',o.label);
+  h.style.cssText+=`left:${o.cx-o.r}px;top:${o.cy-o.r}px;width:${2*o.r}px;height:${2*o.r}px`;face.appendChild(h);
+  const tipAt=()=>showTip(o.fmt(S[o.key]),o.cx,o.cy+o.r+o.tipGap);
+  const apply=v=>{S[o.key]=clamp(v,0,1);onChange(o.key);tipAt()};
+  let y0=0,v0=0,drag=false;
+  h.addEventListener('pointerdown',e=>{drag=true;y0=e.clientY;v0=S[o.key];h.setPointerCapture(e.pointerId);e.preventDefault();h.focus({preventScroll:true});tipAt()});
+  h.addEventListener('pointermove',e=>{if(drag)apply(v0+(y0-e.clientY)/(e.shiftKey?2600:o.travel))});
+  const end=()=>{drag=false;hideTip()};h.addEventListener('pointerup',end);h.addEventListener('pointercancel',end);
+  h.addEventListener('pointerenter',()=>{if(!drag)tipAt()});h.addEventListener('pointerleave',()=>{if(!drag)hideTip()});
+  h.addEventListener('dblclick',()=>apply(o.def));
+  h.addEventListener('wheel',e=>{e.preventDefault();apply(S[o.key]-Math.sign(e.deltaY)*(e.shiftKey?.002:.02))},{passive:false});
+  h.addEventListener('keydown',e=>{const st=e.shiftKey?.002:.02;
+    if(e.key==='ArrowUp'||e.key==='ArrowRight'){apply(S[o.key]+st);e.preventDefault()} else if(e.key==='ArrowDown'||e.key==='ArrowLeft'){apply(S[o.key]-st);e.preventDefault()}});
+  h.addEventListener('blur',hideTip);
+  return ()=>{set(Math.round(S[o.key]*(n-1)));h.setAttribute('aria-valuetext',o.fmt(S[o.key]))};
+}
+/* a stepped selector: frames per position, plus clickable printed labels */
+function stepper(face,o){
+  const set=sprite(face,o.strip,o.cx,o.cy),N=o.values.length;
+  const h=document.createElement('div');h.className='hit';h.tabIndex=0;h.setAttribute('role','slider');h.setAttribute('aria-label',o.label);
+  h.style.cssText+=`left:${o.cx-o.r}px;top:${o.cy-o.r}px;width:${2*o.r}px;height:${2*o.r}px`;face.appendChild(h);
+  const idx=()=>Math.max(0,o.values.findIndex(v=>String(v)===String(S[o.key])));
+  const go=i=>{S[o.key]=o.values[clamp(i,0,N-1)];onChange(o.key)};
+  let y0=0,i0=0,drag=false;
+  h.addEventListener('pointerdown',e=>{drag=true;y0=e.clientY;i0=idx();h.setPointerCapture(e.pointerId);e.preventDefault();h.focus({preventScroll:true})});
+  h.addEventListener('pointermove',e=>{if(!drag)return;const i=clamp(i0+Math.round((y0-e.clientY)/30),0,N-1);if(i!==idx())go(i)});
+  h.addEventListener('pointerup',()=>drag=false);h.addEventListener('pointercancel',()=>drag=false);
+  h.addEventListener('click',e=>{if(Math.abs(e.clientY-y0)<3&&!o.labels)go((idx()+1)%N)});
+  h.addEventListener('keydown',e=>{if(['ArrowUp','ArrowRight'].includes(e.key)){go(idx()+1);e.preventDefault()}else if(['ArrowDown','ArrowLeft'].includes(e.key)){go(idx()-1);e.preventDefault()}});
+  if(o.labels) o.labels.forEach(([x,y,w,hh],i)=>{const b=document.createElement('button');b.className='press';b.setAttribute('aria-label',o.names[i]);
+    b.style.cssText+=`left:${x}px;top:${y}px;width:${w}px;height:${hh}px`;b.addEventListener('click',()=>go(i));face.appendChild(b)});
+  return ()=>{set(o.frames?o.frames[idx()]:idx());h.setAttribute('aria-valuetext',o.names[idx()])};
+}
+/* a bat-handle toggle: frame 0 lever up, frame 1 lever down */
+function toggleSw(face,o){
+  const set=sprite(face,'toggle',o.cx,o.cy);
+  const b=document.createElement('button');b.className='press';b.setAttribute('aria-label',o.label);b.setAttribute('aria-pressed','false');
+  b.style.cssText+=`left:${o.cx-34}px;top:${o.cy-70}px;width:68px;height:140px`;b.addEventListener('click',o.click);face.appendChild(b);
+  return ()=>{const down=o.down();set(down?1:0);b.setAttribute('aria-pressed',String(down));b.setAttribute('aria-label',`${o.label}: ${o.state()}`)};
+}
+function labelBox(cx,cy,r,a,w){const [x,y]=polar(cx,cy,r,a);const left=a<-5?x-w:a>5?x:x-w/2;return [left-4,y-9,w+8,18]}
+
+const renders=[];
+/* front */
+const NAMES=MODELS.map(m=>m.name), LBLW=[44,58,74,40,74,84];
+renders.push(stepper(front,{strip:'console',key:'model',label:'Console',cx:LF.console.cx,cy:LF.console.cy,r:46,values:[0,1,2,3,4,5],names:NAMES,
+  labels:LF.console.angles.map((a,i)=>labelBox(LF.console.cx,LF.console.cy,LF.console.labelR,a,LBLW[i]))}));
+renders.push(knob(front,{strip:'drive',key:'drive',label:'Drive',cx:LF.drive.cx,cy:LF.drive.cy,r:LF.drive.d/2,def:3/7+.001,travel:340,tipGap:-LF.drive.d-26,
+  fmt:v=>ZONES[Math.min(6,Math.floor(v*7))].n}));
+renders.push(knob(front,{strip:'small',key:'spread',label:'Spread',cx:LF.spread.cx,cy:LF.spread.cy,r:LF.spread.d/2,def:.45,travel:260,tipGap:-LF.spread.d-30,fmt:v=>Math.round(v*100)+' %'}));
+renders.push(knob(front,{strip:'small',key:'out',label:'Output',cx:LF.output.cx,cy:LF.output.cy,r:LF.output.d/2,def:.5,travel:260,tipGap:-LF.output.d-30,
+  fmt:v=>{const d=(v-.5)*24;return (d>=0?'+':'−')+Math.abs(d).toFixed(1)+' dB'}}));
+{const set=sprite(front,'jewel',LF.jewel.cx,LF.jewel.cy);renders.push(()=>set(S.bypass?0:1))}
+renders.push(toggleSw(front,{cx:LF.power.cx,cy:LF.power.cy,label:'Power',down:()=>S.bypass,state:()=>S.bypass?'bypass':'on',click:()=>{S.bypass=!S.bypass;onChange('bypass')}}));
+/* VU needles over the rendered face */
+let setVU,setPeak=()=>{};
+{const V=LF.vu,[fw,fh]=V.face,fx=V.cx-fw/2,fy=V.cy-fh/2,[px,py]=V.pivot;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','needles');svg.setAttribute('viewBox',`0 0 ${fw} ${fh}`);
+  svg.style.cssText+=`left:${fx}px;top:${fy}px;width:${fw}px;height:${fh}px`;
+  svg.innerHTML=`<defs><clipPath id="vclip"><rect width="${fw}" height="${fh}" rx="4"/></clipPath><filter id="nsh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2.2" dy="3" stdDeviation="1.4" flood-color="#3a2410" flood-opacity=".35"/></filter></defs>
+    <g clip-path="url(#vclip)" filter="url(#nsh)"><line id="nR" x1="${px}" y1="${py}" x2="${px}" y2="${py-V.r-4}" stroke="#b8352a" stroke-width="1.3" stroke-linecap="round"/>
+    <line id="nL" x1="${px}" y1="${py}" x2="${px}" y2="${py-V.r-4}" stroke="#1f2d3d" stroke-width="1.3" stroke-linecap="round"/></g>`;
+  front.appendChild(svg);const g=document.createElement('div');g.className='glare';g.style.cssText+=`left:${fx}px;top:${fy}px;width:${fw}px;height:${fh}px`;front.appendChild(g);
+  const nL=svg.querySelector('#nL'),nR=svg.querySelector('#nR');const vd=v=>{const t=(v+20)/23;return -44+88*Math.pow(clamp(t,0,1.1),1.35)};
+  setVU=(l,r)=>{nL.setAttribute('transform',`rotate(${vd(l)} ${px} ${py})`);nR.setAttribute('transform',`rotate(${vd(r)} ${px} ${py})`)}}
+/* rear */
+renders.push(knob(rear,{strip:'trim',key:'age',label:'Age',cx:LR.age.cx,cy:LR.age.cy,r:LR.age.d/2+6,def:.2,travel:260,tipGap:-LR.age.d-40,fmt:v=>Math.round(v*100)+' %'}));
+renders.push(knob(rear,{strip:'trim',key:'noise',label:'Noise',cx:LR.noise.cx,cy:LR.noise.cy,r:LR.noise.d/2+6,def:.3,travel:260,tipGap:-LR.noise.d-40,
+  fmt:v=>v<.005?'OFF':(MODELS[S.model].noise-12+24*v).toFixed(0)+' dBFS'}));
+renders.push(stepper(rear,{strip:'trim',key:'os',label:'Oversampling',cx:LR.os.cx,cy:LR.os.cy,r:LR.os.d/2+6,values:['none','2x','4x','8x'],names:['1x','2x','4x','8x'],frames:LR.os.frames,
+  labels:LR.os.angles.map(a=>labelBox(LR.os.cx,LR.os.cy,LR.os.d/2+26,a,22))}));
+S.cal='-18';
+renders.push(stepper(rear,{strip:'trim',key:'cal',label:'0 VU',cx:LR.cal.cx,cy:LR.cal.cy,r:LR.cal.d/2+6,values:['-24','-18','-14','-12'],names:['-24 dBFS','-18 dBFS','-14 dBFS','-12 dBFS'],frames:LR.cal.frames,
+  labels:LR.cal.angles.map(a=>labelBox(LR.cal.cx,LR.cal.cy,LR.cal.d/2+26,a,26))}));
+renders.push(toggleSw(rear,{cx:LR.mode.cx,cy:LR.mode.cy,label:'Mode',down:()=>S.mode==='bus',state:()=>S.mode,click:()=>{S.mode=S.mode==='bus'?'channel':'bus';onChange('mode')}}));
+renders.push(toggleSw(rear,{cx:LR.auto.cx,cy:LR.auto.cy,label:'Auto gain',down:()=>!S.auto,state:()=>S.auto?'on':'off',click:()=>{S.auto=!S.auto;onChange('auto')}}));
+renders.push(toggleSw(rear,{cx:LR.matched.cx,cy:LR.matched.cy,label:'Matched pair',down:()=>S.matched,state:()=>S.matched?'on':'off',click:()=>{S.matched=!S.matched;onChange('matched')}}));
+{const C=LR.channel,d=document.createElement('div');d.className='digits';d.style.cssText+=`left:${C.cx-C.w/2}px;top:${C.cy-C.h/2}px;width:${C.w}px;height:${C.h}px`;rear.appendChild(d);
+  const mk=(dx,lab,f)=>{const b=document.createElement('button');b.className='press';b.setAttribute('aria-label',lab);b.style.cssText+=`left:${C.cx+dx-14}px;top:${C.cy-16}px;width:28px;height:32px`;b.addEventListener('click',f);rear.appendChild(b)};
+  mk(-58,'Vorig kanaal',()=>{S.ch=S.ch<=1?48:S.ch-1;onChange('ch')});mk(58,'Volgend kanaal',()=>{S.ch=S.ch>=48?1:S.ch+1;onChange('ch')});
+  renders.push(()=>d.textContent=String(S.ch).padStart(2,'0'))}
+/* flipping the unit round */
+const unit=$('#unit');
+function flip(toRear){unit.classList.toggle('flipped',toRear);front.inert=toRear;rear.inert=!toRear;hideTip()}
+for(const [face,f,lab] of [[front,LF.flip,'Achterpaneel tonen'],[rear,LR.flip,'Voorpaneel tonen']]){const b=document.createElement('button');b.className='press';b.setAttribute('aria-label',lab);
+  b.style.cssText+=`left:${f.x-110}px;top:${f.y-12}px;width:116px;height:24px`;b.addEventListener('click',()=>flip(face===front));face.appendChild(b)}
+rear.inert=true;
+
+/* zone table in the proposal */
+function fmtPct(x){return x<.001?x.toFixed(5)+' %':x<.01?x.toFixed(4)+' %':x<.1?x.toFixed(3)+' %':x<10?x.toFixed(2)+' %':x.toFixed(1)+' %'}
+$('#zoneRows').innerHTML=ZONES.map((z,i)=>{const a=Math.pow(10,THD_LO+i/7*(THD_HI-THD_LO)),b=Math.pow(10,THD_LO+(i+1)/7*(THD_HI-THD_LO));
+  return `<tr><td class="spot">${z.n}</td><td class="num">${fmtPct(a).replace(' %','')} – ${fmtPct(b)}</td><td>${z.txt}</td></tr>`}).join('');
+const vu={L:-22,R:-22};setVU(-22,-22);
+
+/* ------------------------------------------------------------------ audio: the fitted chain, per channel
+   cal → pre-shelves → 4× waveshaper → inverse shelves → tone EQ → DC → gain → (BUS crosstalk) → noise */
+let ac=null,G=null,src=null,synth=null,playing=false,builtModel=-1;
+function iir(b,a){return ac.createIIRFilter(b,a)}
+function chainOf(nodes){for(let i=0;i<nodes.length-1;i++)nodes[i].connect(nodes[i+1]);return nodes}
+function buildGraph(){
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  const g={};
+  g.input=ac.createGain();g.input.channelCount=2;g.input.channelCountMode='explicit';g.input.channelInterpretation='speakers';
+  g.split=ac.createChannelSplitter(2);g.merge=ac.createChannelMerger(2);g.wet=ac.createGain();g.dry=ac.createGain();g.out=ac.createGain();
+  g.input.connect(g.split);g.input.connect(g.dry);g.dry.connect(g.out);
+  g.cal=[0,1].map(i=>{const n=ac.createGain();g.split.connect(n,i);return n});
+  g.post=[0,1].map(i=>{const n=ac.createGain();n.connect(g.merge,0,i);return n});
+  const nb=ac.createBuffer(2,ac.sampleRate*3,ac.sampleRate);for(let k=0;k<2;k++){const d=nb.getChannelData(k);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*1.73}
+  g.nsrc=ac.createBufferSource();g.nsrc.buffer=nb;g.nsrc.loop=true;g.nlp=ac.createBiquadFilter();g.nlp.type='lowpass';g.nlp.frequency.value=16000;g.ng=ac.createGain();g.ng.gain.value=0;
+  g.nsrc.connect(g.nlp);g.nlp.connect(g.ng);g.ng.connect(g.merge);g.nsrc.start();
+  g.merge.connect(g.wet);g.wet.connect(g.out);g.out.connect(ac.destination);
+  g.sp=ac.createChannelSplitter(2);g.out.connect(g.sp);g.aL=ac.createAnalyser();g.aR=ac.createAnalyser();g.aL.fftSize=g.aR.fftSize=2048;g.sp.connect(g.aL,0);g.sp.connect(g.aR,1);
+  G=g;updateAudio(true);
+}
+/* rebuild the filter chains when the console changes (IIR coefficients are fixed per node) */
+function buildChains(P){
+  const fs=ac.sampleRate;
+  if(G.ch) G.ch.forEach(c=>{c.nodes.forEach(n=>{try{n.disconnect()}catch(e){}});c.xt.forEach(n=>{try{n.disconnect()}catch(e){}})});
+  G.cal.forEach(n=>{try{n.disconnect()}catch(e){}});
+  G.ch=[0,1].map(i=>{
+    const sh=ac.createWaveShaper(),gain=ac.createGain();
+    const pre=preFilters(P,fs).map(([b,a])=>iir(b,a)),post=postFilters(P,fs).map(([b,a])=>iir(b,a)),eq=eqFilters(P,fs).map(([b,a])=>iir(b,a));
+    const nodes=chainOf([G.cal[i],...pre,sh,...post,...eq,gain]);gain.connect(G.post[i]);
+    const x=P.xtalk,flat=ac.createGain(),lf=ac.createGain(),hf=ac.createGain(),lpn=iir(...biquad('lp1',x.lf_f,fs)),hpn=iir(...biquad('hp1',x.hf_f,fs)),xg=ac.createGain();
+    gain.connect(flat);gain.connect(lpn);lpn.connect(lf);gain.connect(hpn);hpn.connect(hf);[flat,lf,hf].forEach(n=>n.connect(xg));xg.connect(G.merge,0,1-i);
+    flat.gain.value=x.flat;lf.gain.value=x.lf;hf.gain.value=x.hf;
+    return {sh,gain,xg,nodes:nodes.slice(1),xt:[flat,lf,hf,lpn,hpn,xg]};
+  });
+  builtModel=S.model;
+}
+const RANGE=4; // the shaper's curve covers ±4 FS (+12 dBFS)
+function curveFor(P,D,sp){const n=16384,cu=new Float32Array(n);for(let i=0;i<n;i++){const x=(i/(n-1)*2-1)*RANGE;cu[i]=shapeN(x,P,D,sp)/RANGE}return cu}
+let curvePending=false;
+function updateAudio(force){
+  if(!G)return;const t=ac.currentTime,P=MODELS[S.model];
+  if(builtModel!==S.model||force) buildChains(P);
+  const calG=Math.pow(10,(-18-Number(S.cal))/20)/RANGE;   // 0 VU lands on the model's -18 dBFS reference
+  G.ch.forEach((c,i)=>{
+    const sp=S.matched?null:spreadFor(S.ch+i,S.spread||0);
+    c.sh.curve=curveFor(P,cur.D,sp);c.sh.oversample=S.os==='none'?'none':(S.os==='2x'?'2x':'4x');
+    const comp=S.auto?Math.min(Math.max(cur.an.comp,.25),4):1;
+    const g=Math.pow(10,(outGainDb(P,cur.D)+(sp?sp.gain_db:0))/20)*RANGE/Math.pow(10,(-18-Number(S.cal))/20)*comp;
+    c.gain.gain.setTargetAtTime(g,t,.02);
+    c.xg.gain.setTargetAtTime(S.mode==='bus'?1:0,t,.03);
+  });
+  G.cal.forEach(n=>n.gain.setTargetAtTime(calG,t,.02));
+  const nl=S.noise<.005?0:Math.pow(10,(P.noise_dbfs-12+24*S.noise+S.age*8)/20);G.ng.gain.setTargetAtTime(nl,t,.05);
+  const outG=Math.pow(10,((S.out-.5)*24)/20);G.out.gain.setTargetAtTime(outG,t,.03);
+  G.wet.gain.setTargetAtTime(S.bypass?0:S.mix,t,.03);G.dry.gain.setTargetAtTime(S.bypass?1:1-S.mix,t,.03);
+}
+
+/* demo loop: kick, snare, hats, bass, a wide pad. Mixed to sit near -18 dBFS RMS. */
+function startSynth(){
+  const bus=ac.createGain();bus.gain.value=.42;bus.connect(G.input);
+  const nbuf=ac.createBuffer(1,ac.sampleRate*.5,ac.sampleRate);{const d=nbuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+  const bpm=94,six=60/bpm/4;let step=0,next=ac.currentTime+.08;
+  const roots=[45,41,48,43],chords=[[57,60,64,69],[53,57,60,65],[55,60,64,67],[55,59,62,67]];
+  const f=n=>440*Math.pow(2,(n-69)/12);
+  const pan=(node,p)=>{const s=ac.createStereoPanner();s.pan.value=p;node.connect(s);s.connect(bus);return s};
+  function kick(t){const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(44,t+.13);
+    g.gain.setValueAtTime(1.0,t);g.gain.exponentialRampToValueAtTime(.001,t+.45);o.connect(g);g.connect(bus);o.start(t);o.stop(t+.5)}
+  function snare(t){const s=ac.createBufferSource();s.buffer=nbuf;const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1900;bp.Q.value=.7;const g=ac.createGain();
+    g.gain.setValueAtTime(.55,t);g.gain.exponentialRampToValueAtTime(.001,t+.22);s.connect(bp);bp.connect(g);pan(g,-.08);s.start(t);s.stop(t+.25);
+    const o=ac.createOscillator(),og=ac.createGain();o.frequency.value=190;og.gain.setValueAtTime(.35,t);og.gain.exponentialRampToValueAtTime(.001,t+.12);o.connect(og);og.connect(bus);o.start(t);o.stop(t+.15)}
+  function hat(t,a){const s=ac.createBufferSource();s.buffer=nbuf;const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=7500;const g=ac.createGain();
+    g.gain.setValueAtTime(a,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);s.connect(hp);hp.connect(g);pan(g,.35);s.start(t);s.stop(t+.06)}
+  function bass(t,n,d){const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=f(n);const lp=ac.createBiquadFilter();lp.type='lowpass';lp.Q.value=4;
+    lp.frequency.setValueAtTime(900,t);lp.frequency.exponentialRampToValueAtTime(180,t+d);const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.32,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+d);
+    o.connect(lp);lp.connect(g);g.connect(bus);o.start(t);o.stop(t+d+.02)}
+  function pad(t,notes,d){notes.forEach((n,k)=>[-1,1].forEach(side=>{const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=f(n);o.detune.value=side*7+k*2;
+    const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2400;const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.026,t+.25);g.gain.setValueAtTime(.026,t+d-.3);g.gain.linearRampToValueAtTime(.0001,t+d);
+    o.connect(lp);lp.connect(g);pan(g,side*.85);o.start(t);o.stop(t+d+.05)}))}
+  const timer=setInterval(()=>{while(next<ac.currentTime+.15){const s=step%16,bar=Math.floor(step/16)%4;
+    if(s===0||s===8||s===10&&bar%2) kick(next);
+    if(s===4||s===12) snare(next);
+    if(s%2===0) hat(next,s%4===2?.22:.12);
+    if([0,3,6,8,11,14].includes(s)) bass(next,roots[bar]+(s===14?12:0),six*2.2);
+    if(s===0) pad(next,chords[bar],six*16);
+    next+=six;step++}},25);
+  return {stop(){clearInterval(timer);bus.disconnect()}};
+}
+function stopAll(){if(synth){synth.stop();synth=null}if(src){try{src.stop()}catch(e){}src.disconnect();src=null}playing=false;$('#play').textContent='Speel demo-loop'}
+$('#play').addEventListener('click',async()=>{
+  if(!ac) buildGraph(); if(ac.state==='suspended') await ac.resume();
+  if(playing){stopAll();$('#tstat').textContent='Gestopt.';return}
+  synth=startSynth();playing=true;$('#play').textContent='Stop';$('#tstat').textContent='Demo-loop speelt. Draai aan DRIVE en wissel van console; zet BYPASS aan om te vergelijken.';
+});
+$('#loadBtn').addEventListener('click',()=>$('#file').click());
+$('#file').addEventListener('change',async e=>{const fl=e.target.files[0];if(!fl)return;
+  if(!ac) buildGraph(); if(ac.state==='suspended') await ac.resume();
+  try{const buf=await ac.decodeAudioData(await fl.arrayBuffer());stopAll();src=ac.createBufferSource();src.buffer=buf;src.loop=true;src.connect(G.input);src.start();playing=true;
+    $('#play').textContent='Stop';$('#tstat').textContent=`Speelt "${fl.name}" in een lus. Zorg dat 0 VU = past bij het niveau van je bestand.`}
+  catch(err){$('#tstat').textContent='Dit bestand kan de browser niet openen. Probeer WAV, MP3 of AAC.'}
+  e.target.value='';
+});
+
+/* meters loop */
+const tdL=new Float32Array(2048),tdR=new Float32Array(2048);
+let lastT=performance.now();const pk={L:-1e9,R:-1e9};
+function frame(now){
+  const dt=Math.min(.1,(now-lastT)/1000);lastT=now;
+  if(G&&playing){
+    G.aL.getFloatTimeDomainData(tdL);G.aR.getFloatTimeDomainData(tdR);
+    let sl=0,sr=0,slr=0;for(let i=0;i<2048;i++){sl+=tdL[i]*tdL[i];sr+=tdR[i]*tdR[i];slr+=tdL[i]*tdR[i]}
+    const cal=Number(S.cal),toVU=s=>20*Math.log10(Math.sqrt(s/2048)+1e-9)-cal;
+    const k=1-Math.exp(-dt/.065);vu.L+= (toVU(sl)-vu.L)*k;vu.R+=(toVU(sr)-vu.R)*k;
+    let pl=0,pr=0;for(let i=0;i<2048;i++){pl=Math.max(pl,Math.abs(tdL[i]));pr=Math.max(pr,Math.abs(tdR[i]))}
+    if(pl>.89)pk.L=now;if(pr>.89)pk.R=now;
+  } else {const k=1-Math.exp(-dt/.25);vu.L+=(-22-vu.L)*k;vu.R+=(-22-vu.R)*k}
+  setVU(vu.L,vu.R);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+
+/* ------------------------------------------------------------------ state changes */
+function onChange(key){
+  if(key==='spread'){S.tol=S.spread;S.xt=S.spread*.8}
+  if(['drive','age','model'].includes(key)) compute();
+  renders.forEach(r=>r());
+  if(G&&!curvePending){curvePending=true;requestAnimationFrame(()=>{curvePending=false;updateAudio()})}
+}
+const stage=$('#stage'),box=$('#stageBox'),outer=$('#stageOuter');
+function fit(){const w=outer.clientWidth,s=Math.max(.5,Math.min(1,w/1600));stage.style.transform=`scale(${s})`;box.style.width=(1600*s)+'px';box.style.height=(440*s)+'px'}
+window.addEventListener('resize',fit);fit();
+S.drive=3/7+.06;S.tol=S.spread;S.xt=S.spread*.8;
+compute();renders.forEach(r=>r());
+})();
+</script>

@@ -1,0 +1,113 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nazaré print layers</title>
+<!--
+  Draws the silkscreen layers the Blender scene prints onto the panel.
+  Masks are white ink on black; the VU face is in colour. tools: gen_prints.js
+-->
+<style>
+@font-face{font-family:Jost; src:url(fonts/Jost-500.woff2) format("woff2"); font-weight:500}
+@font-face{font-family:Yellowtail; src:url(fonts/Yellowtail.woff2) format("woff2")}
+body{margin:0; background:#333}
+</style>
+<script>
+const NAZARE_MARK=[
+ ["M4 76 H116",2.0],
+ ["M112 76 C 100 72, 96 44, 84 24 C 78 14, 70 9, 60 9 C 46 9, 34 16, 31 28 C 29 37, 35 43, 42 41 C 48 39, 49 32, 45 29 C 42 27, 38 29, 39 33",2.4],
+ ["M10 76 C 30 75, 46 68, 54 56 C 60 47, 62 36, 58 27",2.0],
+ ["M70 18 C 82 26, 88 46, 94 64",1.2,.5]];
+const SURFER=[["M-5 0.9 C -2 1.6, 3 1.5, 5.4 0.2",1.5],["M-1.6 0.2 L -0.6 -2.6 L 1.6 0.2",1.05],["M-0.6 -2.6 L -1.3 -5.6",1.05],["M-1.3 -5.0 L -4.4 -4.1 M -1.2 -5.1 L 1.8 -6.5",1.05]];
+const IW=[["M8.5 20 C 11.5 11, 16 11, 20 20 S 28.5 29, 31.5 20",2]];
+
+function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+function canvas(w,h,bg){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);return [c,g]}
+function txt(g,s,x,y,o={}){g.save();g.font=`${o.weight||500} ${o.size||10}px ${o.font||'Jost'}`;g.fillStyle=o.color||'#fff';g.textBaseline=o.base||'middle';
+  const ls=o.ls||0; g.letterSpacing=ls+'px';
+  let w=g.measureText(s).width; if(ls) w-=ls; // trailing tracking
+  let ax=o.align==='left'?x:o.align==='right'?x-w:x-w/2;g.textAlign='left';g.fillText(s,ax,y);g.restore()}
+function strokePaths(g,paths,color,scale,ox,oy){g.save();g.translate(ox,oy);g.scale(scale,scale);g.strokeStyle=color;g.lineCap='round';g.lineJoin='round';
+  for(const [d,w,a] of paths){g.globalAlpha=a||1;g.lineWidth=w;g.stroke(new Path2D(d))}g.restore()}
+function mark(g,x,y,scale,color){strokePaths(g,NAZARE_MARK,color,scale,x,y);
+  g.save();g.translate(x,y);g.scale(scale,scale);g.translate(38,70);g.rotate(-22*Math.PI/180);g.strokeStyle=color;g.lineCap='round';g.lineJoin='round';
+  for(const [d,w] of SURFER){g.lineWidth=w;g.stroke(new Path2D(d))}g.fillStyle=color;g.beginPath();g.arc(-1.6,-7,1.05,0,Math.PI*2);g.fill();g.restore()}
+function iw(g,x,y,s,color){g.save();g.translate(x,y);g.scale(s,s);g.strokeStyle=color;g.lineWidth=1.8;g.beginPath();g.arc(20,20,17.5,0,Math.PI*2);g.stroke();
+  g.lineWidth=2;g.lineCap='round';g.stroke(new Path2D(IW[0][0]));g.restore()}
+const LBL={size:10.5,ls:3.4}, SMALL={size:8.5,ls:2.6};
+
+function pinstripes(g){g.strokeStyle='#fff';g.lineWidth=1;for(const y of [22.5,26.5,413.5,417.5]){g.beginPath();g.moveTo(76,y);g.lineTo(1524,y);g.stroke()}}
+function knobDots(g,cx,cy,r,n,major,big){for(let i=0;i<n;i++){const a=-135+270*i/(n-1),[x,y]=polar(cx,cy,r,a);const M=!major||i%major===0;
+  g.globalAlpha=M?1:.55;g.beginPath();g.arc(x,y,M?(big?2.3:1.7):1.2,0,Math.PI*2);g.fillStyle='#fff';g.fill()}g.globalAlpha=1}
+
+function front(L){
+  const [c,g]=canvas(3200,880,'#000');g.scale(2,2);const F=L.front;pinstripes(g);
+  // badge legends
+  txt(g,'LARGE FORMAT ANALOG CONSOLE',F.badge.cx,F.badge.cy+F.badge.h/2+30,SMALL);
+  iw(g,F.badge.cx-62,F.badge.cy+F.badge.h/2+44,.3,'#fff');txt(g,'INDIEWAVE AUDIO',F.badge.cx+8,F.badge.cy+F.badge.h/2+50,SMALL);
+  // console
+  const C=F.console,names=['GLASS','PIPELINE','MAVERICKS','JAWS','TEAHUPO’O','SUPERTUBES'];
+  C.angles.forEach((a,i)=>{const [x,y]=polar(C.cx,C.cy,C.dotR,a);g.beginPath();g.arc(x,y,2,0,Math.PI*2);g.fillStyle='#fff';g.fill();
+    const [lx,ly]=polar(C.cx,C.cy,C.labelR,a);txt(g,names[i],lx,ly,{size:8.5,ls:2,align:a<-5?'right':a>5?'left':'center'})});
+  txt(g,'CONSOLE',C.cx,338,LBL);
+  // drive
+  const D=F.drive;knobDots(g,D.cx,D.cy,D.dotR,29,4,true);
+  const zones=['PRISTINE','CLEAN','SILK','WARM','RICH','SATURATED','DROWNED'],seg=270/7;
+  zones.forEach((z,i)=>{const am=-135+seg*(i+.5),[x,y]=polar(D.cx,D.cy,D.labelR,am);txt(g,z,x,y,{size:8.5,ls:2,align:am<-15?'right':am>15?'left':'center'})});
+  txt(g,'DRIVE',D.cx,370,{size:12,ls:4.4});
+  // small knobs
+  for(const [k,lab,lo,hi] of [['spread','SPREAD','MONO','WIDE'],['output','OUTPUT','−12','+12']]){const K=F[k];knobDots(g,K.cx,K.cy,K.dotR,11,5,false);
+    const [x0,y0]=polar(K.cx,K.cy,K.dotR+6,-135),[x1,y1]=polar(K.cx,K.cy,K.dotR+6,135);txt(g,lo,x0-4,y0+10,{size:7.5,ls:1.6});txt(g,hi,x1+4,y1+10,{size:7.5,ls:1.6});
+    txt(g,lab,K.cx,K.cy+K.d/2+34,LBL)}
+  // power
+  txt(g,'ON',F.power.cx,F.power.cy-64,SMALL);txt(g,'BYPASS',F.power.cx,F.power.cy+64,SMALL);
+  txt(g,'REAR PANEL  ↻',F.flip.x,F.flip.y,{size:8,ls:2.4,align:'right'});
+  return c;
+}
+function rear(L){
+  const [c,g]=canvas(3200,880,'#000');g.scale(2,2);const R=L.rear;pinstripes(g);
+  const trimLabel=(K,lab,lo,hi)=>{g.strokeStyle='#fff';g.lineWidth=1;g.beginPath();g.arc(K.cx,K.cy,K.d/2+12,(-135-90)*Math.PI/180,(135-90)*Math.PI/180);g.stroke();
+    for(const a of [-135,0,135]){const [x,y]=polar(K.cx,K.cy,K.d/2+12,a);g.beginPath();g.arc(x,y,2,0,Math.PI*2);g.fill()}
+    if(lo){const [x0,y0]=polar(K.cx,K.cy,K.d/2+18,-135),[x1,y1]=polar(K.cx,K.cy,K.d/2+18,135);txt(g,lo,x0-2,y0+8,{size:7.5,ls:1.6});txt(g,hi,x1+2,y1+8,{size:7.5,ls:1.6})}
+    txt(g,lab,K.cx,K.cy+K.d/2+48,LBL)};
+  g.fillStyle='#fff';
+  trimLabel(R.age,'AGE','NEW','OLD');trimLabel(R.noise,'NOISE','OFF','MAX');
+  const sel=(K,lab,opts)=>{K.angles.forEach((a,i)=>{const [x,y]=polar(K.cx,K.cy,K.d/2+10,a);g.beginPath();g.arc(x,y,2,0,Math.PI*2);g.fill();
+      const [lx,ly]=polar(K.cx,K.cy,K.d/2+26,a);txt(g,opts[i],lx,ly,{size:8.5,ls:1.4,align:a<0?'right':'left'})});txt(g,lab,K.cx,K.cy+K.d/2+48,LBL)};
+  sel(R.os,'OVERSAMPLING',['1×','2×','4×','8×']);sel(R.cal,'0 VU',['−24','−18','−14','−12']);
+  txt(g,'dBFS',R.cal.cx,R.cal.cy+R.cal.d/2+64,{size:7.5,ls:1.6});
+  for(const [k,lab,up,dn] of [['mode','MODE','CHANNEL','BUS'],['auto','AUTO GAIN','ON','OFF'],['matched','MATCHED','OFF','ON']]){const K=R[k];
+    txt(g,up,K.cx,K.cy-62,SMALL);txt(g,dn,K.cx,K.cy+62,SMALL);txt(g,lab,K.cx,K.cy+K.cy*0+124,LBL)}
+  txt(g,'CHANNEL',R.channel.cx,R.channel.cy+124,LBL);
+  txt(g,'‹',R.channel.cx-58,R.channel.cy,{size:16});txt(g,'›',R.channel.cx+58,R.channel.cy,{size:16});
+  txt(g,'FRONT PANEL  ↻',R.flip.x,R.flip.y,{size:8,ls:2.4,align:'right'});
+  txt(g,'NO USER SERVICEABLE PARTS INSIDE  ·  REFER SERVICING TO QUALIFIED PERSONNEL',R.serial.x,R.serial.y+R.serial.h+40,{size:7,ls:1.6,align:'left'});
+  return c;
+}
+function badge(L){const B=L.front.badge,[c,g]=canvas(B.w*2,B.h*2,'#000');g.scale(2,2);
+  mark(g,B.w/2-48,6,.8,'#fff');txt(g,'Nazaré',B.w/2,B.h-30,{font:'Yellowtail',weight:400,size:38});return c}
+function serial(L){const S=L.rear.serial,[c,g]=canvas(S.w*2,S.h*2,'#000');g.scale(2,2);
+  txt(g,'Nazaré',22,40,{font:'Yellowtail',weight:400,size:34,align:'left'});mark(g,S.w-96,14,.62,'#fff');
+  g.fillStyle='#fff';g.fillRect(22,74,S.w-44,.8);
+  const rows=[['MODEL','NZ-1  LARGE FORMAT'],['SERIAL Nº','0001'],['MAKER','INDIEWAVE AUDIO'],['CALIBRATED','BY HAND']];
+  rows.forEach(([a,b],i)=>{txt(g,a,22,98+i*22,{size:8.5,ls:2.2,align:'left'});txt(g,b,S.w-22,98+i*22,{size:8.5,ls:2.2,align:'right'})});
+  g.fillRect(22,186,S.w-44,.8);return c}
+function vuFace(L){const V=L.front.vu,[w,h]=V.face,[c,g]=canvas(w*2,h*2,'#f3e7c8');g.scale(2,2);
+  const grd=g.createRadialGradient(w/2,h*1.1,10,w/2,h*1.1,h*1.25);grd.addColorStop(0,'#fff8e2');grd.addColorStop(.7,'#f3e6c5');grd.addColorStop(1,'#e4d2a8');g.fillStyle=grd;g.fillRect(0,0,w,h);
+  const [px,py]=V.pivot,r=V.r,NAVY='#1f2d3d',RED='#b8352a';
+  const vd=v=>{const t=(v+20)/23;return -44+88*Math.pow(Math.min(Math.max(t,0),1.1),1.35)};
+  const arc=(r,a0,a1,col,wd)=>{g.strokeStyle=col;g.lineWidth=wd;g.beginPath();g.arc(px,py,r,(a0-90)*Math.PI/180,(a1-90)*Math.PI/180);g.stroke()};
+  arc(r,vd(-20),vd(0),NAVY,1);arc(r+3,vd(0),vd(3),RED,6);
+  for(let v=-20;v<=3;v++){if(v<-10&&v!==-20)continue;const a=vd(v),M=v%5===0||v===-3||v===3||v===-7||v===-20;const [x0,y0]=polar(px,py,r,a),[x1,y1]=polar(px,py,r+(M?9:5),a);
+    g.strokeStyle=v>0?RED:NAVY;g.lineWidth=1.1;g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.stroke()}
+  for(const v of [-20,-10,-7,-5,-3,0,3]){const [x,y]=polar(px,py,r+21,vd(v));txt(g,v>0?'+'+v:String(Math.abs(v)),x,y,{size:10,color:v>0?RED:NAVY})}
+  // percentage scale below
+  arc(r-14,vd(-20),vd(3),'rgba(31,45,61,.45)',.8);
+  for(const [v,p] of [[-20,'0'],[-6,'50'],[0,'100']]){const [x,y]=polar(px,py,r-26,vd(v));txt(g,p,x,y,{size:7,color:'rgba(31,45,61,.6)'})}
+  txt(g,'VU',w/2,h-62,{size:18,ls:4,color:NAVY});txt(g,'Nazaré',w/2,h-38,{font:'Yellowtail',weight:400,size:16,color:'rgba(31,45,61,.7)'});
+  // pivot cover
+  g.fillStyle='#1f2d3d';g.beginPath();g.ellipse(px,h,30,16,0,Math.PI,2*Math.PI);g.fill();
+  txt(g,'L',16,h-14,{size:8,ls:1.4,color:NAVY,align:'left'});g.fillStyle=NAVY;g.fillRect(26,h-15,12,1.6);
+  txt(g,'R',46,h-14,{size:8,ls:1.4,color:NAVY,align:'left'});g.fillStyle=RED;g.fillRect(56,h-15,12,1.6);
+  return c}
+async function build(L){await document.fonts.load('500 10px Jost');await document.fonts.load('10px Yellowtail');
+  return {front_print:front(L).toDataURL(),rear_print:rear(L).toDataURL(),badge_print:badge(L).toDataURL(),serial_print:serial(L).toDataURL(),vu_face:vuFace(L).toDataURL()}}
+</script>

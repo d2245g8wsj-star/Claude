@@ -1,0 +1,56 @@
+bypass | bool | default 0
+dual_split | bool | default 0
+hf_bell | bool | default 0
+hf_freq | choice | 600 Hz;1 kHz;1.5 kHz;2.2 kHz;3.3 kHz;4.7 kHz;6.8 kHz;10 kHz;12 kHz;16 kHz;20 kHz;28 kHz | default 7
+hf_gain | float | -15..15 step 0.1 skew 1 | default 0
+hf_in | bool | default 1
+hmf_freq | choice | 260 Hz;380 Hz;560 Hz;820 Hz;1.2 kHz;1.6 kHz;2.2 kHz;3.3 kHz;4.7 kHz;6.8 kHz;8.2 kHz;11 kHz | default 6
+hmf_gain | float | -15..15 step 0.1 skew 1 | default 0
+hmf_hiq | bool | default 0
+hmf_in | bool | default 1
+hpf | float | 12..300 step 0 skew 1 | default 30
+hpf_24 | bool | default 0
+hpf_in | bool | default 0
+iron | bool | default 0
+iron_link | bool | default 0
+iron_pad | float | 0..15 step 1 skew 1 | default 0
+lf_bell | bool | default 0
+lf_freq | choice | 22 Hz;30 Hz;40 Hz;60 Hz;80 Hz;100 Hz;150 Hz;220 Hz;330 Hz;470 Hz;680 Hz;1 kHz | default 5
+lf_gain | float | -15..15 step 0.1 skew 1 | default 0
+lf_in | bool | default 1
+lmf_freq | choice | 90 Hz;130 Hz;180 Hz;270 Hz;390 Hz;560 Hz;820 Hz;1.2 kHz;1.8 kHz;2.7 kHz;3.9 kHz;4.8 kHz | default 4
+lmf_gain | float | -15..15 step 0.1 skew 1 | default 0
+lmf_hiq | bool | default 0
+lmf_in | bool | default 1
+lpf | float | 6000..50000 step 0 skew 1 | default 20000
+lpf_24 | bool | default 0
+lpf_in | bool | default 0
+mode | choice | Dual Mono;Stereo;Mid/Side | default 1
+output | float | -15..15 step 0.25 skew 1 | default 0
+q_mode | choice | Proportional;Constant | default 0
+range | choice | 5 dB;15 dB | default 1
+side_hf_bell | bool | default 0
+side_hf_freq | choice | 600 Hz;1 kHz;1.5 kHz;2.2 kHz;3.3 kHz;4.7 kHz;6.8 kHz;10 kHz;12 kHz;16 kHz;20 kHz;28 kHz | default 7
+side_hf_gain | float | -15..15 step 0.1 skew 1 | default 0
+side_hf_in | bool | default 1
+side_hmf_freq | choice | 260 Hz;380 Hz;560 Hz;820 Hz;1.2 kHz;1.6 kHz;2.2 kHz;3.3 kHz;4.7 kHz;6.8 kHz;8.2 kHz;11 kHz | default 6
+side_hmf_gain | float | -15..15 step 0.1 skew 1 | default 0
+side_hmf_hiq | bool | default 0
+side_hmf_in | bool | default 1
+side_hpf | float | 12..300 step 0 skew 1 | default 30
+side_hpf_24 | bool | default 0
+side_hpf_in | bool | default 0
+side_lf_bell | bool | default 0
+side_lf_freq | choice | 22 Hz;30 Hz;40 Hz;60 Hz;80 Hz;100 Hz;150 Hz;220 Hz;330 Hz;470 Hz;680 Hz;1 kHz | default 5
+side_lf_gain | float | -15..15 step 0.1 skew 1 | default 0
+side_lf_in | bool | default 1
+side_lmf_freq | choice | 90 Hz;130 Hz;180 Hz;270 Hz;390 Hz;560 Hz;820 Hz;1.2 kHz;1.8 kHz;2.7 kHz;3.9 kHz;4.8 kHz | default 4
+side_lmf_gain | float | -15..15 step 0.1 skew 1 | default 0
+side_lmf_hiq | bool | default 0
+side_lmf_in | bool | default 1
+side_lpf | float | 6000..50000 step 0 skew 1 | default 20000
+side_lpf_24 | bool | default 0
+side_lpf_in | bool | default 0
+side_output | float | -15..15 step 0.25 skew 1 | default 0
+side_thd | float | 0..100 step 1 skew 1 | default 0
+thd | float | 0..100 step 1 skew 1 | default 0

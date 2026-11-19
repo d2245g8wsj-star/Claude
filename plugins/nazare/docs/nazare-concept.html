@@ -1,0 +1,916 @@
+<title>Nazaré Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,200..800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: the plugin itself sits on top as a fixed-size rack unit scaled to fit; the proposal reads below it in one 70ch column with wide tables. */
+:root{
+  /* page (light) */
+  --bg:#eef1f2; --surface:#ffffff; --fg:#14212a; --muted:#56656e; --line:#d3dade; --accent:#c8392a; --sea:#1f7f73; --chip:#e3e9eb;
+  /* plugin (single look: Atlantic slate, lighthouse red, sea foam) */
+  --p-top:#22323c; --p-bot:#111b22; --p-sub-top:#1f2e37; --p-sub-bot:#17232b; --p-ink:#ece6d8; --p-dim:#8797a0; --p-faint:#4d5d66;
+  --p-foam:#8fd6c9; --p-amber:#f0b240; --p-red:#e5432f; --p-screen:#061015;
+  --f-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1216; --surface:#121c22; --fg:#e4e8e6; --muted:#93a3ab; --line:#25343c; --accent:#f0624e; --sea:#79cdbf; --chip:#1a272e; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b1216; --surface:#121c22; --fg:#e4e8e6; --muted:#93a3ab; --line:#25343c; --accent:#f0624e; --sea:#79cdbf; --chip:#1a272e; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{background:var(--bg); color:var(--fg)}
+body{font-family:var(--f-body); font-size:15px; line-height:1.6; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:28px 64px}
+.wrap{max-width:1180px; margin:0 auto}
+:focus-visible{outline:2px solid var(--p-foam); outline-offset:3px}
+
+/* ---------- page header ---------- */
+.intro{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 32px; margin-bottom:18px}
+.intro h1{font-family:var(--f-display); font-stretch:125%; font-weight:300; font-size:clamp(28px,4.4vw,46px); letter-spacing:.01em; line-height:1.05; margin:0; text-wrap:balance}
+.intro h1 b{font-weight:700}
+.intro p{margin:6px 0 0; color:var(--muted); max-width:60ch}
+.eyebrow{font-family:var(--f-display); font-stretch:115%; font-weight:600; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent)}
+
+/* ---------- stage that holds the plugin ---------- */
+.stage-outer{overflow-x:auto; border-radius:6px; -webkit-overflow-scrolling:touch}
+.stage-box{position:relative}
+.stage{position:absolute; left:0; top:0; width:1720px; height:604px; transform-origin:0 0; font-family:var(--f-display); color:var(--p-ink); user-select:none; -webkit-user-select:none}
+
+/* rack */
+.ear{position:absolute; top:0; bottom:0; width:60px; background:linear-gradient(90deg,#0d1419,#1a252c 40%,#141e24); box-shadow:inset -1px 0 0 rgba(255,255,255,.04)}
+.ear.l{left:0; border-radius:4px 0 0 4px} .ear.r{right:0; border-radius:0 4px 4px 0; background:linear-gradient(270deg,#0d1419,#1a252c 40%,#141e24)}
+.ear i{position:absolute; left:12px; width:36px; height:15px; border-radius:8px; background:linear-gradient(#020405,#1b2228); box-shadow:0 1px 0 rgba(255,255,255,.07), inset 0 2px 3px rgba(0,0,0,.8)}
+.ear i:nth-child(1){top:62px} .ear i:nth-child(2){bottom:62px}
+.plate{position:absolute; left:60px; right:60px; top:0; bottom:0; padding:18px 22px; border-radius:2px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 0%, rgba(143,214,201,.05), transparent 60%),
+    linear-gradient(var(--p-top), var(--p-bot));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.6), 0 18px 40px -18px rgba(0,0,0,.6)}
+.screw{position:absolute; width:11px; height:11px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#7a858b,#20282d 70%); box-shadow:0 1px 1px rgba(0,0,0,.7)}
+.screw::after{content:""; position:absolute; left:2px; right:2px; top:5px; height:1.2px; background:#0b0f12; transform:rotate(35deg)}
+
+/* header */
+.hdr{position:absolute; left:22px; right:22px; top:16px; height:98px; display:flex; align-items:center; gap:30px}
+.brand{display:flex; align-items:center; gap:14px; width:380px; flex:none}
+.brand svg{width:104px; height:73px; flex:none}
+.brand .wm{display:flex; flex-direction:column; gap:3px}
+.brand .name{font-stretch:112%; font-weight:250; font-size:43px; line-height:1; letter-spacing:.005em}
+.brand .sub{font-stretch:110%; font-weight:600; font-size:9px; letter-spacing:.2em; white-space:nowrap; color:var(--p-dim)}
+.consoles{flex:1; display:flex; flex-direction:column; gap:7px}
+.legend{font-stretch:118%; font-weight:650; font-size:10px; letter-spacing:.22em; color:var(--p-dim); text-transform:uppercase}
+.ckeys{display:flex; gap:9px}
+.ckey{all:unset; cursor:pointer; flex:1; display:flex; flex-direction:column; align-items:center; gap:6px}
+.ckey .cap{width:100%; height:38px; border-radius:3px; display:grid; place-items:center; font-stretch:112%; font-weight:700; font-size:12.5px; letter-spacing:.12em; color:#2b2b2b;
+  background:linear-gradient(#d9d6cd,#bdb9ae); box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 rgba(255,255,255,.6), inset 0 -2px 0 rgba(0,0,0,.18); transition:background .15s, box-shadow .15s}
+.ckey .d{font-stretch:105%; font-weight:500; font-size:9.5px; letter-spacing:.09em; color:var(--p-dim); text-transform:uppercase; white-space:nowrap}
+.ckey[aria-checked="true"] .cap{background:linear-gradient(#fffdf2,#f3ead2); color:#1a1206; box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 #fff, 0 0 22px rgba(255,236,190,.38)}
+.ckey[aria-checked="true"] .d{color:var(--p-ink)}
+.ckey:focus-visible .cap{outline:2px solid var(--p-foam); outline-offset:3px}
+.maker{width:120px; flex:none; display:flex; flex-direction:column; align-items:center; gap:6px}
+.maker svg{width:40px; height:40px}
+.maker span{font-stretch:118%; font-weight:600; font-size:8.5px; letter-spacing:.26em; color:var(--p-dim)}
+.power{display:flex; align-items:center; gap:7px; font-stretch:115%; font-size:8.5px; font-weight:600; letter-spacing:.2em; color:var(--p-dim)}
+.led{width:9px; height:9px; border-radius:50%; background:#2a2f31; box-shadow:inset 0 1px 1px rgba(0,0,0,.6)}
+.led.on{background:radial-gradient(circle at 40% 35%,#ffd3c9,var(--p-red) 55%,#7a1309); box-shadow:0 0 10px rgba(229,67,47,.7)}
+
+/* modules */
+.row{position:absolute; left:22px; right:22px; top:128px; height:372px; display:flex; gap:12px}
+.mod{position:relative; border-radius:7px; background:linear-gradient(var(--p-sub-top),var(--p-sub-bot)); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.03); padding:14px 14px 12px; display:flex; flex-direction:column; align-items:center}
+.mod>.legend{align-self:stretch; text-align:center}
+.m-drive{width:392px} .m-char{width:196px} .m-disp{width:452px; padding:10px 12px 12px} .m-stereo{width:196px} .m-out{width:272px}
+
+/* knobs */
+.kn{display:flex; flex-direction:column; align-items:center; gap:2px; outline:none}
+.kn .lbl{font-stretch:118%; font-weight:650; font-size:10px; letter-spacing:.2em; color:var(--p-ink)}
+.kn .val{font-family:var(--f-mono); font-size:10.5px; color:var(--p-dim); height:14px; letter-spacing:.02em}
+.kn .face{position:relative; width:var(--box); height:var(--box); cursor:ns-resize; touch-action:none}
+.kn .face svg.ring{position:absolute; inset:0; overflow:visible}
+.kn .leg{position:absolute; bottom:-1px; font-size:8.5px; font-weight:600; letter-spacing:.12em; color:var(--p-dim); font-stretch:110%}
+.kn .leg.lo{left:0} .kn .leg.hi{right:0}
+.kn:focus-visible .face{outline:2px solid var(--p-foam); outline-offset:2px; border-radius:50%}
+.knob{position:absolute; left:50%; top:50%; width:var(--s); height:var(--s); margin:calc(var(--s) / -2) 0 0 calc(var(--s) / -2); border-radius:50%;
+  box-shadow:0 6px 10px rgba(0,0,0,.55), 0 2px 2px rgba(0,0,0,.6)}
+.knob .knurl{position:absolute; inset:0; border-radius:50%; background:repeating-conic-gradient(#0b0e10 0 3deg,#2a3034 3deg 6deg); box-shadow:inset 0 0 0 1px #000}
+.knob .cap{position:absolute; inset:13%; border-radius:50%;
+  background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0 54%, rgba(0,0,0,.35) 100%),
+             conic-gradient(from 200deg,#2b3034,#62686d,#2a2f33,#4d5358,#24282b,#6f767b,#2b3034);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.25), inset 0 -2px 3px rgba(0,0,0,.6), 0 0 0 1px #070809}
+.knob .ptr{position:absolute; inset:0}
+.knob .ptr::after{content:""; position:absolute; left:50%; top:9%; width:var(--pw,3px); height:30%; margin-left:calc(var(--pw,3px) / -2); border-radius:2px; background:var(--pc,#f4f1e8); box-shadow:0 0 4px rgba(0,0,0,.6)}
+.hero .knob{--pc:var(--p-red); --pw:5px}
+.hero .knob .cap{inset:15%; background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0 50%, rgba(0,0,0,.35) 100%), conic-gradient(from 205deg,#3a4045,#9aa1a6,#3b4146,#7d8489,#33383c,#a8afb4,#3a4045)}
+.hero .knob .cap::before{content:""; position:absolute; inset:34%; border-radius:50%; background:radial-gradient(circle at 40% 35%,#4a5055,#1a1e21); box-shadow:inset 0 1px 1px rgba(255,255,255,.2), 0 0 0 1px #0a0c0d}
+
+/* drive readout */
+.dread{display:flex; align-items:baseline; justify-content:center; gap:14px; margin-top:2px; font-family:var(--f-mono)}
+.dread .db{font-size:22px; font-weight:500; color:var(--p-ink); min-width:94px; text-align:right}
+.dread .zone{font-family:var(--f-display); font-stretch:120%; font-weight:750; font-size:13px; letter-spacing:.2em; min-width:112px}
+.dread .thd{font-size:12px; color:var(--p-dim); min-width:90px}
+.hint{font-size:9px; letter-spacing:.14em; color:var(--p-faint); font-weight:600; font-stretch:110%; margin-top:4px}
+
+/* display */
+.tabs{align-self:stretch; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
+.tabs .t{display:flex; gap:4px}
+.tab{all:unset; cursor:pointer; font-stretch:118%; font-weight:650; font-size:9.5px; letter-spacing:.2em; color:var(--p-dim); padding:5px 9px; border-radius:3px}
+.tab[aria-selected="true"]{color:var(--p-screen); background:var(--p-foam)}
+.tab:focus-visible{outline:2px solid var(--p-foam)}
+.screen{position:relative; align-self:stretch; height:246px; border-radius:5px; background:var(--p-screen); box-shadow:inset 0 2px 8px rgba(0,0,0,.9), 0 0 0 1px #000, 0 1px 0 rgba(255,255,255,.05); overflow:hidden}
+.screen canvas{width:100%; height:100%; display:block}
+.screen::after{content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(160deg,rgba(255,255,255,.05),transparent 35%)}
+.reads{align-self:stretch; display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:10px}
+.rd{display:flex; flex-direction:column; align-items:center; gap:4px}
+.rd span{font-stretch:118%; font-weight:650; font-size:8.5px; letter-spacing:.18em; color:var(--p-dim)}
+.rd b{width:100%; text-align:center; font-family:var(--f-mono); font-weight:500; font-size:13px; color:var(--p-amber); background:#070d10; border-radius:3px; padding:5px 0; box-shadow:inset 0 1px 3px #000}
+
+/* stereo channel stepper */
+.chan{display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:auto}
+.chan .box{display:flex; align-items:center; gap:6px}
+.chan button{all:unset; cursor:pointer; width:24px; height:24px; border-radius:3px; display:grid; place-items:center; color:var(--p-ink); font-weight:700; background:linear-gradient(#323d44,#20292f); box-shadow:0 0 0 1px #050708, inset 0 1px 0 rgba(255,255,255,.12)}
+.chan button:focus-visible{outline:2px solid var(--p-foam)}
+.chan output{font-family:var(--f-mono); font-size:20px; font-weight:600; color:var(--p-red); background:#0a0605; padding:2px 10px; border-radius:3px; box-shadow:inset 0 1px 4px #000; text-shadow:0 0 8px rgba(229,67,47,.6); min-width:52px; text-align:center}
+
+/* VU */
+.vus{display:flex; gap:10px; margin:2px 0 6px}
+.vu{width:120px; height:112px; border-radius:5px; padding:4px; background:#0a0e10; box-shadow:inset 0 0 0 1px #000, 0 1px 0 rgba(255,255,255,.05)}
+.vu svg{width:100%; height:100%; display:block; border-radius:3px}
+.outk{display:flex; gap:22px; margin-top:auto}
+.peaks{display:flex; gap:40px; margin-top:4px}
+article a{color:var(--accent)}
+
+/* footer keys */
+.foot{position:absolute; left:22px; right:22px; top:514px; height:70px; display:flex; align-items:flex-end; gap:26px}
+.grp{display:flex; flex-direction:column; gap:7px; align-items:center}
+.keys{display:flex; gap:6px}
+.k{all:unset; cursor:pointer; min-width:38px; padding:0 10px; height:26px; border-radius:3px; display:grid; place-items:center; font-stretch:112%; font-weight:700; font-size:10px; letter-spacing:.12em; color:#2b2b2b; background:linear-gradient(#d4d1c8,#b7b3a8); box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 rgba(255,255,255,.5)}
+.k[aria-pressed="true"],.k[aria-checked="true"]{background:linear-gradient(#ffd27a,#f0a83a); color:#1d1204; box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 #fff3cf, 0 0 14px rgba(240,178,64,.35)}
+.k.red[aria-pressed="true"]{background:linear-gradient(#ff8a72,#e5432f); color:#200603; box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 #ffd0c6, 0 0 14px rgba(229,67,47,.4)}
+.k:focus-visible{outline:2px solid var(--p-foam); outline-offset:2px}
+.status{margin-left:auto; font-family:var(--f-mono); font-size:10px; color:var(--p-dim); letter-spacing:.06em; padding-bottom:6px; text-align:right; line-height:1.5}
+
+/* ---------- transport under the stage ---------- */
+.transport{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin:14px 0 6px}
+.btn{all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:8px; font-weight:600; font-size:14px; padding:9px 16px; border-radius:999px; background:var(--fg); color:var(--bg)}
+.btn.ghost{background:transparent; color:var(--fg); box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.transport small{color:var(--muted); font-size:13px}
+#file{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none}
+
+/* ---------- proposal ---------- */
+.doc{display:grid; grid-template-columns:200px minmax(0,1fr); gap:40px; margin-top:48px}
+@media (max-width:860px){.doc{grid-template-columns:minmax(0,1fr); gap:0}.toc{display:none}}
+.toc{position:sticky; top:calc(env(safe-area-inset-top, 0px) + 20px); align-self:start; font-size:13px}
+.toc ol{list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:7px; counter-reset:t}
+.toc a{color:var(--muted); text-decoration:none} .toc a:hover{color:var(--fg)}
+.toc li{counter-increment:t} .toc li::before{content:counter(t) "  "; font-family:var(--f-mono); font-size:11px; color:var(--accent)}
+article{max-width:74ch; min-width:0}
+article section{padding-top:8px; margin-bottom:40px}
+article h2{font-family:var(--f-display); font-stretch:120%; font-weight:650; font-size:23px; letter-spacing:.005em; line-height:1.2; margin:0 0 12px; text-wrap:balance}
+article h2 .n{font-family:var(--f-mono); font-weight:500; font-size:13px; color:var(--accent); margin-right:10px; vertical-align:3px}
+article h3{font-family:var(--f-display); font-stretch:112%; font-weight:650; font-size:16px; margin:22px 0 6px}
+article p{margin:0 0 12px}
+article ul{margin:0 0 12px; padding-left:20px} article li{margin-bottom:5px}
+code,.mono{font-family:var(--f-mono); font-size:.88em}
+.lead{font-size:17px; line-height:1.55}
+.tw{overflow-x:auto; margin:6px 0 16px; border:1px solid var(--line); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:640px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-family:var(--f-display); font-stretch:115%; font-weight:650; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); background:var(--chip)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+.spot{font-family:var(--f-display); font-stretch:118%; font-weight:700; letter-spacing:.1em; font-size:12px; white-space:nowrap}
+.zbar{display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:-1px; margin-right:7px}
+.flow{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:10px 0 16px; padding:14px; background:var(--surface); border:1px solid var(--line); border-radius:6px; font-size:12.5px}
+.flow span{padding:6px 10px; border-radius:4px; background:var(--chip); font-weight:500}
+.flow span.nl{background:color-mix(in srgb, var(--accent) 16%, var(--chip)); }
+.flow i{font-style:normal; color:var(--muted)}
+.note{border-left:3px solid var(--sea); padding:6px 0 6px 14px; margin:14px 0; color:var(--fg)}
+.note b{color:var(--sea)}
+.logo-row{display:flex; flex-wrap:wrap; gap:12px; margin:10px 0 14px}
+.logo-tile{flex:1 1 150px; min-width:0; border-radius:6px; display:grid; place-items:center; padding:18px 10px; border:1px solid var(--line)}
+.logo-tile svg{width:100%; max-width:150px; height:auto}
+.logo-tile.dk{background:#16232b} .logo-tile.lt{background:#f3efe4} .logo-tile.sm{background:#16232b}
+.logo-tile.sm svg{max-width:44px}
+.qa{display:grid; gap:10px}
+.qa div{background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:12px 14px}
+.qa b{display:block; margin-bottom:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="nazare-mark" viewBox="0 0 120 84">
+      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 76 H116" stroke-width="2.2"/>
+        <path d="M112 76 C 100 72, 96 44, 84 24 C 78 14, 70 9, 60 9 C 46 9, 34 16, 31 28 C 29 37, 35 43, 42 41 C 48 39, 49 32, 45 29 C 42 27, 38 29, 39 33" stroke-width="2.6"/>
+        <path d="M10 76 C 30 75, 46 68, 54 56 C 60 47, 62 36, 58 27" stroke-width="2.2"/>
+        <path d="M70 18 C 82 26, 88 46, 94 64" stroke-width="1.3" opacity=".55"/>
+        <path d="M64 26 C 72 36, 76 52, 80 68" stroke-width="1.1" opacity=".35"/>
+      </g>
+      <g fill="currentColor" opacity=".8"><circle cx="27" cy="22" r="1"/><circle cx="23" cy="27" r=".8"/><circle cx="26" cy="31" r=".6"/><circle cx="21" cy="19" r=".6"/></g>
+      <g transform="translate(38 70) rotate(-22)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-5.2 0.9 C -2 1.7, 3 1.6, 5.6 0.2" stroke="#e5432f" stroke-width="1.6"/>
+        <g stroke="currentColor" stroke-width="1.05">
+          <path d="M-1.6 0.2 L -0.6 -2.6 L 1.6 0.2"/>
+          <path d="M-0.6 -2.6 L -1.3 -5.6"/>
+          <path d="M-1.3 -5.0 L -4.6 -4.0 M -1.2 -5.1 L 1.9 -6.6"/>
+        </g>
+        <circle cx="-1.6" cy="-7" r="1.05" fill="currentColor"/>
+      </g>
+    </symbol>
+    <symbol id="iw-mark" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="17.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M8.5 20 C 11.5 11, 16 11, 20 20 S 28.5 29, 31.5 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="intro">
+    <div>
+      <div class="eyebrow">IndieWave Audio · Voorstel en GUI-ontwerp · concept 0.1</div>
+      <h1><b>Nazaré</b> large format analog console</h1>
+      <p>Zes consoles in één kanaal. Eén drive-knop die van ongerept schoon tot verzopen en verzadigd gaat, en een stereobeeld dat ontstaat uit twee net-niet-identieke kanalen. Hieronder werkt alles: draai, kies een console en luister.</p>
+    </div>
+  </header>
+
+  <div class="stage-outer" id="stageOuter">
+    <div class="stage-box" id="stageBox">
+      <div class="stage" id="stage" role="group" aria-label="Nazaré plugin">
+        <div class="ear l"><i></i><i></i></div>
+        <div class="ear r"><i></i><i></i></div>
+        <div class="plate">
+          <span class="screw" style="left:8px;top:8px"></span><span class="screw" style="right:8px;top:8px"></span>
+          <span class="screw" style="left:8px;bottom:8px"></span><span class="screw" style="right:8px;bottom:8px"></span>
+
+          <div class="hdr">
+            <div class="brand">
+              <svg style="color:var(--p-ink)" aria-hidden="true"><use href="#nazare-mark"/></svg>
+              <div class="wm">
+                <div class="name">Nazaré</div>
+                <div class="sub">LARGE FORMAT ANALOG CONSOLE</div>
+              </div>
+            </div>
+            <div class="consoles">
+              <div class="legend" style="text-align:center">Console</div>
+              <div class="ckeys" id="ckeys" role="radiogroup" aria-label="Console"></div>
+            </div>
+            <div class="maker">
+              <svg style="color:var(--p-ink)" aria-hidden="true"><use href="#iw-mark"/></svg>
+              <span>INDIEWAVE</span>
+              <div class="power"><span class="led on" id="powerLed"></span>POWER</div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="mod m-drive">
+              <div class="legend">Drive</div>
+              <div id="drive"></div>
+              <div class="dread" aria-live="polite">
+                <span class="db" id="dDb">+0.0 dB</span>
+                <span class="zone" id="dZone">WARM</span>
+                <span class="thd" id="dThd">0.08 %</span>
+              </div>
+              <div class="hint">SHIFT = FIJN · DUBBELKLIK = RESET</div>
+            </div>
+
+            <div class="mod m-char">
+              <div class="legend">Character</div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px" id="charKnobs"></div>
+            </div>
+
+            <div class="mod m-disp">
+              <div class="tabs">
+                <span class="legend" style="text-align:left">Analyse</span>
+                <div class="t" role="tablist" aria-label="Weergave">
+                  <button class="tab" role="tab" aria-selected="true" data-v="harm">HARMONICS</button>
+                  <button class="tab" role="tab" aria-selected="false" data-v="xfer">TRANSFER</button>
+                  <button class="tab" role="tab" aria-selected="false" data-v="img">IMAGE</button>
+                </div>
+              </div>
+              <div class="screen"><canvas id="scr" aria-label="Analyse van de huidige instelling"></canvas></div>
+              <div class="reads">
+                <div class="rd"><span>THD</span><b id="rThd">–</b></div>
+                <div class="rd"><span>H2</span><b id="rH2">–</b></div>
+                <div class="rd"><span>H3</span><b id="rH3">–</b></div>
+                <div class="rd"><span>HEADROOM</span><b id="rHead">–</b></div>
+                <div class="rd"><span>CORR</span><b id="rCorr">–</b></div>
+              </div>
+            </div>
+
+            <div class="mod m-stereo">
+              <div class="legend">Stereo</div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px" id="stKnobs"></div>
+              <div class="chan">
+                <span class="legend">Channel</span>
+                <div class="box">
+                  <button id="chDown" aria-label="Vorig kanaal">−</button>
+                  <output id="chOut">07</output>
+                  <button id="chUp" aria-label="Volgend kanaal">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mod m-out">
+              <div class="legend">Output</div>
+              <div class="vus"><div class="vu"><svg id="vuL" viewBox="0 0 110 104" preserveAspectRatio="none"></svg></div><div class="vu"><svg id="vuR" viewBox="0 0 110 104" preserveAspectRatio="none"></svg></div></div>
+              <div class="peaks"><span class="power"><span class="led" id="pkL"></span>PEAK L</span><span class="power"><span class="led" id="pkR"></span>PEAK R</span></div>
+              <div class="outk" id="outKnobs"></div>
+            </div>
+          </div>
+
+          <div class="foot">
+            <div class="grp"><span class="legend">Oversampling</span><div class="keys" data-group="os"></div></div>
+            <div class="grp"><span class="legend">0 VU =</span><div class="keys" data-group="cal"></div></div>
+            <div class="grp"><span class="legend">Mode</span><div class="keys" data-group="mode"></div></div>
+            <div class="grp"><span class="legend">Stereo</span><div class="keys"><button class="k" id="kMatch" aria-pressed="false">MATCHED PAIR</button></div></div>
+            <div class="grp"><span class="legend">Level</span><div class="keys"><button class="k" id="kAuto" aria-pressed="true">AUTO GAIN</button></div></div>
+            <div class="grp"><span class="legend">&nbsp;</span><div class="keys"><button class="k red" id="kByp" aria-pressed="false">BYPASS</button></div></div>
+            <div class="status" id="status">48.0 kHz · LATENCY 0 smp<br>v0.1.0 CONCEPT</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button class="btn" id="play">▶ Speel demo-loop</button>
+    <button class="btn ghost" id="loadBtn">Eigen audio laden…</button>
+    <input type="file" id="file" accept="audio/*">
+    <small id="tstat">Het geluid hier is een schets van de DSP in de browser (statische waveshapers met 4× oversampling), niet het eindproduct.</small>
+  </div>
+
+  <div class="doc">
+    <nav class="toc" aria-label="Inhoud">
+      <div class="eyebrow">Voorstel</div>
+      <ol>
+        <li><a href="#idee">Het idee</a></li>
+        <li><a href="#consoles">Zes consoles</a></li>
+        <li><a href="#drive">De drive-knop</a></li>
+        <li><a href="#dsp">De non-lineaire kern</a></li>
+        <li><a href="#stereo">Stereobeeld</a></li>
+        <li><a href="#gui">GUI en logo</a></li>
+        <li><a href="#slate">Analyse van Slate VCC</a></li>
+        <li><a href="#plan">Plan en fases</a></li>
+        <li><a href="#vragen">Open vragen</a></li>
+      </ol>
+    </nav>
+
+    <article>
+      <section id="idee">
+        <h2><span class="n">01</span>Het idee</h2>
+        <p class="lead">Nazaré zet op elk spoor en op de mixbus het kanaal van een grote analoge tafel. Niet als effect dat je hoort, maar als het medium waar alles doorheen gaat: kleine verschillen tussen links en rechts, harmonischen die met het niveau meebewegen, laag dat iets dikker wordt omdat de ingangstrafo als eerste verzadigt.</p>
+        <p>Het wordt de achtste plugin in de suite, naast Crest, Breakwater, Beacon, Swell, Hinge, Lacquer en Tide. Hij gebruikt dezelfde paneelset (rack-oren, schroeven, het sinus-in-ring merkje, de witte toetsen) met een eigen plaat: Atlantisch leisteen, met als accent het rood van de vuurtoren op de klif van Nazaré.</p>
+        <p>Werktitel en identiteit: <b>IndieWave Audio Nazaré, large format analog console</b>. Plugin code <code>Nzre</code>, bundle id <code>audio.indiewave.nazare</code>, map <code>plugins/nazare</code>. JUCE 8, VST3, AU en Standalone, net als de rest.</p>
+      </section>
+
+      <section id="consoles">
+        <h2><span class="n">02</span>Zes consoles, genoemd naar golven</h2>
+        <p>Elke console is vernoemd naar een beroemde surfspot. Op het paneel staat alleen een generieke omschrijving; merknamen van SSL, Neve, API of Abbey Road komen niet op de GUI of in de plugin. Dat is juridisch veilig en past bij het thema. In marketing kun je "geïnspireerd door" gebruiken met een disclaimer, zoals Slate en Waves dat doen.</p>
+        <div class="tw"><table>
+          <thead><tr><th>Console</th><th>Op het paneel</th><th>Inspiratie</th><th>Headroom</th><th>Karakter</th></tr></thead>
+          <tbody>
+            <tr><td class="spot">GLASS</td><td>Modern transformerless</td><td>SSL 9000 J/K, AMS Neve 88</td><td class="num">+26 dB</td><td>De referentie. Bijna onmeetbaar tot hij hard wordt aangesproken, dan een strakke, symmetrische (oneven) verzadiging.</td></tr>
+            <tr><td class="spot">PIPELINE</td><td>British VCA</td><td>SSL 4000 E/G</td><td class="num">+22 dB</td><td>Helder en strak. Vooral oneven harmonischen uit de op-amps, een vleugje lucht bovenin, en slew-limiting op scherpe transiënten.</td></tr>
+            <tr><td class="spot">MAVERICKS</td><td>American discrete</td><td>API 2520 / 312</td><td class="num">+21 dB</td><td>Punch in het middengebied, iets meer 2e harmonische, transformator-uitgang die het laag stevig houdt.</td></tr>
+            <tr><td class="spot">JAWS</td><td>British class A</td><td>Neve 80-serie (1073/1081 kanalen)</td><td class="num">+20 dB</td><td>IJzer en gewicht. De ingangstrafo verzadigt eerst in het laag, rijke 2e en 3e harmonische, hoog dat zacht afrondt.</td></tr>
+            <tr><td class="spot">TEAHUPO'O</td><td>Germanium transistor</td><td>EMI TG12345 (Abbey Road, jaren 70)</td><td class="num">+17 dB</td><td>Korrel en midden. Asymmetrisch, met hogere oneven harmonischen en een duidelijke presence-bult.</td></tr>
+            <tr><td class="spot">SUPERTUBES</td><td>British valve</td><td>EMI REDD.51 (Abbey Road, jaren 60)</td><td class="num">+15 dB</td><td>Buizen. Zacht, groot en warm, sterk even, asymmetrisch clippen, hoog dat vroeg afrolt.</td></tr>
+          </tbody>
+        </table></div>
+        <p>Ieder model krijgt in de echte plugin zijn eigen keten van trappen (zie <a href="#dsp">de non-lineaire kern</a>). In de demo hierboven is elk model teruggebracht tot één asymmetrische waveshaper plus de juiste filters rond die waveshaper, genoeg om het verschil te horen.</p>
+      </section>
+
+      <section id="drive">
+        <h2><span class="n">03</span>De drive-knop: geijkt in vervorming, niet in dB</h2>
+        <p>Dit is het hart van het ontwerp. Bij de meeste console-plugins draait de drive-knop aan de versterking. Daardoor zit al het interessante in een klein stukje van de draaiweg, en klinkt dezelfde knopstand op elke console anders hard.</p>
+        <p>Nazaré ijkt de knop in <b>totale harmonische vervorming</b> (THD) op nominaal niveau. Elke stap in de draaiweg is een vaste stap in vervorming, logaritmisch van 0,0005 % tot 25 %. De plugin rekent per console uit hoeveel niveau er in de trap moet om daar te komen. Dat geeft drie dingen:</p>
+        <ul>
+          <li><b>Eerlijk vergelijken.</b> Wissel van console bij dezelfde knopstand en je hoort het karakter, niet een niveauverschil of een andere hoeveelheid vervorming.</li>
+          <li><b>Gelijk verdeelde draaiweg.</b> Van ongerept naar verzopen zijn zeven zones van ieder 0,67 decade vervorming. Geen dood stuk aan het begin, geen klif aan het eind.</li>
+          <li><b>Eenvoudig.</b> Eén knop, één woord dat zegt waar je bent, en twee getallen voor wie wil weten wat er gebeurt: het niveau in de trap in dB en de THD.</li>
+        </ul>
+        <div class="tw"><table>
+          <thead><tr><th>Zone</th><th>THD op 0 VU</th><th>Wat je hoort</th></tr></thead>
+          <tbody id="zoneRows"></tbody>
+        </table></div>
+        <h3>Fijn regelen zonder extra knoppen</h3>
+        <ul>
+          <li>Shift ingedrukt bij slepen of scrollen geeft tien keer fijnere stappen. Pijltjestoetsen werken ook.</li>
+          <li>Dubbelklik zet de knop op het begin van WARM, de standaardstand voor een kanaal.</li>
+          <li>De dB-waarde onder de knop is het niveau in de trap ten opzichte van nominaal. Daar kun je ook direct een waarde intikken (in de plugin).</li>
+          <li><b>0 VU =</b> bepaalt waar je digitale niveau op de console landt: −24, −18, −14 of −12 dBFS. Dit is de echte gain staging; de drive-knop doet de rest.</li>
+          <li><b>AUTO GAIN</b> compenseert het luidheidsverlies van verzadiging, zodat luider nooit beter lijkt. Drive is daarnaast altijd intern gecompenseerd: in de lineaire zone komt het signaal er bit-voor-bit even hard uit als het erin ging.</li>
+        </ul>
+        <div class="note"><b>Belofte, net als bij Crest:</b> op PRISTINE is de THD kleiner dan 0,002 % en de versterking exact 1,0 bij elk model. De offline tests controleren dat bij elke build.</div>
+        <h3>Character, de tweede laag</h3>
+        <p><b>HARMONICS</b> schuift het evenwicht binnen het model van even (dikker, octaaf) naar oneven (dichter, scherper), met het midden als het origineel. <b>AGE</b> maakt de componenten ouder: meer ruis, minder hoog, meer spreiding tussen kanalen, iets meer 2e harmonische. <b>NOISE</b> stelt de ruisvloer van het model in, van uit tot overdreven.</p>
+      </section>
+
+      <section id="dsp">
+        <h2><span class="n">04</span>De non-lineaire kern</h2>
+        <p>Goede console-emulatie zit niet in één waveshaper. Het zit in de volgorde van trappen die elk op hun eigen manier en in hun eigen frequentiegebied verzadigen, en in het geheugen van die trappen. Per kanaal ziet de keten er zo uit:</p>
+        <div class="flow" aria-label="Signaalketen">
+          <span>in</span><i>→</i><span>0 VU-ijking</span><i>→</i><span class="nl">ingangstrafo</span><i>→</i><span class="nl">versterkertrap</span><i>→</i><span>kanaal-EQ-kleur</span><i>→</i><span class="nl">summing / bus-amp</span><i>→</i><span class="nl">uitgangstrafo</span><i>→</i><span>crosstalk + ruis</span><i>→</i><span>auto gain · mix · out</span>
+        </div>
+        <ul>
+          <li><b>Transformatoren</b> met frequentie-afhankelijke verzadiging: kern-flux is evenredig met de integraal van de spanning, dus laag verzadigt eerst. Gemodelleerd met een vereenvoudigde Jiles-Atherton-hysterese, zodat het laag ook licht faseverschuift en "ademt".</li>
+          <li><b>Versterkertrappen</b> per type: VCA en op-amp met slew-rate-limiet (PIPELINE, GLASS), discrete class-A met asymmetrische werkpuntverschuiving (MAVERICKS, JAWS), germanium met temperatuurafhankelijke bias (TEAHUPO'O), triode met roosterstroom (SUPERTUBES).</li>
+          <li><b>Dynamische bias.</b> Bij luide passages verschuift het werkpunt traag (tijdconstante 20 tot 300 ms per model). Daardoor veranderen de harmonischen met het programma, en krijg je die "lijm" die een statische curve nooit geeft.</li>
+          <li><b>Aliasing.</b> Antiderivative antialiasing (ADAA, eerste orde) op elke non-lineaire trap plus 1× tot 8× oversampling met lineaire-fase of minimum-fase filters. Op PRISTINE kost dat bijna niets, want de trappen worden dan overgeslagen zodra het signaal ver onder de knik blijft.</li>
+          <li><b>Ruis</b> per kanaal onafhankelijk, met het spectrum van het model en optioneel brom op 50 of 60 Hz. De ruis is gate-baar zodat hij niet doorloopt in stille passages.</li>
+        </ul>
+        <p>De harmonischen-weergave in de plugin rekent live met dezelfde modellen: wat je ziet bij H2 tot H10 is wat de DSP doet. In het concept hierboven is dat al zo voor de vereenvoudigde modellen.</p>
+      </section>
+
+      <section id="stereo">
+        <h2><span class="n">05</span>Stereobeeld</h2>
+        <p>Een echte tafel is nooit links en rechts gelijk. Die kleine ongelijkheid, opgeteld over 24 of 48 kanalen, is een groot deel van "de breedte en diepte van analoog". Nazaré bouwt dat bewust na:</p>
+        <ul>
+          <li><b>TOLERANCE</b> geeft elk kanaal eigen componentwaarden: ±0,25 dB versterking, ±1,5 dB headroom, ±30 % in de even harmonischen en ±12 % in de hoge afrol. Vast per kanaalnummer, dus reproduceerbaar.</li>
+          <li><b>CHANNEL 1–48</b> kiest welk kanaal van de tafel je gebruikt. Zet elk spoor op een ander kanaal en de mix krijgt de spreiding van een echte tafel. Een latere versie kan instanties dit zelf laten regelen.</li>
+          <li><b>MATCHED PAIR</b> maakt links en rechts identiek, voor als je het stereobeeld exact wilt houden (mastering, mono-kritische bronnen).</li>
+          <li><b>CROSSTALK</b> lekt een stukje van elk kanaal naar het andere, sterker in het hoog zoals bij echte capacitieve overspraak. In BUS-mode is de overspraak hoger en zit er een summing-versterker in de keten.</li>
+          <li><b>IMAGE</b> laat een goniometer en de correlatie zien, zodat je ziet wat de spreiding doet.</li>
+        </ul>
+      </section>
+
+      <section id="gui">
+        <h2><span class="n">06</span>GUI en logo</h2>
+        <p>Het paneel is een rack-unit van 1720 × 604 punten, schaalbaar van 50 % tot 200 %, opgebouwd met de gedeelde IndieWave-paneelset zodat het naast Crest en Breakwater thuishoort. De indeling volgt de signaalrichting van links naar rechts: console kiezen, drive, karakter, analyse, stereo, uitgang.</p>
+        <ul>
+          <li><b>De drive-knop</b> is de enige grote knop. Rond de knop staat de zoneschaal met de zeven namen en de kleur loopt van zeeschuim via amber naar vuurtorenrood. De ring licht op tot de knopstand.</li>
+          <li><b>Consoles</b> zijn witte toetsen zoals op Tide en Crest: de gekozen toets licht op. Wisselen gaat met een korte crossfade zodat je zonder klik kunt A/B'en.</li>
+          <li><b>VU-meters</b> met warme achtergrondverlichting en echte VU-ballistiek (300 ms), geijkt op de 0 VU-instelling.</li>
+          <li><b>Kleine knoppen</b> gebruiken de LED-ring uit de paneelset. Machinaal glanzende kappen houden hun lichtval vast terwijl alleen de wijzer en de kartelrand meedraaien.</li>
+        </ul>
+        <h3>Het logo</h3>
+        <p>Een grote golf in één lijn, getekend zoals het sinus-in-ring merkje van IndieWave, met een klein surfertje laag op de golfwand. Het surfboard is het enige rode element: het accent van het hele paneel. Het schaalverschil is de boodschap: zo groot zijn de golven in Nazaré.</p>
+        <div class="logo-row">
+          <div class="logo-tile dk"><svg viewBox="0 0 120 84" style="color:#ece6d8" role="img" aria-label="Nazaré logo, licht op donker"><use href="#nazare-mark"/></svg></div>
+          <div class="logo-tile lt"><svg viewBox="0 0 120 84" style="color:#14212a" role="img" aria-label="Nazaré logo, donker op licht"><use href="#nazare-mark"/></svg></div>
+          <div class="logo-tile sm"><svg viewBox="0 0 120 84" style="color:#ece6d8" role="img" aria-label="Nazaré logo, klein formaat"><use href="#nazare-mark"/></svg></div>
+        </div>
+      </section>
+
+      <section id="slate">
+        <h2><span class="n">07</span>Analyse van Slate Virtual Console Collection</h2>
+        <p>Ik ga de plugin zelf niet decompileren; dat mag volgens de licentie niet en levert ook weinig op. Wat wel werkt, en precies is wat we nodig hebben, is meten wat hij met signaal doet. Deze cloudomgeving draait Linux en kan een macOS- of Windows-plugin niet laden, dus de handigste route is:</p>
+        <ul>
+          <li>Ik maak een set testbestanden (WAV, 48 kHz, 32-bit float): sinussen op 50 Hz, 1 kHz en 10 kHz in stappen van 1 dB, een logaritmische sweep, twee-toon IMD (60 Hz + 7 kHz), roze ruis, impulsen, en een stereobestand met alleen links.</li>
+          <li>Jij stuurt die door VCC op elke console, met drive op een paar vaste standen, en exporteert de renders.</li>
+          <li>Ik bereken per console THD en de afzonderlijke harmonischen tegen niveau, de frequentierespons, IMD, crosstalk, ruisvloer, het verschil tussen kanalen en het tijdsgedrag (dynamische bias) uit de bursts.</li>
+        </ul>
+        <p>Met die curves kalibreren we de zes modellen en zie je precies waar Nazaré anders of beter doet. Hetzelfde kan voor Waves NLS en, nog beter, voor echte hardware als je ergens toegang toe hebt.</p>
+      </section>
+
+      <section id="plan">
+        <h2><span class="n">08</span>Plan en fases</h2>
+        <div class="tw"><table>
+          <thead><tr><th>Versie</th><th>Wat</th><th>Klaar als</th></tr></thead>
+          <tbody>
+            <tr><td class="num">0.1</td><td>Projectskelet in <code>plugins/nazare</code>, parameters, paneel uit deze GUI in JUCE met de gedeelde paneelset, eenvoudige modellen zoals in de demo.</td><td>Bouwt op macOS en Windows in CI, laadt in een DAW, alle knoppen werken.</td></tr>
+            <tr><td class="num">0.2</td><td>Meetsuite op de Slate-renders, de echte trapketen per model, ADAA en oversampling.</td><td>Harmonischen per model binnen 2 dB van de doelcurve van 1 tot 7 kHz.</td></tr>
+            <tr><td class="num">0.3</td><td>Dynamische bias, transformator-hysterese, tolerance en crosstalk, BUS-mode.</td><td>Offline tests op PRISTINE-belofte, latency, reproduceerbare kanalen.</td></tr>
+            <tr><td class="num">0.5</td><td>Presets, schaalbare GUI, CPU-optimalisatie, beta.</td><td>Onder 1 % CPU per instantie op 2× bij 48 kHz op een M1.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="vragen">
+        <h2><span class="n">09</span>Open vragen voor jou</h2>
+        <div class="qa">
+          <div><b>Zes consoles, of liever vier sterke?</b>Minder modellen betekent sneller beter. Mijn voorstel is starten met GLASS, PIPELINE, JAWS en SUPERTUBES.</div>
+          <div><b>Kanaal en bus in één plugin, of twee?</b>Slate splitst ze niet, Waves wel. Eén plugin met een MODE-schakelaar houdt de suite overzichtelijk.</div>
+          <div><b>Testbestanden of plugin?</b>Stuur liever de renders dan de plugin zelf. Zeg het, en ik maak de testbestanden als eerste stap.</div>
+        </div>
+      </section>
+    </article>
+  </div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+
+/* ------------------------------------------------------------------ models */
+const MODELS=[
+ {id:'glass',name:'GLASS',desc:'Modern transformerless',H:26,e:.0008,p:4.0,neg:1.0,lf:0,lpf:40000,shelfLo:0,peak:[1000,0,.7],shelfHi:0,noise:-100},
+ {id:'pipeline',name:'PIPELINE',desc:'British VCA',H:22,e:.004,p:3.0,neg:1.0,lf:1,lpf:34000,shelfLo:0,peak:[3200,.3,.8],shelfHi:.7,noise:-92},
+ {id:'mavericks',name:'MAVERICKS',desc:'American discrete',H:21,e:.009,p:2.5,neg:1.05,lf:2,lpf:30000,shelfLo:.5,peak:[1400,.9,.7],shelfHi:0,noise:-90},
+ {id:'jaws',name:'JAWS',desc:'British class A',H:20,e:.016,p:2.0,neg:1.1,lf:6,lpf:26000,shelfLo:.9,peak:[1000,0,.7],shelfHi:-.6,noise:-88},
+ {id:'teahupoo',name:'TEAHUPO’O',desc:'Germanium',H:17,e:.022,p:2.2,neg:1.25,lf:2,lpf:20000,shelfLo:0,peak:[2600,1.0,.8],shelfHi:0,noise:-84},
+ {id:'supertubes',name:'SUPERTUBES',desc:'British valve',H:15,e:.045,p:1.6,neg:1.35,lf:3,lpf:16500,shelfLo:.6,peak:[5000,-.5,.6],shelfHi:0,noise:-80},
+];
+const ZONES=[
+ {n:'PRISTINE',c:'#dff3ee',txt:'Niets te horen, ook niet in een null-test. Alleen de lineaire kleur van het model.'},
+ {n:'CLEAN',c:'#b6e6dc',txt:'Je meet het, je hoort het nauwelijks. Goed voor elk spoor in een volle mix.'},
+ {n:'SILK',c:'#8fd6c9',txt:'Hoog wordt zachter, transiënten iets ronder. De "console op elk kanaal"-stand.'},
+ {n:'WARM',c:'#c9d38a',txt:'Duidelijk dikker laag en midden. De standaard voor bus en drums.'},
+ {n:'RICH',c:'#f0b240',txt:'De console doet mee: harmonischen zijn hoorbaar, pieken worden ingehouden.'},
+ {n:'SATURATED',c:'#ee7a36',txt:'Bewust gekleurd. Synths, bas, room-mics, parallel op drums.'},
+ {n:'DROWNED',c:'#e5432f',txt:'Zompig en verzadigd. De tafel ligt in het rood en klinkt daar ook naar.'},
+];
+const THD_LO=-3.3, THD_HI=1.4; // log10 of THD % across the knob travel
+
+const S={model:3, drive:.5, harm:.5, age:.2, noise:.3, tol:.45, xt:.35, out:.5, mix:1, ch:7, os:'4x', cal:-18, mode:'channel', matched:false, auto:true, bypass:false, view:'harm'};
+
+function hash(n){let x=Math.sin(n*127.1+311.7)*43758.5453;return (x-Math.floor(x))*2-1}
+function chanOffsets(ch){return {L:[hash(ch*3+1),hash(ch*3+2),hash(ch*3+3)],R:[hash(ch*3+101),hash(ch*3+102),hash(ch*3+103)]}}
+
+function params(side){ // side: null (nominal), 'L' or 'R'
+  const m=MODELS[S.model];
+  const eoScale=Math.pow(2,(.5-S.harm)*3), pScale=Math.pow(2,(S.harm-.5)*.8);
+  let e=m.e*eoScale*(1+S.age*.8), p=m.p*pScale, H=m.H-S.age*1.5, gain=0, lpf=m.lpf*(1-S.age*.35);
+  if(S.mode==='bus'){p*=.88; H-=1}
+  if(side && !S.matched){
+    const o=chanOffsets(S.ch)[side], t=S.tol*(1+S.age*.6);
+    gain=.25*t*o[0]; H+=1.5*t*o[1]; e*=1+.3*t*o[2]; lpf*=1+.12*t*o[1];
+  }
+  return {e,p,H,neg:m.neg,gain,lpf:clamp(lpf,4000,22000*2)};
+}
+function shape(u,P){
+  const v=u+P.e*(u*u)/(1+u*u);
+  if(v>=0) return v/Math.pow(1+Math.pow(v,P.p),1/P.p);
+  const w=-v*P.neg; return -(w/Math.pow(1+Math.pow(w,P.p),1/P.p))/P.neg;
+}
+const N=512, SIN=new Float64Array(N), COS=new Float64Array(N);
+for(let i=0;i<N;i++){SIN[i]=Math.sin(2*Math.PI*i/N);COS[i]=Math.cos(2*Math.PI*i/N)}
+function analyse(D,P){ // harmonics of a 0 VU sine at stage level D
+  const A=Math.SQRT2*Math.pow(10,(D-P.H)/20), y=new Float64Array(N);
+  for(let i=0;i<N;i++) y[i]=shape(A*SIN[i],P);
+  const h=[];
+  for(let k=1;k<=10;k++){let re=0,im=0;for(let i=0;i<N;i++){const j=(k*i)%N;re+=y[i]*COS[j];im+=y[i]*SIN[j]}h.push(Math.hypot(re,im))}
+  let s=0;for(let k=1;k<10;k++) s+=h[k]*h[k];
+  const thd=Math.sqrt(s)/h[0]*100;
+  let r1=0,r2=0;for(let i=0;i<N;i++){r1+=(A*SIN[i])**2;r2+=y[i]*y[i]}
+  return {h,thd,A,comp:Math.sqrt(r1/Math.max(r2,1e-30))};
+}
+function solveD(t,P){ // drive position -> stage level that gives the target THD
+  const target=Math.pow(10,THD_LO+t*(THD_HI-THD_LO));
+  let lo=-110,hi=60;
+  for(let i=0;i<34;i++){const mid=(lo+hi)/2; if(analyse(mid,P).thd<target) lo=mid; else hi=mid}
+  return (lo+hi)/2;
+}
+let cur={D:0,an:null,P:null};
+function compute(){
+  const P=params(null); const D=solveD(S.drive,P); const an=analyse(D,P);
+  cur={D,an,P};
+}
+
+/* ------------------------------------------------------------------ knobs */
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.appendChild(e);return e}
+function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+function arcPath(cx,cy,r,a0,a1){const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1);return `M${x0} ${y0} A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1} ${y1}`}
+
+function makeKnob(host,o){
+  // o: key,label,size,box,def,fmt,leds,bipolar,lo,hi,color
+  const wrap=document.createElement('div');wrap.className='kn';wrap.tabIndex=0;wrap.setAttribute('role','slider');wrap.setAttribute('aria-label',o.aria||o.label);
+  if(o.label){const l=document.createElement('div');l.className='lbl';l.textContent=o.label;wrap.appendChild(l)}
+  const face=document.createElement('div');face.className='face';face.style.setProperty('--box',o.box+'px');wrap.appendChild(face);
+  const svg=el('svg',{class:'ring',viewBox:`0 0 ${o.box} ${o.box}`},face);
+  const c=o.box/2, rr=o.size/2+9, leds=[];
+  for(let i=0;i<o.leds;i++){const a=-135+270*i/(o.leds-1);const [x,y]=polar(c,c,rr,a);leds.push(el('circle',{cx:x,cy:y,r:1.9,fill:'#2a3236'},svg))}
+  const knob=document.createElement('div');knob.className='knob';knob.style.setProperty('--s',o.size+'px');
+  knob.innerHTML='<div class="knurl"></div><div class="cap"></div><div class="ptr"></div>';face.appendChild(knob);
+  if(o.lo){const a=document.createElement('span');a.className='leg lo';a.textContent=o.lo;face.appendChild(a)}
+  if(o.hi){const a=document.createElement('span');a.className='leg hi';a.textContent=o.hi;face.appendChild(a)}
+  const val=document.createElement('div');val.className='val';wrap.appendChild(val);
+  host.appendChild(wrap);
+  const knurl=knob.querySelector('.knurl'),ptr=knob.querySelector('.ptr');
+  function render(){
+    const v=S[o.key],ang=-135+270*v;
+    knurl.style.transform=ptr.style.transform=`rotate(${ang}deg)`;
+    leds.forEach((L,i)=>{const p=i/(o.leds-1);const on=o.bipolar?((v>=.5&&p>=.5&&p<=v+1e-6)||(v<.5&&p<=.5&&p>=v-1e-6)):(p<=v+1e-6&&v>0.001);
+      L.setAttribute('fill',on?o.color:'#2a3236');L.setAttribute('style',on?`filter:drop-shadow(0 0 2px ${o.color})`:'')});
+    val.textContent=o.fmt(v);wrap.setAttribute('aria-valuetext',o.fmt(v));
+  }
+  bindDrag(face,wrap,o,render);render();return render;
+}
+function bindDrag(face,wrap,o,render){
+  const set=v=>{S[o.key]=clamp(v,0,1);render();onChange(o.key)};
+  let y0=0,v0=0,drag=false;
+  face.addEventListener('pointerdown',e=>{drag=true;y0=e.clientY;v0=S[o.key];face.setPointerCapture(e.pointerId);e.preventDefault();wrap.focus({preventScroll:true})});
+  face.addEventListener('pointermove',e=>{if(!drag)return;const k=e.shiftKey?2400:o.travel||240;set(v0+(y0-e.clientY)/k)});
+  face.addEventListener('pointerup',()=>drag=false);face.addEventListener('pointercancel',()=>drag=false);
+  face.addEventListener('dblclick',()=>set(o.def));
+  face.addEventListener('wheel',e=>{e.preventDefault();set(S[o.key]-Math.sign(e.deltaY)*(e.shiftKey?.002:.02))},{passive:false});
+  wrap.addEventListener('keydown',e=>{const st=e.shiftKey?.002:.02;
+    if(e.key==='ArrowUp'||e.key==='ArrowRight'){set(S[o.key]+st);e.preventDefault()}
+    else if(e.key==='ArrowDown'||e.key==='ArrowLeft'){set(S[o.key]-st);e.preventDefault()}
+    else if(e.key==='Home'){set(0);e.preventDefault()} else if(e.key==='End'){set(1);e.preventDefault()}});
+}
+
+/* hero drive knob */
+let renderDrive;
+(function(){
+  const host=$('#drive');const W=364,Hh=286,cx=W/2,cy=146,KS=142;
+  const wrap=document.createElement('div');wrap.className='kn hero';wrap.tabIndex=0;wrap.setAttribute('role','slider');wrap.setAttribute('aria-label','Drive');
+  const face=document.createElement('div');face.className='face';face.style.width=W+'px';face.style.height=Hh+'px';wrap.appendChild(face);host.appendChild(wrap);
+  const svg=el('svg',{class:'ring',viewBox:`0 0 ${W} ${Hh}`},face);
+  const defs=el('defs',{},svg);const gl=el('filter',{id:'glow',x:'-50%',y:'-50%',width:'200%',height:'200%'},defs);
+  el('feGaussianBlur',{stdDeviation:'2.6',result:'b'},gl);const mg=el('feMerge',{},gl);el('feMergeNode',{in:'b'},mg);el('feMergeNode',{in:'SourceGraphic'},mg);
+  // fine ticks
+  for(let i=0;i<=70;i++){const a=-135+270*i/70, major=i%10===0;const [x0,y0]=polar(cx,cy,KS/2+14,a),[x1,y1]=polar(cx,cy,KS/2+(major?24:19),a);
+    el('line',{x1:x0,y1:y0,x2:x1,y2:y1,stroke:major?'#8797a0':'#4d5d66','stroke-width':major?1.6:1,'stroke-linecap':'round'},svg)}
+  // zone band (dim) + lit overlay
+  const R=KS/2+33, seg=270/7, dim=[],lit=[];
+  ZONES.forEach((z,i)=>{const a0=-135+seg*i+1.2,a1=-135+seg*(i+1)-1.2;
+    dim.push(el('path',{d:arcPath(cx,cy,R,a0,a1),stroke:z.c,'stroke-opacity':.16,'stroke-width':7,fill:'none'},svg));
+    lit.push(el('path',{d:arcPath(cx,cy,R,a0,a1),stroke:z.c,'stroke-width':7,fill:'none',filter:'url(#glow)'},svg));
+    const am=-135+seg*(i+.5);const [lx,ly]=polar(cx,cy,R+17,am);
+    const t=el('text',{x:lx,y:ly,'text-anchor':am<-20?'end':am>20?'start':'middle','dominant-baseline':'middle',fill:'#8797a0','font-size':8.5,'font-weight':700,'letter-spacing':'1.2','font-stretch':'118%','font-family':'Archivo, Arial, sans-serif'},svg);
+    if(Math.abs(am)<=20) t.setAttribute('text-anchor','middle');
+    t.textContent=z.n; z.label=t;
+  });
+  const knob=document.createElement('div');knob.className='knob';knob.style.setProperty('--s',KS+'px');knob.style.top=cy+'px';
+  knob.innerHTML='<div class="knurl"></div><div class="cap"></div><div class="ptr"></div>';face.appendChild(knob);
+  const knurl=knob.querySelector('.knurl'),ptr=knob.querySelector('.ptr');
+  renderDrive=function(){
+    const v=S.drive, ang=-135+270*v;knurl.style.transform=ptr.style.transform=`rotate(${ang}deg)`;
+    ZONES.forEach((z,i)=>{const a0=-135+seg*i+1.2,a1=-135+seg*(i+1)-1.2,end=Math.min(a1,ang);
+      if(end<=a0+.2){lit[i].setAttribute('d','');} else lit[i].setAttribute('d',arcPath(cx,cy,R,a0,end));
+      const zi=Math.min(6,Math.floor(v*7));z.label.setAttribute('fill',i===zi?z.c:'#6f7f88');});
+    const zi=Math.min(6,Math.floor(v*7));
+    $('#dZone').textContent=ZONES[zi].n;$('#dZone').style.color=ZONES[zi].c;
+    $('#dDb').textContent=(cur.D>=0?'+':'−')+Math.abs(cur.D).toFixed(1)+' dB';
+    $('#dThd').textContent=fmtPct(cur.an.thd)+' THD';
+    wrap.setAttribute('aria-valuetext',`${ZONES[zi].n}, ${fmtPct(cur.an.thd)} THD`);
+  };
+  bindDrag(face,wrap,{key:'drive',def:3/7+.001,travel:320},()=>{});
+})();
+function fmtPct(x){return x<.001?x.toFixed(5)+' %':x<.01?x.toFixed(4)+' %':x<.1?x.toFixed(3)+' %':x<10?x.toFixed(2)+' %':x.toFixed(1)+' %'}
+
+const kfmt={
+  harm:v=>Math.abs(v-.5)<.02?'MODEL':(v<.5?'EVEN '+Math.round((.5-v)*200)+'%':'ODD '+Math.round((v-.5)*200)+'%'),
+  pct:v=>Math.round(v*100)+' %',
+  noise:v=>v<.005?'OFF':((MODELS[S.model].noise-12+24*v)>=0?'+':'')+(MODELS[S.model].noise-12+24*v).toFixed(0)+' dBFS',
+  xt:v=>v<.005?'OFF':'−'+(90-60*v).toFixed(0)+' dB',
+  out:v=>{const d=(v-.5)*24;return (d>=0?'+':'−')+Math.abs(d).toFixed(1)+' dB'},
+};
+const renders=[];
+const ch=$('#charKnobs'),st=$('#stKnobs'),ok=$('#outKnobs');
+const small={size:56,box:84,leds:21};
+renders.push(makeKnob(ch,{...small,key:'harm',label:'HARMONICS',def:.5,bipolar:true,lo:'EVEN',hi:'ODD',color:'#8fd6c9',fmt:kfmt.harm}));
+renders.push(makeKnob(ch,{...small,key:'age',label:'AGE',def:.2,lo:'NEW',hi:'OLD',color:'#f0b240',fmt:kfmt.pct}));
+renders.push(makeKnob(ch,{...small,key:'noise',label:'NOISE',def:.3,lo:'OFF',hi:'MAX',color:'#f0b240',fmt:kfmt.noise}));
+renders.push(makeKnob(st,{...small,key:'tol',label:'TOLERANCE',def:.45,lo:'0',hi:'MAX',color:'#8fd6c9',fmt:kfmt.pct}));
+renders.push(makeKnob(st,{...small,key:'xt',label:'CROSSTALK',def:.35,lo:'OFF',hi:'−30',color:'#8fd6c9',fmt:kfmt.xt}));
+renders.push(makeKnob(ok,{...small,key:'out',label:'OUTPUT',def:.5,bipolar:true,lo:'−12',hi:'+12',color:'#ece6d8',fmt:kfmt.out}));
+renders.push(makeKnob(ok,{...small,key:'mix',label:'MIX',def:1,lo:'DRY',hi:'WET',color:'#ece6d8',fmt:kfmt.pct}));
+
+/* console keys */
+const ck=$('#ckeys');
+MODELS.forEach((m,i)=>{const b=document.createElement('button');b.className='ckey';b.setAttribute('role','radio');
+  b.innerHTML=`<span class="cap">${m.name}</span><span class="d">${m.desc}</span>`;
+  b.addEventListener('click',()=>{S.model=i;onChange('model')});ck.appendChild(b)});
+function renderConsoles(){[...ck.children].forEach((b,i)=>{b.setAttribute('aria-checked',i===S.model);b.tabIndex=i===S.model?0:-1})}
+ck.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){S.model=(S.model+(e.key==='ArrowRight'?1:5))%6;onChange('model');ck.children[S.model].focus();e.preventDefault()}});
+
+/* footer key groups */
+function keyGroup(name,items,key){const g=document.querySelector(`[data-group="${name}"]`);g.setAttribute('role','radiogroup');
+  items.forEach(([lab,val])=>{const b=document.createElement('button');b.className='k';b.textContent=lab;b.setAttribute('role','radio');
+    b.addEventListener('click',()=>{S[key]=val;onChange(key)});b.dataset.val=String(val);g.appendChild(b)});
+  return ()=>[...g.children].forEach(b=>b.setAttribute('aria-checked',b.dataset.val===String(S[key])));}
+const rk=[keyGroup('os',[['1×','none'],['2×','2x'],['4×','4x'],['8×','8x']],'os'),
+          keyGroup('cal',[['−24','-24'],['−18','-18'],['−14','-14'],['−12','-12']],'cal'),
+          keyGroup('mode',[['CHANNEL','channel'],['BUS','bus']],'mode')];
+S.cal='-18';
+function toggle(id,key){const b=$(id);b.addEventListener('click',()=>{S[key]=!S[key];onChange(key)});return ()=>b.setAttribute('aria-pressed',S[key])}
+rk.push(toggle('#kMatch','matched'),toggle('#kAuto','auto'),toggle('#kByp','bypass'));
+$('#chDown').addEventListener('click',()=>{S.ch=S.ch<=1?48:S.ch-1;onChange('ch')});
+$('#chUp').addEventListener('click',()=>{S.ch=S.ch>=48?1:S.ch+1;onChange('ch')});
+
+/* zone table in the proposal */
+$('#zoneRows').innerHTML=ZONES.map((z,i)=>{const a=Math.pow(10,THD_LO+i/7*(THD_HI-THD_LO)),b=Math.pow(10,THD_LO+(i+1)/7*(THD_HI-THD_LO));
+  return `<tr><td class="spot"><span class="zbar" style="background:${z.c}"></span>${z.n}</td><td class="num">${fmtPct(a).replace(' %','')} – ${fmtPct(b)}</td><td>${z.txt}</td></tr>`}).join('');
+
+/* tabs */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{S.view=t.dataset.v;document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===t));drawScreen()}));
+
+/* ------------------------------------------------------------------ screen */
+const cv=$('#scr'),cx2=cv.getContext('2d');
+function sizeCanvas(){const r=cv.getBoundingClientRect(),d=Math.max(2,window.devicePixelRatio||1);cv.width=428*d;cv.height=246*d;cx2.setTransform(d,0,0,d,0,0)}
+const C={grid:'rgba(143,214,201,.08)',axis:'#4d5d66',txt:'#6f7f88',foam:'#8fd6c9',amber:'#f0b240',red:'#e5432f',ink:'#ece6d8'};
+function drawScreen(){
+  const g=cx2,W=428,H=246;g.clearRect(0,0,W,H);g.font='600 9px "IBM Plex Mono", monospace';
+  if(S.view==='harm') drawHarm(g,W,H); else if(S.view==='xfer') drawXfer(g,W,H); else drawImg(g,W,H);
+}
+function drawHarm(g,W,H){
+  const L=40,R=W-14,T=30,B=H-26,dbMin=-140;
+  const y=db=>T+(B-T)*(db/dbMin);
+  g.strokeStyle=C.grid;g.lineWidth=1;g.fillStyle=C.txt;g.textAlign='right';g.textBaseline='middle';
+  for(let d=0;d>=dbMin;d-=20){g.beginPath();g.moveTo(L,y(d)+.5);g.lineTo(R,y(d)+.5);g.stroke();g.fillText(d===0?'0':d,L-6,y(d))}
+  g.save();g.translate(11,(T+B)/2);g.rotate(-Math.PI/2);g.textAlign='center';g.fillText('dBc',0,0);g.restore();
+  const h=cur.an.h, n=9, bw=(R-L)/n;
+  for(let k=2;k<=10;k++){
+    const db=Math.max(dbMin,20*Math.log10(h[k-1]/h[0]+1e-30)), x=L+bw*(k-2)+bw*.2, w=bw*.6, col=k%2===0?C.foam:C.amber;
+    const grd=g.createLinearGradient(0,y(db),0,B);grd.addColorStop(0,col);grd.addColorStop(1,col+'22');
+    g.fillStyle=grd;g.fillRect(x,y(db),w,B-y(db));
+    g.fillStyle=col;g.fillRect(x,y(db),w,2);
+    g.fillStyle=C.txt;g.textAlign='center';g.textBaseline='top';g.fillText('H'+k,x+w/2,B+7);
+    if(db>dbMin+6){g.fillStyle=C.ink;g.textBaseline='bottom';g.fillText(db.toFixed(0),x+w/2,y(db)-3)}
+  }
+  g.textAlign='left';g.textBaseline='top';g.fillStyle=C.foam;g.fillText('■ EVEN',L,10);g.fillStyle=C.amber;g.fillText('■ ODD',L+56,10);
+  g.textAlign='right';g.fillStyle=C.ink;g.font='600 12px "IBM Plex Mono", monospace';g.fillText('1 kHz · 0 VU · '+MODELS[S.model].name,R,8);
+}
+function drawXfer(g,W,H){
+  const P=cur.P,A=cur.an.A,U=Math.max(1.6,A*1.5),cxm=W/2,cym=H/2,sc=(H/2-18)/U;
+  g.strokeStyle=C.grid;g.lineWidth=1;
+  for(let i=-4;i<=4;i++){const v=i*U/4;g.beginPath();g.moveTo(cxm+v*sc,10);g.lineTo(cxm+v*sc,H-10);g.stroke();g.beginPath();g.moveTo(cxm-U*sc*1.35,cym-v*sc);g.lineTo(cxm+U*sc*1.35,cym-v*sc);g.stroke()}
+  // operating window
+  g.fillStyle='rgba(240,178,64,.08)';g.fillRect(cxm-A*sc,10,2*A*sc,H-20);
+  g.strokeStyle='rgba(240,178,64,.5)';g.setLineDash([3,4]);g.beginPath();g.moveTo(cxm-A*sc,10);g.lineTo(cxm-A*sc,H-10);g.moveTo(cxm+A*sc,10);g.lineTo(cxm+A*sc,H-10);g.stroke();g.setLineDash([]);
+  // clip level
+  g.strokeStyle='rgba(229,67,47,.45)';g.setLineDash([2,3]);g.beginPath();g.moveTo(cxm-U*sc*1.35,cym-sc);g.lineTo(cxm+U*sc*1.35,cym-sc);g.moveTo(cxm-U*sc*1.35,cym+sc);g.lineTo(cxm+U*sc*1.35,cym+sc);g.stroke();g.setLineDash([]);
+  g.strokeStyle=C.axis;g.beginPath();g.moveTo(cxm-U*sc,cym+U*sc);g.lineTo(cxm+U*sc,cym-U*sc);g.stroke();
+  g.strokeStyle=C.foam;g.lineWidth=2.2;g.beginPath();
+  for(let i=0;i<=300;i++){const u=-U+2*U*i/300,v=shape(u,P);const X=cxm+u*sc,Y=cym-v*sc;i?g.lineTo(X,Y):g.moveTo(X,Y)}g.stroke();
+  g.fillStyle=C.txt;g.textAlign='left';g.textBaseline='top';g.fillText('IN → OUT · 1.0 = CLIP',10,10);
+  g.fillStyle=C.amber;g.fillText('▮ SIGNAAL OP 0 VU',10,24);g.fillStyle=C.red;g.fillText('┄ CLIP',10,38);
+}
+const gonio={L:new Float32Array(1024),R:new Float32Array(1024),has:false,corr:null};
+function drawImg(g,W,H){
+  const cxm=W/2,cym=H/2+6,rad=H/2-22;
+  g.strokeStyle=C.grid;g.lineWidth=1;
+  g.beginPath();g.arc(cxm,cym,rad,Math.PI,2*Math.PI);g.stroke();
+  g.beginPath();g.moveTo(cxm-rad,cym);g.lineTo(cxm+rad,cym);g.moveTo(cxm,cym);g.lineTo(cxm,cym-rad);
+  g.moveTo(cxm,cym);g.lineTo(cxm-rad*.707,cym-rad*.707);g.moveTo(cxm,cym);g.lineTo(cxm+rad*.707,cym-rad*.707);g.stroke();
+  g.fillStyle=C.txt;g.textAlign='center';g.textBaseline='bottom';g.fillText('M',cxm,cym-rad-3);g.fillText('L',cxm-rad*.72-6,cym-rad*.72);g.fillText('R',cxm+rad*.72+6,cym-rad*.72);
+  if(!gonio.has){g.fillStyle=C.txt;g.textBaseline='middle';g.fillText('Start de demo-loop of laad audio om het stereobeeld te zien',cxm,cym+12);return}
+  let pk=1e-4;for(let i=0;i<1024;i++)pk=Math.max(pk,Math.abs(gonio.L[i]),Math.abs(gonio.R[i]));const s=rad*.9/Math.max(pk,.05);
+  g.fillStyle='rgba(143,214,201,.55)';
+  for(let i=0;i<1024;i++){const l=gonio.L[i],r=gonio.R[i];const m=(l+r)*.7071,sd=(r-l)*.7071;const X=cxm+sd*s,Y=cym-Math.abs(m)*s;g.fillRect(X,Y,1.4,1.4)}
+}
+
+/* ------------------------------------------------------------------ VU meters */
+function buildVU(svg,label){
+  const d=el('defs',{},svg);const lg=el('radialGradient',{id:'vub'+label,cx:'50%',cy:'110%',r:'90%'},d);
+  el('stop',{offset:'0',['stop-color']:'#fff4d6'},lg);el('stop',{offset:'.7',['stop-color']:'#f1dfb0'},lg);el('stop',{offset:'1',['stop-color']:'#c9b480'},lg);
+  el('rect',{x:0,y:0,width:110,height:104,fill:`url(#vub${label})`},svg);
+  const cx=55,cy=112,r=78;const vuDeg=v=>{const t=(v+20)/23;return -48+96*Math.pow(clamp(t,0,1.15),1.35)};
+  el('path',{d:arcPath(cx,cy,r,vuDeg(-20),vuDeg(0)),stroke:'#2b2418','stroke-width':1.1,fill:'none'},svg);
+  el('path',{d:arcPath(cx,cy,r,vuDeg(0),vuDeg(3)),stroke:'#c8301f','stroke-width':4,fill:'none'},svg);
+  [-20,-10,-7,-5,-3,-2,-1,0,1,2,3].forEach(v=>{const a=vuDeg(v);const [x0,y0]=polar(cx,cy,r,a),[x1,y1]=polar(cx,cy,r+(v%5===0||v>=0?6:4),a);
+    el('line',{x1:x0,y1:y0,x2:x1,y2:y1,stroke:v>0?'#c8301f':'#2b2418','stroke-width':1},svg);
+    if([-20,-10,-5,-3,0,3].includes(v)){const [tx,ty]=polar(cx,cy,r+13,a);const t=el('text',{x:tx,y:ty,'text-anchor':'middle','dominant-baseline':'middle','font-size':7.5,'font-family':'Archivo, Arial, sans-serif','font-weight':600,fill:v>0?'#c8301f':'#2b2418'},svg);t.textContent=v>0?'+'+v:v}});
+  const t=el('text',{x:55,y:74,'text-anchor':'middle','font-size':11,'font-family':'Archivo, Arial, sans-serif','font-weight':700,fill:'#2b2418','letter-spacing':'1'},svg);t.textContent='VU';
+  const t2=el('text',{x:10,y:88,'font-size':7,'font-family':'Archivo, Arial, sans-serif','font-weight':700,fill:'#6e6146','letter-spacing':'1'},svg);t2.textContent=label;
+  const needle=el('line',{x1:cx,y1:cy,x2:cx,y2:cy-r-4,stroke:'#151210','stroke-width':1.2,'stroke-linecap':'round'},svg);
+  el('rect',{x:0,y:92,width:110,height:12,fill:'#1a1712'},svg);
+  el('rect',{x:0,y:0,width:110,height:46,fill:'rgba(255,255,255,.12)'},svg);
+  return v=>needle.setAttribute('transform',`rotate(${vuDeg(v)} ${cx} ${cy})`);
+}
+const vuL=buildVU($('#vuL'),'L'),vuR=buildVU($('#vuR'),'R');
+const vu={L:-22,R:-22};vuL(-22);vuR(-22);
+
+/* ------------------------------------------------------------------ audio */
+let ac=null,G=null,src=null,synth=null,playing=false;
+function buildGraph(){
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  const g={};
+  g.input=ac.createGain();g.input.channelCount=2;g.input.channelCountMode='explicit';g.input.channelInterpretation='speakers';
+  g.split=ac.createChannelSplitter(2);g.merge=ac.createChannelMerger(2);g.wet=ac.createGain();g.dry=ac.createGain();g.out=ac.createGain();
+  g.input.connect(g.split);g.input.connect(g.dry);g.dry.connect(g.out);
+  g.ch=['L','R'].map((side,i)=>{
+    const c={};c.pre=ac.createGain();c.lfUp=ac.createBiquadFilter();c.lfUp.type='lowshelf';c.lfUp.frequency.value=110;
+    c.sh=ac.createWaveShaper();c.lfDn=ac.createBiquadFilter();c.lfDn.type='lowshelf';c.lfDn.frequency.value=110;
+    c.lo=ac.createBiquadFilter();c.lo.type='lowshelf';c.lo.frequency.value=70;
+    c.pk=ac.createBiquadFilter();c.pk.type='peaking';
+    c.hi=ac.createBiquadFilter();c.hi.type='highshelf';c.hi.frequency.value=11000;
+    c.lp=ac.createBiquadFilter();c.lp.type='lowpass';c.lp.Q.value=.6;
+    c.dc=ac.createBiquadFilter();c.dc.type='highpass';c.dc.frequency.value=8;c.dc.Q.value=.6;
+    c.post=ac.createGain();
+    c.xf=ac.createBiquadFilter();c.xf.type='highpass';c.xf.frequency.value=1800;c.xf.Q.value=.5;c.xg=ac.createGain();
+    g.split.connect(c.pre,i);c.pre.connect(c.lfUp);c.lfUp.connect(c.sh);c.sh.connect(c.lfDn);c.lfDn.connect(c.lo);c.lo.connect(c.pk);c.pk.connect(c.hi);c.hi.connect(c.lp);c.lp.connect(c.dc);c.dc.connect(c.post);
+    c.post.connect(g.merge,0,i);c.post.connect(c.xf);c.xf.connect(c.xg);c.xg.connect(g.merge,0,1-i);
+    return c;});
+  // noise
+  const nb=ac.createBuffer(2,ac.sampleRate*3,ac.sampleRate);for(let k=0;k<2;k++){const d=nb.getChannelData(k);let b=0;for(let i=0;i<d.length;i++){const w=Math.random()*2-1;b=.97*b+.03*w;d[i]=(w*.6+b*3)*.5}}
+  g.nsrc=ac.createBufferSource();g.nsrc.buffer=nb;g.nsrc.loop=true;g.nlp=ac.createBiquadFilter();g.nlp.type='lowpass';g.nlp.frequency.value=14000;g.ng=ac.createGain();g.ng.gain.value=0;
+  g.nsrc.connect(g.nlp);g.nlp.connect(g.ng);g.ng.connect(g.merge);g.nsrc.start();
+  g.merge.connect(g.wet);g.wet.connect(g.out);g.out.connect(ac.destination);
+  g.sp=ac.createChannelSplitter(2);g.out.connect(g.sp);g.aL=ac.createAnalyser();g.aR=ac.createAnalyser();g.aL.fftSize=g.aR.fftSize=2048;g.sp.connect(g.aL,0);g.sp.connect(g.aR,1);
+  G=g;updateAudio(true);
+}
+function curveFor(P,D){ // shaper sees s/2; curve maps back to full scale x2
+  const c=Math.pow(10,(Number(S.cal)+P.H)/20), gg=Math.pow(10,D/20), Rr=2*gg/c, n=32768, cu=new Float32Array(n);
+  for(let i=0;i<n;i++){const x=i/(n-1)*2-1;cu[i]=shape(Rr*x,P)/Rr}
+  return cu;
+}
+let curvePending=false;
+function updateAudio(force){
+  if(!G)return;const t=ac.currentTime,m=MODELS[S.model];
+  ['L','R'].forEach((side,i)=>{const c=G.ch[i],P=params(side);
+    c.sh.curve=curveFor(P,cur.D);c.sh.oversample=S.os==='8x'?'4x':S.os;
+    c.pre.gain.setTargetAtTime(.5*Math.pow(10,P.gain/20),t,.02);
+    c.lfUp.gain.setTargetAtTime(m.lf,t,.02);c.lfDn.gain.setTargetAtTime(-m.lf,t,.02);
+    c.lo.gain.setTargetAtTime(m.shelfLo,t,.03);c.pk.frequency.setTargetAtTime(m.peak[0],t,.03);c.pk.gain.setTargetAtTime(m.peak[1],t,.03);c.pk.Q.value=m.peak[2];
+    c.hi.gain.setTargetAtTime(m.shelfHi,t,.03);c.lp.frequency.setTargetAtTime(Math.min(P.lpf,ac.sampleRate*.45),t,.03);
+    c.post.gain.setTargetAtTime(2*(S.auto?clamp(cur.an.comp,.5,3):1),t,.03);
+    const xdb=S.xt<.005?-200:(-90+60*S.xt)+(S.mode==='bus'?10:0);c.xg.gain.setTargetAtTime(Math.pow(10,xdb/20),t,.03);
+  });
+  const nl=S.noise<.005?0:Math.pow(10,(m.noise-12+24*S.noise+S.age*8)/20);G.ng.gain.setTargetAtTime(nl,t,.05);
+  const outG=Math.pow(10,((S.out-.5)*24)/20);G.out.gain.setTargetAtTime(outG,t,.03);
+  G.wet.gain.setTargetAtTime(S.bypass?0:S.mix,t,.03);G.dry.gain.setTargetAtTime(S.bypass?1:1-S.mix,t,.03);
+}
+
+/* demo loop: kick, snare, hats, bass, a wide pad. Mixed to sit near -18 dBFS RMS. */
+function startSynth(){
+  const bus=ac.createGain();bus.gain.value=.42;bus.connect(G.input);
+  const nbuf=ac.createBuffer(1,ac.sampleRate*.5,ac.sampleRate);{const d=nbuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+  const bpm=94,six=60/bpm/4;let step=0,next=ac.currentTime+.08;
+  const roots=[45,41,48,43],chords=[[57,60,64,69],[53,57,60,65],[55,60,64,67],[55,59,62,67]];
+  const f=n=>440*Math.pow(2,(n-69)/12);
+  const pan=(node,p)=>{const s=ac.createStereoPanner();s.pan.value=p;node.connect(s);s.connect(bus);return s};
+  function kick(t){const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(44,t+.13);
+    g.gain.setValueAtTime(1.0,t);g.gain.exponentialRampToValueAtTime(.001,t+.45);o.connect(g);g.connect(bus);o.start(t);o.stop(t+.5)}
+  function snare(t){const s=ac.createBufferSource();s.buffer=nbuf;const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1900;bp.Q.value=.7;const g=ac.createGain();
+    g.gain.setValueAtTime(.55,t);g.gain.exponentialRampToValueAtTime(.001,t+.22);s.connect(bp);bp.connect(g);pan(g,-.08);s.start(t);s.stop(t+.25);
+    const o=ac.createOscillator(),og=ac.createGain();o.frequency.value=190;og.gain.setValueAtTime(.35,t);og.gain.exponentialRampToValueAtTime(.001,t+.12);o.connect(og);og.connect(bus);o.start(t);o.stop(t+.15)}
+  function hat(t,a){const s=ac.createBufferSource();s.buffer=nbuf;const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=7500;const g=ac.createGain();
+    g.gain.setValueAtTime(a,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);s.connect(hp);hp.connect(g);pan(g,.35);s.start(t);s.stop(t+.06)}
+  function bass(t,n,d){const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=f(n);const lp=ac.createBiquadFilter();lp.type='lowpass';lp.Q.value=4;
+    lp.frequency.setValueAtTime(900,t);lp.frequency.exponentialRampToValueAtTime(180,t+d);const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.32,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+d);
+    o.connect(lp);lp.connect(g);g.connect(bus);o.start(t);o.stop(t+d+.02)}
+  function pad(t,notes,d){notes.forEach((n,k)=>[-1,1].forEach(side=>{const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=f(n);o.detune.value=side*7+k*2;
+    const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2400;const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.026,t+.25);g.gain.setValueAtTime(.026,t+d-.3);g.gain.linearRampToValueAtTime(.0001,t+d);
+    o.connect(lp);lp.connect(g);pan(g,side*.85);o.start(t);o.stop(t+d+.05)}))}
+  const timer=setInterval(()=>{while(next<ac.currentTime+.15){const s=step%16,bar=Math.floor(step/16)%4;
+    if(s===0||s===8||s===10&&bar%2) kick(next);
+    if(s===4||s===12) snare(next);
+    if(s%2===0) hat(next,s%4===2?.22:.12);
+    if([0,3,6,8,11,14].includes(s)) bass(next,roots[bar]+(s===14?12:0),six*2.2);
+    if(s===0) pad(next,chords[bar],six*16);
+    next+=six;step++}},25);
+  return {stop(){clearInterval(timer);bus.disconnect()}};
+}
+function stopAll(){if(synth){synth.stop();synth=null}if(src){try{src.stop()}catch(e){}src.disconnect();src=null}playing=false;$('#play').textContent='▶ Speel demo-loop'}
+$('#play').addEventListener('click',async()=>{
+  if(!ac) buildGraph(); if(ac.state==='suspended') await ac.resume();
+  if(playing){stopAll();$('#tstat').textContent='Gestopt.';return}
+  synth=startSynth();playing=true;$('#play').textContent='■ Stop';$('#tstat').textContent='Demo-loop speelt. Draai aan DRIVE en wissel van console; zet BYPASS aan om te vergelijken.';
+});
+$('#loadBtn').addEventListener('click',()=>$('#file').click());
+$('#file').addEventListener('change',async e=>{const fl=e.target.files[0];if(!fl)return;
+  if(!ac) buildGraph(); if(ac.state==='suspended') await ac.resume();
+  try{const buf=await ac.decodeAudioData(await fl.arrayBuffer());stopAll();src=ac.createBufferSource();src.buffer=buf;src.loop=true;src.connect(G.input);src.start();playing=true;
+    $('#play').textContent='■ Stop';$('#tstat').textContent=`Speelt "${fl.name}" in een lus. Zorg dat 0 VU = past bij het niveau van je bestand.`}
+  catch(err){$('#tstat').textContent='Dit bestand kan de browser niet openen. Probeer WAV, MP3 of AAC.'}
+  e.target.value='';
+});
+
+/* meters loop */
+const tdL=new Float32Array(2048),tdR=new Float32Array(2048);
+let lastT=performance.now();const pk={L:-1e9,R:-1e9};
+function frame(now){
+  const dt=Math.min(.1,(now-lastT)/1000);lastT=now;
+  if(G&&playing){
+    G.aL.getFloatTimeDomainData(tdL);G.aR.getFloatTimeDomainData(tdR);
+    let sl=0,sr=0,slr=0;for(let i=0;i<2048;i++){sl+=tdL[i]*tdL[i];sr+=tdR[i]*tdR[i];slr+=tdL[i]*tdR[i]}
+    const cal=Number(S.cal),toVU=s=>20*Math.log10(Math.sqrt(s/2048)+1e-9)-cal;
+    const k=1-Math.exp(-dt/.065);vu.L+= (toVU(sl)-vu.L)*k;vu.R+=(toVU(sr)-vu.R)*k;
+    gonio.L.set(tdL.subarray(0,1024));gonio.R.set(tdR.subarray(0,1024));gonio.has=true;
+    let pl=0,pr=0;for(let i=0;i<2048;i++){pl=Math.max(pl,Math.abs(tdL[i]));pr=Math.max(pr,Math.abs(tdR[i]))}
+    if(pl>.89)pk.L=now;if(pr>.89)pk.R=now;
+    const corr=slr/Math.sqrt(sl*sr+1e-12);gonio.corr=gonio.corr==null?corr:gonio.corr+(corr-gonio.corr)*.08;
+    $('#rCorr').textContent=(gonio.corr>=0?'+':'')+gonio.corr.toFixed(2);
+    if(S.view==='img') drawScreen();
+  } else {const k=1-Math.exp(-dt/.25);vu.L+=(-22-vu.L)*k;vu.R+=(-22-vu.R)*k}
+  vuL(vu.L);vuR(vu.R);$('#pkL').classList.toggle('on',now-pk.L<400);$('#pkR').classList.toggle('on',now-pk.R<400);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ------------------------------------------------------------------ state changes */
+function onChange(key){
+  if(['drive','harm','age','model','mode','tol','matched','ch'].includes(key)) compute();
+  renderAll();
+  if(G){ if(!curvePending){curvePending=true;requestAnimationFrame(()=>{curvePending=false;updateAudio()})} }
+}
+function renderAll(){
+  renderDrive();renders.forEach(r=>r());renderConsoles();rk.forEach(r=>r());
+  $('#chOut').textContent=String(S.ch).padStart(2,'0');
+  const h=cur.an.h, d=k=>(20*Math.log10(h[k-1]/h[0]+1e-30));
+  $('#rThd').textContent=fmtPct(cur.an.thd);$('#rH2').textContent=Math.max(-160,d(2)).toFixed(0)+' dB';$('#rH3').textContent=Math.max(-160,d(3)).toFixed(0)+' dB';
+  $('#rHead').textContent=(cur.P.H-cur.D>=0?'':'−')+Math.abs(cur.P.H-cur.D).toFixed(1)+' dB';
+  if(!gonio.has) $('#rCorr').textContent='—';
+  $('#powerLed').classList.toggle('on',!S.bypass);
+  const lat={'none':0,'2x':'≈ 6','4x':'≈ 12','8x':'≈ 12'}[S.os];
+  $('#status').innerHTML=`${ac?(ac.sampleRate/1000).toFixed(1):'48.0'} kHz · ${S.os==='none'?'1×':S.os.replace('x','×')} · LATENCY ${lat} smp<br>v0.1.0 CONCEPT`;
+  drawScreen();
+}
+
+/* ------------------------------------------------------------------ fit stage */
+const stage=$('#stage'),box=$('#stageBox'),outer=$('#stageOuter');
+function fit(){const w=outer.clientWidth;const s=Math.max(.48,Math.min(1,w/1720));stage.style.transform=`scale(${s})`;box.style.width=(1720*s)+'px';box.style.height=(604*s)+'px'}
+window.addEventListener('resize',fit);fit();
+
+S.drive=3/7+.06;
+compute();sizeCanvas();renderAll();
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{drawScreen()});
+})();
+</script>

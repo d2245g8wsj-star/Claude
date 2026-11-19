@@ -177,7 +177,7 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DBEACON_BUILD_TESTS=ON -DBEACON_BUILD_TOOLS=ON
 cmake --build build --target beacon_tests beacon_shot --parallel
 ./build/beacon_tests_artefacts/Release/beacon_tests
-./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 1.0 stereo   # or dual, ms
+./build/beacon_shot_artefacts/Release/beacon_shot docs/ui.png 0.7 stereo   # or dual, ms
 ```
 
 The checks assert: the THD table inverts; the idle response is flat and the
@@ -211,3 +211,8 @@ tools/Snapshot.cpp      offscreen editor render
 ## Licence
 
 As for the rest of this repository; see `../../LICENSE` and `../../NOTICE.md`.
+
+## Re-rendering the panel
+
+The panel is rendered in Blender from `art/spec.py` with the range's kit, see
+`shared/indiewave/art/README.md`.

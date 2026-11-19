@@ -7,7 +7,7 @@ have their own folder under `plugins/` and their own workflow.
 | --- | --- | --- | --- | --- | --- | --- |
 | **Crest** | Converter and clipper | 0.10.0 beta | `/` | `macos.yml` | `Crst` | `audio.indiewave.crest` |
 | **Breakwater** | Mastering limiter | 0.6.0 beta | `plugins/breakwater` | `breakwater.yml` | `Brkw` | `audio.indiewave.breakwater` |
-| **Beacon** | Vari-mu tube compressor | 0.6.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
+| **Beacon** | Vari-mu tube compressor | 0.7.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
 | **Swell** | Two channel harmonic equaliser | 0.5.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.5.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.5.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
@@ -125,6 +125,10 @@ separated by spaces. It deletes each release together with its tag.
   remembered.
 
 ### Beacon
+- **0.7.0** - Rendered panel in the range's Nazaré style: apricot lacquer,
+  bakelite knobs, chrome toggles and a moving coil gain reduction meter per
+  row, the side row folding out for mid/side or a split dual mono. Same
+  parameters as 0.6.0, so sessions open as they were.
 - **0.6.0** - New panel after the range's look: black, knurled knobs in LED
   rings, a moving coil meter between IN and OUT ladders, the IndieWave mark
   in the centre. Folds to one panel for stereo and out to two for dual mono

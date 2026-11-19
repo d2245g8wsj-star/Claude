@@ -1,0 +1,770 @@
+{
+ "name": "beacon",
+ "scale": 2.0,
+ "faces": {
+  "folded": {
+   "size": [
+    2150,
+    320
+   ]
+  },
+  "open": {
+   "size": [
+    2150,
+    580
+   ]
+  }
+ },
+ "kinds": {
+  "big": {
+   "type": "skirted",
+   "w": 148.0,
+   "h": 148.0,
+   "n": 61,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -130.5,
+    -126.0,
+    -121.5,
+    -117.0,
+    -112.5,
+    -108.0,
+    -103.5,
+    -99.0,
+    -94.5,
+    -90.0,
+    -85.5,
+    -81.0,
+    -76.5,
+    -72.0,
+    -67.5,
+    -63.0,
+    -58.5,
+    -54.0,
+    -49.5,
+    -45.0,
+    -40.5,
+    -36.0,
+    -31.5,
+    -27.0,
+    -22.5,
+    -18.0,
+    -13.5,
+    -9.0,
+    -4.5,
+    0.0,
+    4.5,
+    9.0,
+    13.5,
+    18.0,
+    22.5,
+    27.0,
+    31.5,
+    36.0,
+    40.5,
+    45.0,
+    49.5,
+    54.0,
+    58.5,
+    63.0,
+    67.5,
+    72.0,
+    76.5,
+    81.0,
+    85.5,
+    90.0,
+    94.5,
+    99.0,
+    103.5,
+    108.0,
+    112.5,
+    117.0,
+    121.5,
+    126.0,
+    130.5,
+    135.0
+   ],
+   "steps": null
+  },
+  "trim": {
+   "type": "skirted",
+   "w": 130.0,
+   "h": 130.0,
+   "n": 61,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -130.5,
+    -126.0,
+    -121.5,
+    -117.0,
+    -112.5,
+    -108.0,
+    -103.5,
+    -99.0,
+    -94.5,
+    -90.0,
+    -85.5,
+    -81.0,
+    -76.5,
+    -72.0,
+    -67.5,
+    -63.0,
+    -58.5,
+    -54.0,
+    -49.5,
+    -45.0,
+    -40.5,
+    -36.0,
+    -31.5,
+    -27.0,
+    -22.5,
+    -18.0,
+    -13.5,
+    -9.0,
+    -4.5,
+    0.0,
+    4.5,
+    9.0,
+    13.5,
+    18.0,
+    22.5,
+    27.0,
+    31.5,
+    36.0,
+    40.5,
+    45.0,
+    49.5,
+    54.0,
+    58.5,
+    63.0,
+    67.5,
+    72.0,
+    76.5,
+    81.0,
+    85.5,
+    90.0,
+    94.5,
+    99.0,
+    103.5,
+    108.0,
+    112.5,
+    117.0,
+    121.5,
+    126.0,
+    130.5,
+    135.0
+   ],
+   "steps": null
+  },
+  "small": {
+   "type": "skirted",
+   "w": 100.0,
+   "h": 100.0,
+   "n": 61,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -130.5,
+    -126.0,
+    -121.5,
+    -117.0,
+    -112.5,
+    -108.0,
+    -103.5,
+    -99.0,
+    -94.5,
+    -90.0,
+    -85.5,
+    -81.0,
+    -76.5,
+    -72.0,
+    -67.5,
+    -63.0,
+    -58.5,
+    -54.0,
+    -49.5,
+    -45.0,
+    -40.5,
+    -36.0,
+    -31.5,
+    -27.0,
+    -22.5,
+    -18.0,
+    -13.5,
+    -9.0,
+    -4.5,
+    0.0,
+    4.5,
+    9.0,
+    13.5,
+    18.0,
+    22.5,
+    27.0,
+    31.5,
+    36.0,
+    40.5,
+    45.0,
+    49.5,
+    54.0,
+    58.5,
+    63.0,
+    67.5,
+    72.0,
+    76.5,
+    81.0,
+    85.5,
+    90.0,
+    94.5,
+    99.0,
+    103.5,
+    108.0,
+    112.5,
+    117.0,
+    121.5,
+    126.0,
+    130.5,
+    135.0
+   ],
+   "steps": null
+  },
+  "pad": {
+   "type": "skirted",
+   "w": 96.0,
+   "h": 96.0,
+   "n": 16,
+   "cols": 8,
+   "angles": [
+    -135.0,
+    -117.0,
+    -99.0,
+    -81.0,
+    -63.0,
+    -45.0,
+    -27.0,
+    -9.0,
+    9.0,
+    27.0,
+    45.0,
+    63.0,
+    81.0,
+    99.0,
+    117.0,
+    135.0
+   ],
+   "steps": null
+  },
+  "sw": {
+   "type": "toggle",
+   "w": 69.5,
+   "h": 69.5,
+   "n": 2,
+   "cols": 2,
+   "angles": null,
+   "steps": null
+  },
+  "mode": {
+   "type": "chicken",
+   "w": 103.5,
+   "h": 103.5,
+   "n": 3,
+   "cols": 3,
+   "angles": [
+    -50,
+    0,
+    50
+   ],
+   "steps": null
+  }
+ },
+ "controls": [
+  {
+   "id": "mode",
+   "kind": "mode",
+   "face": "folded",
+   "cx": 150,
+   "cy": 240
+  },
+  {
+   "id": "split",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 262,
+   "cy": 240
+  },
+  {
+   "id": "iron_pad",
+   "kind": "pad",
+   "face": "folded",
+   "cx": 1955,
+   "cy": 125
+  },
+  {
+   "id": "iron",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1925,
+   "cy": 243
+  },
+  {
+   "id": "iron_link",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1990,
+   "cy": 243
+  },
+  {
+   "id": "input",
+   "kind": "trim",
+   "face": "folded",
+   "cx": 420,
+   "cy": 125
+  },
+  {
+   "id": "threshold",
+   "kind": "big",
+   "face": "folded",
+   "cx": 565,
+   "cy": 125
+  },
+  {
+   "id": "attack",
+   "kind": "small",
+   "face": "folded",
+   "cx": 700,
+   "cy": 125
+  },
+  {
+   "id": "release",
+   "kind": "small",
+   "face": "folded",
+   "cx": 800,
+   "cy": 125
+  },
+  {
+   "id": "mix",
+   "kind": "small",
+   "face": "folded",
+   "cx": 900,
+   "cy": 125
+  },
+  {
+   "id": "thd",
+   "kind": "small",
+   "face": "folded",
+   "cx": 1270,
+   "cy": 125
+  },
+  {
+   "id": "tube",
+   "kind": "small",
+   "face": "folded",
+   "cx": 1370,
+   "cy": 125
+  },
+  {
+   "id": "output",
+   "kind": "trim",
+   "face": "folded",
+   "cx": 1490,
+   "cy": 125
+  },
+  {
+   "id": "sc_hpf",
+   "kind": "small",
+   "face": "folded",
+   "cx": 1620,
+   "cy": 125
+  },
+  {
+   "id": "sc_bell",
+   "kind": "small",
+   "face": "folded",
+   "cx": 1725,
+   "cy": 125
+  },
+  {
+   "id": "limit",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 565,
+   "cy": 243
+  },
+  {
+   "id": "feed_forward",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 700,
+   "cy": 243
+  },
+  {
+   "id": "dynamic_link",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 800,
+   "cy": 243
+  },
+  {
+   "id": "tube_in",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1370,
+   "cy": 243
+  },
+  {
+   "id": "sc_hpf_in",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1620,
+   "cy": 243
+  },
+  {
+   "id": "sc_bell_in",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1725,
+   "cy": 243
+  },
+  {
+   "id": "sc_listen",
+   "kind": "sw",
+   "face": "folded",
+   "cx": 1815,
+   "cy": 243
+  },
+  {
+   "id": "mode",
+   "kind": "mode",
+   "face": "open",
+   "cx": 150,
+   "cy": 240
+  },
+  {
+   "id": "split",
+   "kind": "sw",
+   "face": "open",
+   "cx": 262,
+   "cy": 240
+  },
+  {
+   "id": "iron_pad",
+   "kind": "pad",
+   "face": "open",
+   "cx": 1955,
+   "cy": 125
+  },
+  {
+   "id": "iron",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1925,
+   "cy": 243
+  },
+  {
+   "id": "iron_link",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1990,
+   "cy": 243
+  },
+  {
+   "id": "input",
+   "kind": "trim",
+   "face": "open",
+   "cx": 420,
+   "cy": 125
+  },
+  {
+   "id": "threshold",
+   "kind": "big",
+   "face": "open",
+   "cx": 565,
+   "cy": 125
+  },
+  {
+   "id": "attack",
+   "kind": "small",
+   "face": "open",
+   "cx": 700,
+   "cy": 125
+  },
+  {
+   "id": "release",
+   "kind": "small",
+   "face": "open",
+   "cx": 800,
+   "cy": 125
+  },
+  {
+   "id": "mix",
+   "kind": "small",
+   "face": "open",
+   "cx": 900,
+   "cy": 125
+  },
+  {
+   "id": "thd",
+   "kind": "small",
+   "face": "open",
+   "cx": 1270,
+   "cy": 125
+  },
+  {
+   "id": "tube",
+   "kind": "small",
+   "face": "open",
+   "cx": 1370,
+   "cy": 125
+  },
+  {
+   "id": "output",
+   "kind": "trim",
+   "face": "open",
+   "cx": 1490,
+   "cy": 125
+  },
+  {
+   "id": "sc_hpf",
+   "kind": "small",
+   "face": "open",
+   "cx": 1620,
+   "cy": 125
+  },
+  {
+   "id": "sc_bell",
+   "kind": "small",
+   "face": "open",
+   "cx": 1725,
+   "cy": 125
+  },
+  {
+   "id": "limit",
+   "kind": "sw",
+   "face": "open",
+   "cx": 565,
+   "cy": 243
+  },
+  {
+   "id": "feed_forward",
+   "kind": "sw",
+   "face": "open",
+   "cx": 700,
+   "cy": 243
+  },
+  {
+   "id": "dynamic_link",
+   "kind": "sw",
+   "face": "open",
+   "cx": 800,
+   "cy": 243
+  },
+  {
+   "id": "tube_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1370,
+   "cy": 243
+  },
+  {
+   "id": "sc_hpf_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1620,
+   "cy": 243
+  },
+  {
+   "id": "sc_bell_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1725,
+   "cy": 243
+  },
+  {
+   "id": "sc_listen",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1815,
+   "cy": 243
+  },
+  {
+   "id": "side_input",
+   "kind": "trim",
+   "face": "open",
+   "cx": 420,
+   "cy": 385
+  },
+  {
+   "id": "side_threshold",
+   "kind": "big",
+   "face": "open",
+   "cx": 565,
+   "cy": 385
+  },
+  {
+   "id": "side_attack",
+   "kind": "small",
+   "face": "open",
+   "cx": 700,
+   "cy": 385
+  },
+  {
+   "id": "side_release",
+   "kind": "small",
+   "face": "open",
+   "cx": 800,
+   "cy": 385
+  },
+  {
+   "id": "side_mix",
+   "kind": "small",
+   "face": "open",
+   "cx": 900,
+   "cy": 385
+  },
+  {
+   "id": "side_thd",
+   "kind": "small",
+   "face": "open",
+   "cx": 1270,
+   "cy": 385
+  },
+  {
+   "id": "side_tube",
+   "kind": "small",
+   "face": "open",
+   "cx": 1370,
+   "cy": 385
+  },
+  {
+   "id": "side_output",
+   "kind": "trim",
+   "face": "open",
+   "cx": 1490,
+   "cy": 385
+  },
+  {
+   "id": "side_sc_hpf",
+   "kind": "small",
+   "face": "open",
+   "cx": 1620,
+   "cy": 385
+  },
+  {
+   "id": "side_sc_bell",
+   "kind": "small",
+   "face": "open",
+   "cx": 1725,
+   "cy": 385
+  },
+  {
+   "id": "side_limit",
+   "kind": "sw",
+   "face": "open",
+   "cx": 565,
+   "cy": 503
+  },
+  {
+   "id": "side_feed_forward",
+   "kind": "sw",
+   "face": "open",
+   "cx": 700,
+   "cy": 503
+  },
+  {
+   "id": "side_dynamic_link",
+   "kind": "sw",
+   "face": "open",
+   "cx": 800,
+   "cy": 503
+  },
+  {
+   "id": "side_tube_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1370,
+   "cy": 503
+  },
+  {
+   "id": "side_sc_hpf_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1620,
+   "cy": 503
+  },
+  {
+   "id": "side_sc_bell_in",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1725,
+   "cy": 503
+  },
+  {
+   "id": "side_sc_listen",
+   "kind": "sw",
+   "face": "open",
+   "cx": 1815,
+   "cy": 503
+  }
+ ],
+ "parts": {
+  "folded": [
+   {
+    "type": "vu",
+    "id": "vu_main",
+    "cx": 1080,
+    "cy": 135,
+    "w": 236,
+    "h": 150,
+    "face": [
+     212,
+     126
+    ],
+    "layer": "vu_folded_vu_main",
+    "pivot": [
+     106.0,
+     149.90977443609023
+    ],
+    "r": 115.92
+   }
+  ],
+  "open": [
+   {
+    "type": "vu",
+    "id": "vu_main",
+    "cx": 1080,
+    "cy": 135,
+    "w": 236,
+    "h": 150,
+    "face": [
+     212,
+     126
+    ],
+    "layer": "vu_open_vu_main",
+    "pivot": [
+     106.0,
+     149.90977443609023
+    ],
+    "r": 115.92
+   },
+   {
+    "type": "vu",
+    "id": "vu_side",
+    "cx": 1080,
+    "cy": 395,
+    "w": 236,
+    "h": 150,
+    "face": [
+     212,
+     126
+    ],
+    "layer": "vu_open_vu_side",
+    "pivot": [
+     106.0,
+     149.90977443609023
+    ],
+    "r": 115.92
+   }
+  ]
+ }
+}

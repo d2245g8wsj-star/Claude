@@ -1,199 +1,176 @@
 <title>Nazaré Console</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,200..800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap">
 <style>
-/* Layout: the plugin itself sits on top as a fixed-size rack unit scaled to fit; the proposal reads below it in one 70ch column with wide tables. */
+/* Layout: one black-anodised 2U-style faceplate scaled to fit, engraved legends, no boxes; the proposal reads below in a single quiet column. */
 :root{
-  /* page (light) */
-  --bg:#eef1f2; --surface:#ffffff; --fg:#14212a; --muted:#56656e; --line:#d3dade; --accent:#c8392a; --sea:#1f7f73; --chip:#e3e9eb;
-  /* plugin (single look: Atlantic slate, lighthouse red, sea foam) */
-  --p-top:#22323c; --p-bot:#111b22; --p-sub-top:#1f2e37; --p-sub-bot:#17232b; --p-ink:#ece6d8; --p-dim:#8797a0; --p-faint:#4d5d66;
-  --p-foam:#8fd6c9; --p-amber:#f0b240; --p-red:#e5432f; --p-screen:#061015;
-  --f-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --bg:#f1f1ef; --surface:#ffffff; --fg:#17191b; --muted:#62676b; --line:#dcdcd8; --accent:#a8382b; --chip:#e9e9e6;
+  /* faceplate: single look */
+  --plate:#15181b; --plate2:#101215; --ink:#e7e2d6; --ink2:rgba(231,226,214,.52); --ink3:rgba(231,226,214,.34); --rule:rgba(231,226,214,.09); --red:#d23b2a; --glass:#08090a;
+  --f-panel:"Jost", "Futura", "Avenir Next", "Century Gothic", sans-serif;
   --f-body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0b1216; --surface:#121c22; --fg:#e4e8e6; --muted:#93a3ab; --line:#25343c; --accent:#f0624e; --sea:#79cdbf; --chip:#1a272e; color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0b1216; --surface:#121c22; --fg:#e4e8e6; --muted:#93a3ab; --line:#25343c; --accent:#f0624e; --sea:#79cdbf; --chip:#1a272e; color-scheme:dark}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0d0e0f; --surface:#151719; --fg:#e6e4df; --muted:#9a9c9c; --line:#26292b; --accent:#e06a5a; --chip:#1b1d1f; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d0e0f; --surface:#151719; --fg:#e6e4df; --muted:#9a9c9c; --line:#26292b; --accent:#e06a5a; --chip:#1b1d1f; color-scheme:dark}
 
 *{box-sizing:border-box}
 html,body{background:var(--bg); color:var(--fg)}
-body{font-family:var(--f-body); font-size:15px; line-height:1.6; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:28px 64px}
+body{font-family:var(--f-body); font-size:15px; line-height:1.6; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:36px 72px}
 .wrap{max-width:1180px; margin:0 auto}
-:focus-visible{outline:2px solid var(--p-foam); outline-offset:3px}
+:focus-visible{outline:1px solid var(--ink); outline-offset:3px}
 
-/* ---------- page header ---------- */
-.intro{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 32px; margin-bottom:18px}
-.intro h1{font-family:var(--f-display); font-stretch:125%; font-weight:300; font-size:clamp(28px,4.4vw,46px); letter-spacing:.01em; line-height:1.05; margin:0; text-wrap:balance}
-.intro h1 b{font-weight:700}
-.intro p{margin:6px 0 0; color:var(--muted); max-width:60ch}
-.eyebrow{font-family:var(--f-display); font-stretch:115%; font-weight:600; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent)}
+.intro{margin-bottom:26px; max-width:70ch}
+.eyebrow{font-family:var(--f-panel); font-weight:500; font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--muted)}
+.intro h1{font-family:var(--f-panel); font-weight:300; font-size:clamp(26px,3.4vw,38px); letter-spacing:.02em; line-height:1.15; margin:8px 0 8px; text-wrap:balance}
+.intro p{margin:0; color:var(--muted)}
 
-/* ---------- stage that holds the plugin ---------- */
-.stage-outer{overflow-x:auto; border-radius:6px; -webkit-overflow-scrolling:touch}
+/* ---------- stage ---------- */
+.stage-outer{overflow-x:auto; -webkit-overflow-scrolling:touch}
 .stage-box{position:relative}
-.stage{position:absolute; left:0; top:0; width:1720px; height:604px; transform-origin:0 0; font-family:var(--f-display); color:var(--p-ink); user-select:none; -webkit-user-select:none}
+.stage{position:absolute; left:0; top:0; width:1720px; height:560px; transform-origin:0 0; font-family:var(--f-panel); color:var(--ink); user-select:none; -webkit-user-select:none}
+.ear{position:absolute; top:0; bottom:0; width:52px; background:linear-gradient(90deg,#0b0c0e,#17191c 55%,#121417)}
+.ear.l{left:0} .ear.r{right:0; transform:scaleX(-1)}
+.ear i{position:absolute; left:11px; width:30px; height:13px; border-radius:7px; background:#030303; box-shadow:0 1px 0 rgba(255,255,255,.05), inset 0 2px 3px #000}
+.ear i:nth-child(1){top:58px} .ear i:nth-child(2){bottom:58px}
+.plate{position:absolute; left:52px; right:52px; top:0; bottom:0;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.009) 0 1px, transparent 1px 2px), linear-gradient(var(--plate),var(--plate2));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), inset 0 -1px 0 #000, inset 1px 0 0 rgba(255,255,255,.03), inset -1px 0 0 rgba(0,0,0,.6)}
+.screw{position:absolute; width:10px; height:10px; border-radius:50%; background:radial-gradient(circle at 38% 32%,#5b5f63,#1a1c1e 72%); box-shadow:0 1px 1px #000}
+.screw::after{content:""; position:absolute; left:2px; right:2px; top:4.4px; height:1.1px; background:#050506; transform:rotate(-28deg)}
 
-/* rack */
-.ear{position:absolute; top:0; bottom:0; width:60px; background:linear-gradient(90deg,#0d1419,#1a252c 40%,#141e24); box-shadow:inset -1px 0 0 rgba(255,255,255,.04)}
-.ear.l{left:0; border-radius:4px 0 0 4px} .ear.r{right:0; border-radius:0 4px 4px 0; background:linear-gradient(270deg,#0d1419,#1a252c 40%,#141e24)}
-.ear i{position:absolute; left:12px; width:36px; height:15px; border-radius:8px; background:linear-gradient(#020405,#1b2228); box-shadow:0 1px 0 rgba(255,255,255,.07), inset 0 2px 3px rgba(0,0,0,.8)}
-.ear i:nth-child(1){top:62px} .ear i:nth-child(2){bottom:62px}
-.plate{position:absolute; left:60px; right:60px; top:0; bottom:0; padding:18px 22px; border-radius:2px;
-  background:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px),
-    radial-gradient(120% 90% at 50% 0%, rgba(143,214,201,.05), transparent 60%),
-    linear-gradient(var(--p-top), var(--p-bot));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.6), 0 18px 40px -18px rgba(0,0,0,.6)}
-.screw{position:absolute; width:11px; height:11px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#7a858b,#20282d 70%); box-shadow:0 1px 1px rgba(0,0,0,.7)}
-.screw::after{content:""; position:absolute; left:2px; right:2px; top:5px; height:1.2px; background:#0b0f12; transform:rotate(35deg)}
+.cols{position:absolute; left:44px; right:44px; top:34px; height:404px; display:flex}
+.col{position:relative; display:flex; flex-direction:column; align-items:center; padding:0 12px}
+.col + .col::before{content:""; position:absolute; left:0; top:4px; bottom:4px; width:1px; background:var(--rule)}
+.c-brand{width:196px; align-items:flex-start; padding-left:0} .c-console{width:290px} .c-drive{width:350px} .c-char{width:286px} .c-meter{width:304px} .c-out{width:102px; padding-right:0}
+.h{font-weight:500; font-size:10px; letter-spacing:.34em; color:var(--ink2); text-transform:uppercase; margin-bottom:6px; padding-left:.34em}
 
-/* header */
-.hdr{position:absolute; left:22px; right:22px; top:16px; height:98px; display:flex; align-items:center; gap:30px}
-.brand{display:flex; align-items:center; gap:14px; width:380px; flex:none}
-.brand svg{width:104px; height:73px; flex:none}
-.brand .wm{display:flex; flex-direction:column; gap:3px}
-.brand .name{font-stretch:112%; font-weight:250; font-size:43px; line-height:1; letter-spacing:.005em}
-.brand .sub{font-stretch:110%; font-weight:600; font-size:9px; letter-spacing:.2em; white-space:nowrap; color:var(--p-dim)}
-.consoles{flex:1; display:flex; flex-direction:column; gap:7px}
-.legend{font-stretch:118%; font-weight:650; font-size:10px; letter-spacing:.22em; color:var(--p-dim); text-transform:uppercase}
-.ckeys{display:flex; gap:9px}
-.ckey{all:unset; cursor:pointer; flex:1; display:flex; flex-direction:column; align-items:center; gap:6px}
-.ckey .cap{width:100%; height:38px; border-radius:3px; display:grid; place-items:center; font-stretch:112%; font-weight:700; font-size:12.5px; letter-spacing:.12em; color:#2b2b2b;
-  background:linear-gradient(#d9d6cd,#bdb9ae); box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 rgba(255,255,255,.6), inset 0 -2px 0 rgba(0,0,0,.18); transition:background .15s, box-shadow .15s}
-.ckey .d{font-stretch:105%; font-weight:500; font-size:9.5px; letter-spacing:.09em; color:var(--p-dim); text-transform:uppercase; white-space:nowrap}
-.ckey[aria-checked="true"] .cap{background:linear-gradient(#fffdf2,#f3ead2); color:#1a1206; box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 #fff, 0 0 22px rgba(255,236,190,.38)}
-.ckey[aria-checked="true"] .d{color:var(--p-ink)}
-.ckey:focus-visible .cap{outline:2px solid var(--p-foam); outline-offset:3px}
-.maker{width:120px; flex:none; display:flex; flex-direction:column; align-items:center; gap:6px}
-.maker svg{width:40px; height:40px}
-.maker span{font-stretch:118%; font-weight:600; font-size:8.5px; letter-spacing:.26em; color:var(--p-dim)}
-.power{display:flex; align-items:center; gap:7px; font-stretch:115%; font-size:8.5px; font-weight:600; letter-spacing:.2em; color:var(--p-dim)}
-.led{width:9px; height:9px; border-radius:50%; background:#2a2f31; box-shadow:inset 0 1px 1px rgba(0,0,0,.6)}
-.led.on{background:radial-gradient(circle at 40% 35%,#ffd3c9,var(--p-red) 55%,#7a1309); box-shadow:0 0 10px rgba(229,67,47,.7)}
-
-/* modules */
-.row{position:absolute; left:22px; right:22px; top:128px; height:372px; display:flex; gap:12px}
-.mod{position:relative; border-radius:7px; background:linear-gradient(var(--p-sub-top),var(--p-sub-bot)); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.03); padding:14px 14px 12px; display:flex; flex-direction:column; align-items:center}
-.mod>.legend{align-self:stretch; text-align:center}
-.m-drive{width:392px} .m-char{width:196px} .m-disp{width:452px; padding:10px 12px 12px} .m-stereo{width:196px} .m-out{width:272px}
+/* brand */
+.mark{width:118px; height:83px; color:var(--ink); margin:2px 0 14px -4px}
+.wm{font-weight:300; font-size:25px; letter-spacing:.42em; line-height:1}
+.tag{margin-top:9px; font-weight:400; font-size:8.5px; letter-spacing:.3em; line-height:1.9; color:var(--ink2)}
+.maker{margin-top:auto; display:flex; align-items:center; gap:10px; color:var(--ink2); font-size:8.5px; letter-spacing:.3em; font-weight:500}
+.maker svg{width:22px; height:22px; color:var(--ink2)}
+.pwr{display:flex; align-items:center; gap:9px; margin-bottom:18px; font-size:8.5px; letter-spacing:.3em; color:var(--ink2); font-weight:500}
+.lamp{width:8px; height:8px; border-radius:50%; background:#2a1c1a; box-shadow:inset 0 1px 1px rgba(0,0,0,.7), 0 0 0 1.5px #050505}
+.lamp.on{background:radial-gradient(circle at 40% 35%,#ffb4a6,var(--red) 60%,#6c140b); box-shadow:0 0 0 1.5px #050505, 0 0 7px rgba(210,59,42,.55)}
 
 /* knobs */
-.kn{display:flex; flex-direction:column; align-items:center; gap:2px; outline:none}
-.kn .lbl{font-stretch:118%; font-weight:650; font-size:10px; letter-spacing:.2em; color:var(--p-ink)}
-.kn .val{font-family:var(--f-mono); font-size:10.5px; color:var(--p-dim); height:14px; letter-spacing:.02em}
+.kn{display:flex; flex-direction:column; align-items:center; outline:none}
 .kn .face{position:relative; width:var(--box); height:var(--box); cursor:ns-resize; touch-action:none}
-.kn .face svg.ring{position:absolute; inset:0; overflow:visible}
-.kn .leg{position:absolute; bottom:-1px; font-size:8.5px; font-weight:600; letter-spacing:.12em; color:var(--p-dim); font-stretch:110%}
-.kn .leg.lo{left:0} .kn .leg.hi{right:0}
-.kn:focus-visible .face{outline:2px solid var(--p-foam); outline-offset:2px; border-radius:50%}
+.kn .face svg{position:absolute; inset:0; overflow:visible}
+.kn .lbl{font-weight:500; font-size:9.5px; letter-spacing:.3em; padding-left:.3em; color:var(--ink); margin-top:2px}
+.kn .val{font-family:var(--f-mono); font-size:10px; color:var(--ink2); height:15px; margin-top:3px; opacity:.0; transition:opacity .2s}
+.kn:hover .val,.kn:focus-visible .val,.kn.active .val{opacity:1}
+.kn:focus-visible .face{outline:1px solid var(--ink2); outline-offset:0; border-radius:50%}
 .knob{position:absolute; left:50%; top:50%; width:var(--s); height:var(--s); margin:calc(var(--s) / -2) 0 0 calc(var(--s) / -2); border-radius:50%;
-  box-shadow:0 6px 10px rgba(0,0,0,.55), 0 2px 2px rgba(0,0,0,.6)}
-.knob .knurl{position:absolute; inset:0; border-radius:50%; background:repeating-conic-gradient(#0b0e10 0 3deg,#2a3034 3deg 6deg); box-shadow:inset 0 0 0 1px #000}
-.knob .cap{position:absolute; inset:13%; border-radius:50%;
-  background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0 54%, rgba(0,0,0,.35) 100%),
-             conic-gradient(from 200deg,#2b3034,#62686d,#2a2f33,#4d5358,#24282b,#6f767b,#2b3034);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.25), inset 0 -2px 3px rgba(0,0,0,.6), 0 0 0 1px #070809}
-.knob .ptr{position:absolute; inset:0}
-.knob .ptr::after{content:""; position:absolute; left:50%; top:9%; width:var(--pw,3px); height:30%; margin-left:calc(var(--pw,3px) / -2); border-radius:2px; background:var(--pc,#f4f1e8); box-shadow:0 0 4px rgba(0,0,0,.6)}
-.hero .knob{--pc:var(--p-red); --pw:5px}
-.hero .knob .cap{inset:15%; background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0 50%, rgba(0,0,0,.35) 100%), conic-gradient(from 205deg,#3a4045,#9aa1a6,#3b4146,#7d8489,#33383c,#a8afb4,#3a4045)}
-.hero .knob .cap::before{content:""; position:absolute; inset:34%; border-radius:50%; background:radial-gradient(circle at 40% 35%,#4a5055,#1a1e21); box-shadow:inset 0 1px 1px rgba(255,255,255,.2), 0 0 0 1px #0a0c0d}
+  box-shadow:0 10px 16px -4px rgba(0,0,0,.75), 0 2px 3px rgba(0,0,0,.8)}
+.knob .kr{position:absolute; inset:0; border-radius:50%; background:repeating-conic-gradient(#6d7175 0 1.6deg,#a9adb0 1.6deg 3.2deg); box-shadow:inset 0 0 0 1px rgba(0,0,0,.55)}
+.knob .cap{position:absolute; inset:9%; border-radius:50%;
+  background:repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.035) 0 1px, rgba(0,0,0,.03) 1px 2px),
+             conic-gradient(from 10deg,#d6d9db,#8e9397,#e9ebec,#9a9fa3,#cfd2d4,#868b8f,#e3e5e6,#a3a7ab,#d6d9db);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7), inset 0 -1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.35)}
+.knob .pt{position:absolute; inset:0}
+.knob .pt::after{content:""; position:absolute; left:50%; top:4%; width:var(--pw,2px); margin-left:calc(var(--pw,2px) / -2); height:34%; background:var(--pc,#141414); border-radius:1px}
+.big .knob{--pc:var(--red); --pw:3px}
+.big .knob .cap{inset:8%}
+.big .knob .cap::before{content:""; position:absolute; inset:38%; border-radius:50%; background:repeating-radial-gradient(circle,rgba(0,0,0,.05) 0 1px,transparent 1px 2px), radial-gradient(circle at 45% 40%,#c9ccce,#9da1a5); box-shadow:inset 0 1px 2px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.5)}
 
-/* drive readout */
-.dread{display:flex; align-items:baseline; justify-content:center; gap:14px; margin-top:2px; font-family:var(--f-mono)}
-.dread .db{font-size:22px; font-weight:500; color:var(--p-ink); min-width:94px; text-align:right}
-.dread .zone{font-family:var(--f-display); font-stretch:120%; font-weight:750; font-size:13px; letter-spacing:.2em; min-width:112px}
-.dread .thd{font-size:12px; color:var(--p-dim); min-width:90px}
-.hint{font-size:9px; letter-spacing:.14em; color:var(--p-faint); font-weight:600; font-stretch:110%; margin-top:4px}
+/* console rotary */
+.rot{position:relative; width:266px; height:250px; margin-top:4px}
+.rot .opt{all:unset; cursor:pointer; position:absolute; font-weight:500; font-size:9.5px; letter-spacing:.24em; color:var(--ink3); white-space:nowrap; transition:color .2s}
+.rot .opt[aria-checked="true"]{color:var(--ink)}
+.rot .opt:focus-visible{outline:1px solid var(--ink2)}
+.cdesc{margin-top:18px; text-align:center; font-size:9px; letter-spacing:.28em; color:var(--ink2); line-height:2}
+.cdesc b{display:block; font-weight:400; color:var(--ink); font-size:9.5px}
 
-/* display */
-.tabs{align-self:stretch; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
-.tabs .t{display:flex; gap:4px}
-.tab{all:unset; cursor:pointer; font-stretch:118%; font-weight:650; font-size:9.5px; letter-spacing:.2em; color:var(--p-dim); padding:5px 9px; border-radius:3px}
-.tab[aria-selected="true"]{color:var(--p-screen); background:var(--p-foam)}
-.tab:focus-visible{outline:2px solid var(--p-foam)}
-.screen{position:relative; align-self:stretch; height:246px; border-radius:5px; background:var(--p-screen); box-shadow:inset 0 2px 8px rgba(0,0,0,.9), 0 0 0 1px #000, 0 1px 0 rgba(255,255,255,.05); overflow:hidden}
-.screen canvas{width:100%; height:100%; display:block}
-.screen::after{content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(160deg,rgba(255,255,255,.05),transparent 35%)}
-.reads{align-self:stretch; display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:10px}
-.rd{display:flex; flex-direction:column; align-items:center; gap:4px}
-.rd span{font-stretch:118%; font-weight:650; font-size:8.5px; letter-spacing:.18em; color:var(--p-dim)}
-.rd b{width:100%; text-align:center; font-family:var(--f-mono); font-weight:500; font-size:13px; color:var(--p-amber); background:#070d10; border-radius:3px; padding:5px 0; box-shadow:inset 0 1px 3px #000}
+/* drive */
+.dread{margin-top:22px; display:flex; gap:22px; align-items:baseline; font-family:var(--f-mono); font-size:11px; color:var(--ink2)}
+.dread .z{font-family:var(--f-panel); font-weight:500; font-size:11px; letter-spacing:.34em; color:var(--ink)}
 
-/* stereo channel stepper */
-.chan{display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:auto}
-.chan .box{display:flex; align-items:center; gap:6px}
-.chan button{all:unset; cursor:pointer; width:24px; height:24px; border-radius:3px; display:grid; place-items:center; color:var(--p-ink); font-weight:700; background:linear-gradient(#323d44,#20292f); box-shadow:0 0 0 1px #050708, inset 0 1px 0 rgba(255,255,255,.12)}
-.chan button:focus-visible{outline:2px solid var(--p-foam)}
-.chan output{font-family:var(--f-mono); font-size:20px; font-weight:600; color:var(--p-red); background:#0a0605; padding:2px 10px; border-radius:3px; box-shadow:inset 0 1px 4px #000; text-shadow:0 0 8px rgba(229,67,47,.6); min-width:52px; text-align:center}
+/* small knob grid */
+.grid{display:grid; grid-template-columns:repeat(3,1fr); column-gap:6px; width:100%}
+.sub{margin-top:14px}
+.chan{display:flex; flex-direction:column; align-items:center; justify-content:center; height:84px}
+.chan .w{display:flex; align-items:center; gap:4px}
+.chan button{all:unset; cursor:pointer; color:var(--ink2); font-size:13px; padding:2px 6px}
+.chan button:hover{color:var(--ink)}
+.chan button:focus-visible{outline:1px solid var(--ink2)}
+.chan output{font-family:var(--f-mono); font-size:17px; color:var(--ink); background:var(--glass); padding:3px 9px; border-radius:2px; box-shadow:inset 0 1px 3px #000, 0 1px 0 rgba(255,255,255,.05); letter-spacing:.08em}
 
-/* VU */
-.vus{display:flex; gap:10px; margin:2px 0 6px}
-.vu{width:120px; height:112px; border-radius:5px; padding:4px; background:#0a0e10; box-shadow:inset 0 0 0 1px #000, 0 1px 0 rgba(255,255,255,.05)}
-.vu svg{width:100%; height:100%; display:block; border-radius:3px}
-.outk{display:flex; gap:22px; margin-top:auto}
-.peaks{display:flex; gap:40px; margin-top:4px}
-article a{color:var(--accent)}
+/* meters */
+.vus{display:flex; gap:14px; margin-top:2px}
+.vu{width:132px; height:100px; padding:5px; background:#050505; border-radius:3px; box-shadow:0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px #000}
+.vu svg{display:block; width:100%; height:100%}
+.vlab{display:flex; justify-content:space-around; width:100%; margin-top:6px; font-size:8.5px; letter-spacing:.3em; color:var(--ink2); font-weight:500}
+.vlab span{display:flex; align-items:center; gap:7px}
+.vlab .lamp{width:6px; height:6px}
+.views{display:flex; gap:16px; margin:16px 0 7px; align-self:stretch; justify-content:center}
+.view{all:unset; cursor:pointer; font-size:8.5px; letter-spacing:.3em; font-weight:500; color:var(--ink3); padding-bottom:3px; border-bottom:1px solid transparent}
+.view[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--ink2)}
+.view:focus-visible{outline:1px solid var(--ink2)}
+.win{width:280px; height:120px; background:var(--glass); border-radius:3px; box-shadow:inset 0 1px 6px #000, 0 1px 0 rgba(255,255,255,.05)}
+.win canvas{display:block; width:100%; height:100%}
+.reads{margin-top:8px; display:flex; gap:12px; font-family:var(--f-mono); font-size:9.5px; color:var(--ink2); white-space:nowrap}
+.reads b{font-weight:400; color:var(--ink)}
 
-/* footer keys */
-.foot{position:absolute; left:22px; right:22px; top:514px; height:70px; display:flex; align-items:flex-end; gap:26px}
-.grp{display:flex; flex-direction:column; gap:7px; align-items:center}
-.keys{display:flex; gap:6px}
-.k{all:unset; cursor:pointer; min-width:38px; padding:0 10px; height:26px; border-radius:3px; display:grid; place-items:center; font-stretch:112%; font-weight:700; font-size:10px; letter-spacing:.12em; color:#2b2b2b; background:linear-gradient(#d4d1c8,#b7b3a8); box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 rgba(255,255,255,.5)}
-.k[aria-pressed="true"],.k[aria-checked="true"]{background:linear-gradient(#ffd27a,#f0a83a); color:#1d1204; box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 #fff3cf, 0 0 14px rgba(240,178,64,.35)}
-.k.red[aria-pressed="true"]{background:linear-gradient(#ff8a72,#e5432f); color:#200603; box-shadow:0 0 0 1.5px #050708, 0 2px 0 1.5px #050708, inset 0 1px 0 #ffd0c6, 0 0 14px rgba(229,67,47,.4)}
-.k:focus-visible{outline:2px solid var(--p-foam); outline-offset:2px}
-.status{margin-left:auto; font-family:var(--f-mono); font-size:10px; color:var(--p-dim); letter-spacing:.06em; padding-bottom:6px; text-align:right; line-height:1.5}
+/* bottom strip */
+.strip{position:absolute; left:44px; right:44px; top:462px; height:62px; border-top:1px solid var(--rule); display:flex; align-items:center; gap:46px; padding-top:6px}
+.og{display:flex; flex-direction:column; gap:8px}
+.og .h{margin:0; font-size:8.5px}
+.opts{display:flex; gap:16px}
+.o{all:unset; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; font-size:9.5px; letter-spacing:.2em; font-weight:500; color:var(--ink3)}
+.o::before{content:""; width:5px; height:5px; border-radius:50%; background:#24272a; box-shadow:0 0 0 1px #050505}
+.o[aria-checked="true"],.o[aria-pressed="true"]{color:var(--ink)}
+.o[aria-checked="true"]::before,.o[aria-pressed="true"]::before{background:#f2ead6; box-shadow:0 0 0 1px #050505, 0 0 6px rgba(242,234,214,.55)}
+.o.red[aria-pressed="true"]::before{background:var(--red); box-shadow:0 0 0 1px #050505, 0 0 6px rgba(210,59,42,.6)}
+.o:focus-visible{outline:1px solid var(--ink2); outline-offset:3px}
+.status{margin-left:auto; font-family:var(--f-mono); font-size:9.5px; color:var(--ink3); text-align:right; line-height:1.7; letter-spacing:.04em}
 
-/* ---------- transport under the stage ---------- */
-.transport{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin:14px 0 6px}
-.btn{all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:8px; font-weight:600; font-size:14px; padding:9px 16px; border-radius:999px; background:var(--fg); color:var(--bg)}
-.btn.ghost{background:transparent; color:var(--fg); box-shadow:inset 0 0 0 1.5px var(--line)}
-.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+/* ---------- transport ---------- */
+.transport{display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin:16px 0 4px}
+.btn{all:unset; cursor:pointer; font-size:13.5px; font-weight:500; padding:8px 16px; border-radius:2px; background:var(--fg); color:var(--bg); letter-spacing:.01em}
+.btn.ghost{background:transparent; color:var(--fg); box-shadow:inset 0 0 0 1px var(--line)}
+.btn:focus-visible{outline:1px solid var(--fg); outline-offset:2px}
 .transport small{color:var(--muted); font-size:13px}
 #file{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none}
 
 /* ---------- proposal ---------- */
-.doc{display:grid; grid-template-columns:200px minmax(0,1fr); gap:40px; margin-top:48px}
+.doc{display:grid; grid-template-columns:190px minmax(0,1fr); gap:48px; margin-top:56px; padding-top:28px; border-top:1px solid var(--line)}
 @media (max-width:860px){.doc{grid-template-columns:minmax(0,1fr); gap:0}.toc{display:none}}
 .toc{position:sticky; top:calc(env(safe-area-inset-top, 0px) + 20px); align-self:start; font-size:13px}
-.toc ol{list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:7px; counter-reset:t}
+.toc ol{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:8px}
 .toc a{color:var(--muted); text-decoration:none} .toc a:hover{color:var(--fg)}
-.toc li{counter-increment:t} .toc li::before{content:counter(t) "  "; font-family:var(--f-mono); font-size:11px; color:var(--accent)}
-article{max-width:74ch; min-width:0}
-article section{padding-top:8px; margin-bottom:40px}
-article h2{font-family:var(--f-display); font-stretch:120%; font-weight:650; font-size:23px; letter-spacing:.005em; line-height:1.2; margin:0 0 12px; text-wrap:balance}
-article h2 .n{font-family:var(--f-mono); font-weight:500; font-size:13px; color:var(--accent); margin-right:10px; vertical-align:3px}
-article h3{font-family:var(--f-display); font-stretch:112%; font-weight:650; font-size:16px; margin:22px 0 6px}
-article p{margin:0 0 12px}
-article ul{margin:0 0 12px; padding-left:20px} article li{margin-bottom:5px}
-code,.mono{font-family:var(--f-mono); font-size:.88em}
+article{max-width:72ch; min-width:0}
+article section{margin-bottom:44px}
+article h2{font-family:var(--f-panel); font-weight:400; font-size:22px; letter-spacing:.01em; line-height:1.25; margin:0 0 12px; text-wrap:balance}
+article h2 .n{font-family:var(--f-mono); font-size:12px; color:var(--muted); margin-right:12px; vertical-align:3px}
+article h3{font-family:var(--f-panel); font-weight:500; font-size:16px; margin:24px 0 6px}
+article p{margin:0 0 12px} article ul{margin:0 0 12px; padding-left:20px} article li{margin-bottom:5px}
+article a{color:var(--fg); text-decoration-color:var(--line); text-underline-offset:3px}
+code{font-family:var(--f-mono); font-size:.87em}
 .lead{font-size:17px; line-height:1.55}
-.tw{overflow-x:auto; margin:6px 0 16px; border:1px solid var(--line); border-radius:6px; background:var(--surface)}
-table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:640px}
-th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top}
-th{font-family:var(--f-display); font-stretch:115%; font-weight:650; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); background:var(--chip)}
+.tw{overflow-x:auto; margin:6px 0 16px; border-top:1px solid var(--fg); border-bottom:1px solid var(--line)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:620px}
+th,td{text-align:left; padding:9px 12px 9px 0; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-family:var(--f-panel); font-weight:500; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted)}
 tr:last-child td{border-bottom:0}
 td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space:nowrap}
-.spot{font-family:var(--f-display); font-stretch:118%; font-weight:700; letter-spacing:.1em; font-size:12px; white-space:nowrap}
-.zbar{display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:-1px; margin-right:7px}
-.flow{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:10px 0 16px; padding:14px; background:var(--surface); border:1px solid var(--line); border-radius:6px; font-size:12.5px}
-.flow span{padding:6px 10px; border-radius:4px; background:var(--chip); font-weight:500}
-.flow span.nl{background:color-mix(in srgb, var(--accent) 16%, var(--chip)); }
+.spot{font-family:var(--f-panel); font-weight:500; letter-spacing:.18em; font-size:12px; white-space:nowrap}
+.flow{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin:10px 0 16px; font-size:12.5px}
+.flow span{padding:5px 10px; border:1px solid var(--line); border-radius:2px}
+.flow span.nl{border-color:var(--fg)}
 .flow i{font-style:normal; color:var(--muted)}
-.note{border-left:3px solid var(--sea); padding:6px 0 6px 14px; margin:14px 0; color:var(--fg)}
-.note b{color:var(--sea)}
-.logo-row{display:flex; flex-wrap:wrap; gap:12px; margin:10px 0 14px}
-.logo-tile{flex:1 1 150px; min-width:0; border-radius:6px; display:grid; place-items:center; padding:18px 10px; border:1px solid var(--line)}
-.logo-tile svg{width:100%; max-width:150px; height:auto}
-.logo-tile.dk{background:#16232b} .logo-tile.lt{background:#f3efe4} .logo-tile.sm{background:#16232b}
-.logo-tile.sm svg{max-width:44px}
-.qa{display:grid; gap:10px}
-.qa div{background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:12px 14px}
-.qa b{display:block; margin-bottom:2px}
+.note{border-left:1px solid var(--fg); padding:4px 0 4px 16px; margin:14px 0}
+.logo-row{display:flex; flex-wrap:wrap; gap:12px; margin:12px 0 14px}
+.logo-tile{flex:1 1 150px; min-width:0; display:grid; place-items:center; padding:22px 10px}
+.logo-tile svg{width:100%; max-width:140px; height:auto}
+.logo-tile.dk{background:#15181b; color:#e7e2d6} .logo-tile.lt{background:#ebe7dc; color:#17191b}
+.logo-tile.sm svg{max-width:40px}
+.qa{display:grid; gap:0; border-top:1px solid var(--line)}
+.qa div{padding:12px 0; border-bottom:1px solid var(--line)}
+.qa b{display:block; font-weight:600; margin-bottom:2px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 
@@ -201,21 +178,15 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
   <defs>
     <symbol id="nazare-mark" viewBox="0 0 120 84">
       <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 76 H116" stroke-width="2.2"/>
-        <path d="M112 76 C 100 72, 96 44, 84 24 C 78 14, 70 9, 60 9 C 46 9, 34 16, 31 28 C 29 37, 35 43, 42 41 C 48 39, 49 32, 45 29 C 42 27, 38 29, 39 33" stroke-width="2.6"/>
-        <path d="M10 76 C 30 75, 46 68, 54 56 C 60 47, 62 36, 58 27" stroke-width="2.2"/>
-        <path d="M70 18 C 82 26, 88 46, 94 64" stroke-width="1.3" opacity=".55"/>
-        <path d="M64 26 C 72 36, 76 52, 80 68" stroke-width="1.1" opacity=".35"/>
+        <path d="M4 76 H116" stroke-width="1.4"/>
+        <path d="M112 76 C 100 72, 96 44, 84 24 C 78 14, 70 9, 60 9 C 46 9, 34 16, 31 28 C 29 37, 35 43, 42 41 C 48 39, 49 32, 45 29 C 42 27, 38 29, 39 33" stroke-width="1.7"/>
+        <path d="M10 76 C 30 75, 46 68, 54 56 C 60 47, 62 36, 58 27" stroke-width="1.4"/>
+        <path d="M70 18 C 82 26, 88 46, 94 64" stroke-width=".9" opacity=".45"/>
       </g>
-      <g fill="currentColor" opacity=".8"><circle cx="27" cy="22" r="1"/><circle cx="23" cy="27" r=".8"/><circle cx="26" cy="31" r=".6"/><circle cx="21" cy="19" r=".6"/></g>
-      <g transform="translate(38 70) rotate(-22)" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M-5.2 0.9 C -2 1.7, 3 1.6, 5.6 0.2" stroke="#e5432f" stroke-width="1.6"/>
-        <g stroke="currentColor" stroke-width="1.05">
-          <path d="M-1.6 0.2 L -0.6 -2.6 L 1.6 0.2"/>
-          <path d="M-0.6 -2.6 L -1.3 -5.6"/>
-          <path d="M-1.3 -5.0 L -4.6 -4.0 M -1.2 -5.1 L 1.9 -6.6"/>
-        </g>
-        <circle cx="-1.6" cy="-7" r="1.05" fill="currentColor"/>
+      <g transform="translate(38 70) rotate(-22)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-5 0.9 C -2 1.6, 3 1.5, 5.4 0.2" stroke-width="1.2"/>
+        <g stroke-width=".9"><path d="M-1.6 0.2 L -0.6 -2.6 L 1.6 0.2"/><path d="M-0.6 -2.6 L -1.3 -5.6"/><path d="M-1.3 -5.0 L -4.4 -4.1 M -1.2 -5.1 L 1.8 -6.5"/></g>
+        <circle cx="-1.6" cy="-7" r=".95" fill="currentColor" stroke="none"/>
       </g>
     </symbol>
     <symbol id="iw-mark" viewBox="0 0 40 40">
@@ -227,11 +198,9 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
 
 <div class="wrap">
   <header class="intro">
-    <div>
-      <div class="eyebrow">IndieWave Audio · Voorstel en GUI-ontwerp · concept 0.1</div>
-      <h1><b>Nazaré</b> large format analog console</h1>
-      <p>Zes consoles in één kanaal. Eén drive-knop die van ongerept schoon tot verzopen en verzadigd gaat, en een stereobeeld dat ontstaat uit twee net-niet-identieke kanalen. Hieronder werkt alles: draai, kies een console en luister.</p>
-    </div>
+    <div class="eyebrow">IndieWave Audio · voorstel · concept 0.2</div>
+    <h1>Nazaré, large format analog console</h1>
+    <p>Zes consoles in één kanaal, één drive-knop van ongerept schoon tot verzadigd, en een stereobeeld uit twee net-niet-identieke kanalen. Het paneel hieronder werkt: draai, kies een console en luister.</p>
   </header>
 
   <div class="stage-outer" id="stageOuter">
@@ -240,93 +209,68 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
         <div class="ear l"><i></i><i></i></div>
         <div class="ear r"><i></i><i></i></div>
         <div class="plate">
-          <span class="screw" style="left:8px;top:8px"></span><span class="screw" style="right:8px;top:8px"></span>
-          <span class="screw" style="left:8px;bottom:8px"></span><span class="screw" style="right:8px;bottom:8px"></span>
+          <span class="screw" style="left:12px;top:12px"></span><span class="screw" style="right:12px;top:12px"></span>
+          <span class="screw" style="left:12px;bottom:12px"></span><span class="screw" style="right:12px;bottom:12px"></span>
 
-          <div class="hdr">
-            <div class="brand">
-              <svg style="color:var(--p-ink)" aria-hidden="true"><use href="#nazare-mark"/></svg>
-              <div class="wm">
-                <div class="name">Nazaré</div>
-                <div class="sub">LARGE FORMAT ANALOG CONSOLE</div>
+          <div class="cols">
+            <div class="col c-brand">
+              <svg class="mark" aria-hidden="true"><use href="#nazare-mark"/></svg>
+              <div class="wm">NAZARÉ</div>
+              <div class="tag">LARGE FORMAT<br>ANALOG CONSOLE</div>
+              <div style="margin-top:auto">
+                <div class="pwr"><span class="lamp on" id="powerLed"></span>POWER</div>
+                <div class="maker"><svg aria-hidden="true"><use href="#iw-mark"/></svg>INDIEWAVE AUDIO</div>
               </div>
             </div>
-            <div class="consoles">
-              <div class="legend" style="text-align:center">Console</div>
-              <div class="ckeys" id="ckeys" role="radiogroup" aria-label="Console"></div>
-            </div>
-            <div class="maker">
-              <svg style="color:var(--p-ink)" aria-hidden="true"><use href="#iw-mark"/></svg>
-              <span>INDIEWAVE</span>
-              <div class="power"><span class="led on" id="powerLed"></span>POWER</div>
-            </div>
-          </div>
 
-          <div class="row">
-            <div class="mod m-drive">
-              <div class="legend">Drive</div>
+            <div class="col c-console">
+              <div class="h">Console</div>
+              <div class="rot" id="rot" role="radiogroup" aria-label="Console"></div>
+              <div class="cdesc" id="cdesc"></div>
+            </div>
+
+            <div class="col c-drive">
+              <div class="h">Drive</div>
               <div id="drive"></div>
-              <div class="dread" aria-live="polite">
-                <span class="db" id="dDb">+0.0 dB</span>
-                <span class="zone" id="dZone">WARM</span>
-                <span class="thd" id="dThd">0.08 %</span>
-              </div>
-              <div class="hint">SHIFT = FIJN · DUBBELKLIK = RESET</div>
+              <div class="dread" aria-live="polite"><span class="z" id="dZone">WARM</span><span id="dThd">0.10 % THD</span><span id="dDb">−6.6 dB</span></div>
             </div>
 
-            <div class="mod m-char">
-              <div class="legend">Character</div>
-              <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px" id="charKnobs"></div>
-            </div>
-
-            <div class="mod m-disp">
-              <div class="tabs">
-                <span class="legend" style="text-align:left">Analyse</span>
-                <div class="t" role="tablist" aria-label="Weergave">
-                  <button class="tab" role="tab" aria-selected="true" data-v="harm">HARMONICS</button>
-                  <button class="tab" role="tab" aria-selected="false" data-v="xfer">TRANSFER</button>
-                  <button class="tab" role="tab" aria-selected="false" data-v="img">IMAGE</button>
-                </div>
-              </div>
-              <div class="screen"><canvas id="scr" aria-label="Analyse van de huidige instelling"></canvas></div>
-              <div class="reads">
-                <div class="rd"><span>THD</span><b id="rThd">–</b></div>
-                <div class="rd"><span>H2</span><b id="rH2">–</b></div>
-                <div class="rd"><span>H3</span><b id="rH3">–</b></div>
-                <div class="rd"><span>HEADROOM</span><b id="rHead">–</b></div>
-                <div class="rd"><span>CORR</span><b id="rCorr">–</b></div>
+            <div class="col c-char">
+              <div class="h">Character</div>
+              <div class="grid" id="gChar"></div>
+              <div class="h sub">Stereo</div>
+              <div class="grid" id="gSt">
               </div>
             </div>
 
-            <div class="mod m-stereo">
-              <div class="legend">Stereo</div>
-              <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px" id="stKnobs"></div>
-              <div class="chan">
-                <span class="legend">Channel</span>
-                <div class="box">
-                  <button id="chDown" aria-label="Vorig kanaal">−</button>
-                  <output id="chOut">07</output>
-                  <button id="chUp" aria-label="Volgend kanaal">+</button>
-                </div>
+            <div class="col c-meter">
+              <div class="h">Metering</div>
+              <div class="vus"><div class="vu"><svg id="vuL" viewBox="0 0 122 90"></svg></div><div class="vu"><svg id="vuR" viewBox="0 0 122 90"></svg></div></div>
+              <div class="vlab"><span><span class="lamp" id="pkL"></span>L</span><span><span class="lamp" id="pkR"></span>R</span></div>
+              <div class="views" role="tablist" aria-label="Weergave">
+                <button class="view" role="tab" aria-selected="true" data-v="harm">HARMONICS</button>
+                <button class="view" role="tab" aria-selected="false" data-v="xfer">TRANSFER</button>
+                <button class="view" role="tab" aria-selected="false" data-v="img">IMAGE</button>
               </div>
+              <div class="win"><canvas id="scr" aria-label="Analyse van de huidige instelling"></canvas></div>
+              <div class="reads"><span>H2 <b id="rH2">–</b></span><span>H3 <b id="rH3">–</b></span><span>HEADROOM <b id="rHead">–</b></span><span>CORR <b id="rCorr">–</b></span></div>
             </div>
 
-            <div class="mod m-out">
-              <div class="legend">Output</div>
-              <div class="vus"><div class="vu"><svg id="vuL" viewBox="0 0 110 104" preserveAspectRatio="none"></svg></div><div class="vu"><svg id="vuR" viewBox="0 0 110 104" preserveAspectRatio="none"></svg></div></div>
-              <div class="peaks"><span class="power"><span class="led" id="pkL"></span>PEAK L</span><span class="power"><span class="led" id="pkR"></span>PEAK R</span></div>
-              <div class="outk" id="outKnobs"></div>
+            <div class="col c-out">
+              <div class="h">Output</div>
+              <div id="gOut" style="display:flex;flex-direction:column;gap:22px;margin-top:4px"></div>
             </div>
           </div>
 
-          <div class="foot">
-            <div class="grp"><span class="legend">Oversampling</span><div class="keys" data-group="os"></div></div>
-            <div class="grp"><span class="legend">0 VU =</span><div class="keys" data-group="cal"></div></div>
-            <div class="grp"><span class="legend">Mode</span><div class="keys" data-group="mode"></div></div>
-            <div class="grp"><span class="legend">Stereo</span><div class="keys"><button class="k" id="kMatch" aria-pressed="false">MATCHED PAIR</button></div></div>
-            <div class="grp"><span class="legend">Level</span><div class="keys"><button class="k" id="kAuto" aria-pressed="true">AUTO GAIN</button></div></div>
-            <div class="grp"><span class="legend">&nbsp;</span><div class="keys"><button class="k red" id="kByp" aria-pressed="false">BYPASS</button></div></div>
-            <div class="status" id="status">48.0 kHz · LATENCY 0 smp<br>v0.1.0 CONCEPT</div>
+          <div class="strip">
+            <div class="og"><span class="h">Oversampling</span><div class="opts" data-group="os"></div></div>
+            <div class="og"><span class="h">0 VU =  dBFS</span><div class="opts" data-group="cal"></div></div>
+            <div class="og"><span class="h">Mode</span><div class="opts" data-group="mode"></div></div>
+            <div class="og"><span class="h">&nbsp;</span><div class="opts">
+              <button class="o" id="kMatch" aria-pressed="false">MATCHED PAIR</button>
+              <button class="o" id="kAuto" aria-pressed="true">AUTO GAIN</button>
+              <button class="o red" id="kByp" aria-pressed="false">BYPASS</button></div></div>
+            <div class="status" id="status"></div>
           </div>
         </div>
       </div>
@@ -334,10 +278,10 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
   </div>
 
   <div class="transport">
-    <button class="btn" id="play">▶ Speel demo-loop</button>
-    <button class="btn ghost" id="loadBtn">Eigen audio laden…</button>
+    <button class="btn" id="play">Speel demo-loop</button>
+    <button class="btn ghost" id="loadBtn">Eigen audio laden</button>
     <input type="file" id="file" accept="audio/*">
-    <small id="tstat">Het geluid hier is een schets van de DSP in de browser (statische waveshapers met 4× oversampling), niet het eindproduct.</small>
+    <small id="tstat">Het geluid is een schets van de DSP in de browser, niet het eindproduct.</small>
   </div>
 
   <div class="doc">
@@ -349,18 +293,17 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
         <li><a href="#drive">De drive-knop</a></li>
         <li><a href="#dsp">De non-lineaire kern</a></li>
         <li><a href="#stereo">Stereobeeld</a></li>
-        <li><a href="#gui">GUI en logo</a></li>
+        <li><a href="#gui">Paneel en logo</a></li>
         <li><a href="#slate">Analyse van Slate VCC</a></li>
         <li><a href="#plan">Plan en fases</a></li>
         <li><a href="#vragen">Open vragen</a></li>
       </ol>
     </nav>
-
     <article>
       <section id="idee">
         <h2><span class="n">01</span>Het idee</h2>
         <p class="lead">Nazaré zet op elk spoor en op de mixbus het kanaal van een grote analoge tafel. Niet als effect dat je hoort, maar als het medium waar alles doorheen gaat: kleine verschillen tussen links en rechts, harmonischen die met het niveau meebewegen, laag dat iets dikker wordt omdat de ingangstrafo als eerste verzadigt.</p>
-        <p>Het wordt de achtste plugin in de suite, naast Crest, Breakwater, Beacon, Swell, Hinge, Lacquer en Tide. Hij gebruikt dezelfde paneelset (rack-oren, schroeven, het sinus-in-ring merkje, de witte toetsen) met een eigen plaat: Atlantisch leisteen, met als accent het rood van de vuurtoren op de klif van Nazaré.</p>
+        <p>Het wordt de achtste plugin in de suite, naast Crest, Breakwater, Beacon, Swell, Hinge, Lacquer en Tide. Hij gebruikt dezelfde paneelset (rack-oren, schroeven, het sinus-in-ring merkje) met een eigen afwerking: zwart geanodiseerd aluminium, ivoren gravure en één rood accent, het rood van de vuurtoren op de klif van Nazaré.</p>
         <p>Werktitel en identiteit: <b>IndieWave Audio Nazaré, large format analog console</b>. Plugin code <code>Nzre</code>, bundle id <code>audio.indiewave.nazare</code>, map <code>plugins/nazare</code>. JUCE 8, VST3, AU en Standalone, net als de rest.</p>
       </section>
 
@@ -436,20 +379,22 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
       </section>
 
       <section id="gui">
-        <h2><span class="n">06</span>GUI en logo</h2>
-        <p>Het paneel is een rack-unit van 1720 × 604 punten, schaalbaar van 50 % tot 200 %, opgebouwd met de gedeelde IndieWave-paneelset zodat het naast Crest en Breakwater thuishoort. De indeling volgt de signaalrichting van links naar rechts: console kiezen, drive, karakter, analyse, stereo, uitgang.</p>
+        <h2><span class="n">06</span>Paneel en logo</h2>
+        <p>Het paneel is ontworpen als een stuk boutique-hardware: één plaat zwart geanodiseerd aluminium, gegraveerde legenda's in één ivoorkleur, gefreesde aluminium knoppen en geen kaders. Kleur wordt alleen gebruikt waar hij iets betekent: de rode wijzer van de drive-knop, de power-lamp, BYPASS en het rode gebied van de VU-meters.</p>
         <ul>
-          <li><b>De drive-knop</b> is de enige grote knop. Rond de knop staat de zoneschaal met de zeven namen en de kleur loopt van zeeschuim via amber naar vuurtorenrood. De ring licht op tot de knopstand.</li>
-          <li><b>Consoles</b> zijn witte toetsen zoals op Tide en Crest: de gekozen toets licht op. Wisselen gaat met een korte crossfade zodat je zonder klik kunt A/B'en.</li>
-          <li><b>VU-meters</b> met warme achtergrondverlichting en echte VU-ballistiek (300 ms), geijkt op de 0 VU-instelling.</li>
-          <li><b>Kleine knoppen</b> gebruiken de LED-ring uit de paneelset. Machinaal glanzende kappen houden hun lichtval vast terwijl alleen de wijzer en de kartelrand meedraaien.</li>
+          <li><b>Console</b> is een draaischakelaar met zes standen, zoals op een echte kanaalstrip. Klik op een naam of draai de knop.</li>
+          <li><b>Drive</b> is de enige grote knop. De zeven zones staan als tekst rond de schaal gegraveerd; de actieve zone licht op. Daaronder de zone, de THD en het niveau in de trap.</li>
+          <li><b>Character</b> en <b>Stereo</b> zijn kleinere knoppen van hetzelfde type. De waarde verschijnt alleen als je de knop aanraakt, zodat het paneel rustig blijft.</li>
+          <li><b>Metering</b>: twee VU-meters met echte ballistiek en een klein monochroom venster voor harmonischen, transfercurve en stereobeeld.</li>
+          <li><b>Schakelaars</b> onderin zijn gegraveerde woorden met een klein lampje erboven, geen gekleurde toetsen.</li>
+          <li>Het paneel schaalt van 50 % tot 200 % en gebruikt de gedeelde IndieWave-paneelset, zodat het in de suite past.</li>
         </ul>
         <h3>Het logo</h3>
-        <p>Een grote golf in één lijn, getekend zoals het sinus-in-ring merkje van IndieWave, met een klein surfertje laag op de golfwand. Het surfboard is het enige rode element: het accent van het hele paneel. Het schaalverschil is de boodschap: zo groot zijn de golven in Nazaré.</p>
+        <p>Een grote golf in één dunne lijn met een klein surfertje laag op de golfwand, getekend in dezelfde stijl als het IndieWave-merkje. Het schaalverschil is de boodschap. Naast het logo staat de naam in ruim gespatieerde kapitalen.</p>
         <div class="logo-row">
-          <div class="logo-tile dk"><svg viewBox="0 0 120 84" style="color:#ece6d8" role="img" aria-label="Nazaré logo, licht op donker"><use href="#nazare-mark"/></svg></div>
-          <div class="logo-tile lt"><svg viewBox="0 0 120 84" style="color:#14212a" role="img" aria-label="Nazaré logo, donker op licht"><use href="#nazare-mark"/></svg></div>
-          <div class="logo-tile sm"><svg viewBox="0 0 120 84" style="color:#ece6d8" role="img" aria-label="Nazaré logo, klein formaat"><use href="#nazare-mark"/></svg></div>
+          <div class="logo-tile dk"><svg viewBox="0 0 120 84" role="img" aria-label="Nazaré logo, licht op donker"><use href="#nazare-mark"/></svg></div>
+          <div class="logo-tile lt"><svg viewBox="0 0 120 84" role="img" aria-label="Nazaré logo, donker op licht"><use href="#nazare-mark"/></svg></div>
+          <div class="logo-tile dk sm"><svg viewBox="0 0 120 84" role="img" aria-label="Nazaré logo, klein formaat"><use href="#nazare-mark"/></svg></div>
         </div>
       </section>
 
@@ -486,6 +431,7 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
         </div>
       </section>
     </article>
+
   </div>
 </div>
 
@@ -494,7 +440,6 @@ td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space
 'use strict';
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-
 /* ------------------------------------------------------------------ models */
 const MODELS=[
  {id:'glass',name:'GLASS',desc:'Modern transformerless',H:26,e:.0008,p:4.0,neg:1.0,lf:0,lpf:40000,shelfLo:0,peak:[1000,0,.7],shelfHi:0,noise:-100},
@@ -560,42 +505,24 @@ function compute(){
   cur={D,an,P};
 }
 
-/* ------------------------------------------------------------------ knobs */
+
+/* ------------------------------------------------------------------ panel drawing helpers */
 const NS='http://www.w3.org/2000/svg';
 function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.appendChild(e);return e}
 function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
 function arcPath(cx,cy,r,a0,a1){const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1);return `M${x0} ${y0} A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1} ${y1}`}
+const INK='#e7e2d6',INK2='rgba(231,226,214,.52)',INK3='rgba(231,226,214,.34)';
+const PANEL_FONT='Jost, Futura, "Avenir Next", sans-serif';
+function knobDom(size){const k=document.createElement('div');k.className='knob';k.style.setProperty('--s',size+'px');
+  k.innerHTML='<div class="kr"></div><div class="cap"></div><div class="pt"></div>';return k}
+function fmtPct(x){return x<.001?x.toFixed(5)+' %':x<.01?x.toFixed(4)+' %':x<.1?x.toFixed(3)+' %':x<10?x.toFixed(2)+' %':x.toFixed(1)+' %'}
 
-function makeKnob(host,o){
-  // o: key,label,size,box,def,fmt,leds,bipolar,lo,hi,color
-  const wrap=document.createElement('div');wrap.className='kn';wrap.tabIndex=0;wrap.setAttribute('role','slider');wrap.setAttribute('aria-label',o.aria||o.label);
-  if(o.label){const l=document.createElement('div');l.className='lbl';l.textContent=o.label;wrap.appendChild(l)}
-  const face=document.createElement('div');face.className='face';face.style.setProperty('--box',o.box+'px');wrap.appendChild(face);
-  const svg=el('svg',{class:'ring',viewBox:`0 0 ${o.box} ${o.box}`},face);
-  const c=o.box/2, rr=o.size/2+9, leds=[];
-  for(let i=0;i<o.leds;i++){const a=-135+270*i/(o.leds-1);const [x,y]=polar(c,c,rr,a);leds.push(el('circle',{cx:x,cy:y,r:1.9,fill:'#2a3236'},svg))}
-  const knob=document.createElement('div');knob.className='knob';knob.style.setProperty('--s',o.size+'px');
-  knob.innerHTML='<div class="knurl"></div><div class="cap"></div><div class="ptr"></div>';face.appendChild(knob);
-  if(o.lo){const a=document.createElement('span');a.className='leg lo';a.textContent=o.lo;face.appendChild(a)}
-  if(o.hi){const a=document.createElement('span');a.className='leg hi';a.textContent=o.hi;face.appendChild(a)}
-  const val=document.createElement('div');val.className='val';wrap.appendChild(val);
-  host.appendChild(wrap);
-  const knurl=knob.querySelector('.knurl'),ptr=knob.querySelector('.ptr');
-  function render(){
-    const v=S[o.key],ang=-135+270*v;
-    knurl.style.transform=ptr.style.transform=`rotate(${ang}deg)`;
-    leds.forEach((L,i)=>{const p=i/(o.leds-1);const on=o.bipolar?((v>=.5&&p>=.5&&p<=v+1e-6)||(v<.5&&p<=.5&&p>=v-1e-6)):(p<=v+1e-6&&v>0.001);
-      L.setAttribute('fill',on?o.color:'#2a3236');L.setAttribute('style',on?`filter:drop-shadow(0 0 2px ${o.color})`:'')});
-    val.textContent=o.fmt(v);wrap.setAttribute('aria-valuetext',o.fmt(v));
-  }
-  bindDrag(face,wrap,o,render);render();return render;
-}
-function bindDrag(face,wrap,o,render){
-  const set=v=>{S[o.key]=clamp(v,0,1);render();onChange(o.key)};
+function bindDrag(face,wrap,o,set){
   let y0=0,v0=0,drag=false;
-  face.addEventListener('pointerdown',e=>{drag=true;y0=e.clientY;v0=S[o.key];face.setPointerCapture(e.pointerId);e.preventDefault();wrap.focus({preventScroll:true})});
-  face.addEventListener('pointermove',e=>{if(!drag)return;const k=e.shiftKey?2400:o.travel||240;set(v0+(y0-e.clientY)/k)});
-  face.addEventListener('pointerup',()=>drag=false);face.addEventListener('pointercancel',()=>drag=false);
+  face.addEventListener('pointerdown',e=>{drag=true;y0=e.clientY;v0=S[o.key];face.setPointerCapture(e.pointerId);e.preventDefault();wrap.classList.add('active');wrap.focus({preventScroll:true})});
+  face.addEventListener('pointermove',e=>{if(!drag)return;set(v0+(y0-e.clientY)/(e.shiftKey?2600:(o.travel||260)))});
+  const end=()=>{drag=false;wrap.classList.remove('active')};
+  face.addEventListener('pointerup',end);face.addEventListener('pointercancel',end);
   face.addEventListener('dblclick',()=>set(o.def));
   face.addEventListener('wheel',e=>{e.preventDefault();set(S[o.key]-Math.sign(e.deltaY)*(e.shiftKey?.002:.02))},{passive:false});
   wrap.addEventListener('keydown',e=>{const st=e.shiftKey?.002:.02;
@@ -604,167 +531,160 @@ function bindDrag(face,wrap,o,render){
     else if(e.key==='Home'){set(0);e.preventDefault()} else if(e.key==='End'){set(1);e.preventDefault()}});
 }
 
-/* hero drive knob */
+/* small machined knob with an engraved scale */
+function makeKnob(host,o){
+  const box=86,size=46,c=box/2;
+  const wrap=document.createElement('div');wrap.className='kn';wrap.tabIndex=0;wrap.setAttribute('role','slider');wrap.setAttribute('aria-label',o.label);
+  const face=document.createElement('div');face.className='face';face.style.setProperty('--box',box+'px');wrap.appendChild(face);
+  const svg=el('svg',{viewBox:`0 0 ${box} ${box}`},face);
+  for(let i=0;i<=10;i++){const a=-135+27*i,maj=i===0||i===10||i===5;const [x0,y0]=polar(c,c,29,a),[x1,y1]=polar(c,c,maj?35:33,a);
+    el('line',{x1:x0,y1:y0,x2:x1,y2:y1,stroke:maj?INK2:INK3,'stroke-width':1,'stroke-linecap':'round'},svg)}
+  const leg=(t,a,anchor)=>{const [x,y]=polar(c,c,39,a);const tx=el('text',{x,y:y+7,'text-anchor':anchor,'font-size':7,'letter-spacing':1.2,fill:INK2,'font-family':PANEL_FONT,'font-weight':500},svg);tx.textContent=t};
+  if(o.lo) leg(o.lo,-135,'middle'); if(o.hi) leg(o.hi,135,'middle');
+  if(o.bipolar){const [x,y]=polar(c,c,38,0);el('circle',{cx:x,cy:y,r:1.1,fill:INK2},svg)}
+  const k=knobDom(size);face.appendChild(k);
+  const lbl=document.createElement('div');lbl.className='lbl';lbl.textContent=o.label;wrap.appendChild(lbl);
+  const val=document.createElement('div');val.className='val';wrap.appendChild(val);
+  host.appendChild(wrap);
+  const rot=[k.querySelector('.kr'),k.querySelector('.pt')];
+  const render=()=>{const v=S[o.key];rot.forEach(r=>r.style.transform=`rotate(${-135+270*v}deg)`);val.textContent=o.fmt(v);wrap.setAttribute('aria-valuetext',o.fmt(v))};
+  bindDrag(face,wrap,o,v=>{S[o.key]=clamp(v,0,1);render();onChange(o.key)});render();return render;
+}
+
+/* the drive knob */
 let renderDrive;
 (function(){
-  const host=$('#drive');const W=364,Hh=286,cx=W/2,cy=146,KS=142;
-  const wrap=document.createElement('div');wrap.className='kn hero';wrap.tabIndex=0;wrap.setAttribute('role','slider');wrap.setAttribute('aria-label','Drive');
-  const face=document.createElement('div');face.className='face';face.style.width=W+'px';face.style.height=Hh+'px';wrap.appendChild(face);host.appendChild(wrap);
-  const svg=el('svg',{class:'ring',viewBox:`0 0 ${W} ${Hh}`},face);
-  const defs=el('defs',{},svg);const gl=el('filter',{id:'glow',x:'-50%',y:'-50%',width:'200%',height:'200%'},defs);
-  el('feGaussianBlur',{stdDeviation:'2.6',result:'b'},gl);const mg=el('feMerge',{},gl);el('feMergeNode',{in:'b'},mg);el('feMergeNode',{in:'SourceGraphic'},mg);
-  // fine ticks
-  for(let i=0;i<=70;i++){const a=-135+270*i/70, major=i%10===0;const [x0,y0]=polar(cx,cy,KS/2+14,a),[x1,y1]=polar(cx,cy,KS/2+(major?24:19),a);
-    el('line',{x1:x0,y1:y0,x2:x1,y2:y1,stroke:major?'#8797a0':'#4d5d66','stroke-width':major?1.6:1,'stroke-linecap':'round'},svg)}
-  // zone band (dim) + lit overlay
-  const R=KS/2+33, seg=270/7, dim=[],lit=[];
-  ZONES.forEach((z,i)=>{const a0=-135+seg*i+1.2,a1=-135+seg*(i+1)-1.2;
-    dim.push(el('path',{d:arcPath(cx,cy,R,a0,a1),stroke:z.c,'stroke-opacity':.16,'stroke-width':7,fill:'none'},svg));
-    lit.push(el('path',{d:arcPath(cx,cy,R,a0,a1),stroke:z.c,'stroke-width':7,fill:'none',filter:'url(#glow)'},svg));
-    const am=-135+seg*(i+.5);const [lx,ly]=polar(cx,cy,R+17,am);
-    const t=el('text',{x:lx,y:ly,'text-anchor':am<-20?'end':am>20?'start':'middle','dominant-baseline':'middle',fill:'#8797a0','font-size':8.5,'font-weight':700,'letter-spacing':'1.2','font-stretch':'118%','font-family':'Archivo, Arial, sans-serif'},svg);
-    if(Math.abs(am)<=20) t.setAttribute('text-anchor','middle');
-    t.textContent=z.n; z.label=t;
-  });
-  const knob=document.createElement('div');knob.className='knob';knob.style.setProperty('--s',KS+'px');knob.style.top=cy+'px';
-  knob.innerHTML='<div class="knurl"></div><div class="cap"></div><div class="ptr"></div>';face.appendChild(knob);
-  const knurl=knob.querySelector('.knurl'),ptr=knob.querySelector('.ptr');
-  renderDrive=function(){
-    const v=S.drive, ang=-135+270*v;knurl.style.transform=ptr.style.transform=`rotate(${ang}deg)`;
-    ZONES.forEach((z,i)=>{const a0=-135+seg*i+1.2,a1=-135+seg*(i+1)-1.2,end=Math.min(a1,ang);
-      if(end<=a0+.2){lit[i].setAttribute('d','');} else lit[i].setAttribute('d',arcPath(cx,cy,R,a0,end));
-      const zi=Math.min(6,Math.floor(v*7));z.label.setAttribute('fill',i===zi?z.c:'#6f7f88');});
-    const zi=Math.min(6,Math.floor(v*7));
-    $('#dZone').textContent=ZONES[zi].n;$('#dZone').style.color=ZONES[zi].c;
+  const host=$('#drive'),W=326,H=300,cx=W/2,cy=150,KS=150;
+  const wrap=document.createElement('div');wrap.className='kn big';wrap.tabIndex=0;wrap.setAttribute('role','slider');wrap.setAttribute('aria-label','Drive');
+  const face=document.createElement('div');face.className='face';face.style.setProperty('--box',W+'px');face.style.height=H+'px';wrap.appendChild(face);host.appendChild(wrap);
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`},face);
+  for(let i=0;i<=70;i++){const a=-135+270*i/70,maj=i%10===0;const [x0,y0]=polar(cx,cy,KS/2+9,a),[x1,y1]=polar(cx,cy,KS/2+(maj?19:14),a);
+    el('line',{x1:x0,y1:y0,x2:x1,y2:y1,stroke:maj?INK2:INK3,'stroke-width':maj?1.2:.9,'stroke-linecap':'round'},svg)}
+  const seg=270/7;
+  ZONES.forEach((z,i)=>{const am=-135+seg*(i+.5);const [lx,ly]=polar(cx,cy,KS/2+32,am);
+    const t=el('text',{x:lx,y:ly,'dominant-baseline':'middle','text-anchor':am<-15?'end':am>15?'start':'middle',fill:INK3,'font-size':8.5,'letter-spacing':2.2,'font-weight':500,'font-family':PANEL_FONT},svg);
+    t.textContent=z.n;z.label=t});
+  const k=knobDom(KS);k.style.top=cy+'px';face.appendChild(k);
+  const rot=[k.querySelector('.kr'),k.querySelector('.pt')];
+  renderDrive=()=>{const v=S.drive,zi=Math.min(6,Math.floor(v*7));rot.forEach(r=>r.style.transform=`rotate(${-135+270*v}deg)`);
+    ZONES.forEach((z,i)=>z.label.setAttribute('fill',i===zi?INK:INK3));
+    $('#dZone').textContent=ZONES[zi].n;$('#dThd').textContent=fmtPct(cur.an.thd)+' THD';
     $('#dDb').textContent=(cur.D>=0?'+':'−')+Math.abs(cur.D).toFixed(1)+' dB';
-    $('#dThd').textContent=fmtPct(cur.an.thd)+' THD';
-    wrap.setAttribute('aria-valuetext',`${ZONES[zi].n}, ${fmtPct(cur.an.thd)} THD`);
-  };
-  bindDrag(face,wrap,{key:'drive',def:3/7+.001,travel:320},()=>{});
+    wrap.setAttribute('aria-valuetext',`${ZONES[zi].n}, ${fmtPct(cur.an.thd)} THD`)};
+  bindDrag(face,wrap,{key:'drive',def:3/7+.001,travel:340},v=>{S.drive=clamp(v,0,1);onChange('drive')});
 })();
-function fmtPct(x){return x<.001?x.toFixed(5)+' %':x<.01?x.toFixed(4)+' %':x<.1?x.toFixed(3)+' %':x<10?x.toFixed(2)+' %':x.toFixed(1)+' %'}
+
+/* console rotary switch */
+let renderRot;
+(function(){
+  const host=$('#rot'),W=266,cx=133,cy=118,KS=80,ANG=[-120,-72,-24,24,72,120];
+  const svg=el('svg',{viewBox:`0 0 ${W} 250`,style:'position:absolute;inset:0;overflow:visible'},host);
+  ANG.forEach(a=>{const [x0,y0]=polar(cx,cy,KS/2+8,a),[x1,y1]=polar(cx,cy,KS/2+15,a);el('line',{x1:x0,y1:y0,x2:x1,y2:y1,stroke:INK2,'stroke-width':1.1,'stroke-linecap':'round'},svg)});
+  const btns=MODELS.map((m,i)=>{const a=ANG[i],[x,y]=polar(cx,cy,KS/2+22,a);const b=document.createElement('button');b.className='opt';b.setAttribute('role','radio');b.textContent=m.name;
+    b.style.left=x+'px';b.style.top=y+'px';b.style.transform=`translate(${a<0?'-100%':'0'},-50%)`;if(a<0)b.style.paddingRight='0';
+    b.addEventListener('click',()=>{S.model=i;onChange('model')});host.appendChild(b);return b});
+  const face=document.createElement('div');face.style.cssText=`position:absolute;left:${cx-KS/2}px;top:${cy-KS/2}px;width:${KS}px;height:${KS}px;cursor:ns-resize;touch-action:none`;
+  const k=knobDom(KS);face.appendChild(k);host.appendChild(face);
+  const rot=[k.querySelector('.kr'),k.querySelector('.pt')];
+  let y0=0,m0=0,drag=false;
+  face.addEventListener('pointerdown',e=>{drag=true;y0=e.clientY;m0=S.model;face.setPointerCapture(e.pointerId);e.preventDefault()});
+  face.addEventListener('pointermove',e=>{if(!drag)return;const m=clamp(m0+Math.round((y0-e.clientY)/34),0,5);if(m!==S.model){S.model=m;onChange('model')}});
+  face.addEventListener('pointerup',()=>drag=false);face.addEventListener('pointercancel',()=>drag=false);
+  host.addEventListener('keydown',e=>{if(['ArrowRight','ArrowUp','ArrowLeft','ArrowDown'].includes(e.key)){S.model=clamp(S.model+(e.key==='ArrowRight'||e.key==='ArrowUp'?1:-1),0,5);onChange('model');btns[S.model].focus();e.preventDefault()}});
+  renderRot=()=>{rot.forEach(r=>{r.style.transition='transform .14s cubic-bezier(.3,1.4,.5,1)';r.style.transform=`rotate(${ANG[S.model]}deg)`});
+    btns.forEach((b,i)=>{b.setAttribute('aria-checked',i===S.model);b.tabIndex=i===S.model?0:-1});
+    const m=MODELS[S.model];$('#cdesc').innerHTML=`<b>${m.desc.toUpperCase()}</b>HEADROOM +${m.H} dB`};
+})();
 
 const kfmt={
-  harm:v=>Math.abs(v-.5)<.02?'MODEL':(v<.5?'EVEN '+Math.round((.5-v)*200)+'%':'ODD '+Math.round((v-.5)*200)+'%'),
+  harm:v=>Math.abs(v-.5)<.02?'MODEL':(v<.5?'EVEN '+Math.round((.5-v)*200)+' %':'ODD '+Math.round((v-.5)*200)+' %'),
   pct:v=>Math.round(v*100)+' %',
-  noise:v=>v<.005?'OFF':((MODELS[S.model].noise-12+24*v)>=0?'+':'')+(MODELS[S.model].noise-12+24*v).toFixed(0)+' dBFS',
+  noise:v=>v<.005?'OFF':(MODELS[S.model].noise-12+24*v).toFixed(0)+' dBFS',
   xt:v=>v<.005?'OFF':'−'+(90-60*v).toFixed(0)+' dB',
   out:v=>{const d=(v-.5)*24;return (d>=0?'+':'−')+Math.abs(d).toFixed(1)+' dB'},
 };
 const renders=[];
-const ch=$('#charKnobs'),st=$('#stKnobs'),ok=$('#outKnobs');
-const small={size:56,box:84,leds:21};
-renders.push(makeKnob(ch,{...small,key:'harm',label:'HARMONICS',def:.5,bipolar:true,lo:'EVEN',hi:'ODD',color:'#8fd6c9',fmt:kfmt.harm}));
-renders.push(makeKnob(ch,{...small,key:'age',label:'AGE',def:.2,lo:'NEW',hi:'OLD',color:'#f0b240',fmt:kfmt.pct}));
-renders.push(makeKnob(ch,{...small,key:'noise',label:'NOISE',def:.3,lo:'OFF',hi:'MAX',color:'#f0b240',fmt:kfmt.noise}));
-renders.push(makeKnob(st,{...small,key:'tol',label:'TOLERANCE',def:.45,lo:'0',hi:'MAX',color:'#8fd6c9',fmt:kfmt.pct}));
-renders.push(makeKnob(st,{...small,key:'xt',label:'CROSSTALK',def:.35,lo:'OFF',hi:'−30',color:'#8fd6c9',fmt:kfmt.xt}));
-renders.push(makeKnob(ok,{...small,key:'out',label:'OUTPUT',def:.5,bipolar:true,lo:'−12',hi:'+12',color:'#ece6d8',fmt:kfmt.out}));
-renders.push(makeKnob(ok,{...small,key:'mix',label:'MIX',def:1,lo:'DRY',hi:'WET',color:'#ece6d8',fmt:kfmt.pct}));
-
-/* console keys */
-const ck=$('#ckeys');
-MODELS.forEach((m,i)=>{const b=document.createElement('button');b.className='ckey';b.setAttribute('role','radio');
-  b.innerHTML=`<span class="cap">${m.name}</span><span class="d">${m.desc}</span>`;
-  b.addEventListener('click',()=>{S.model=i;onChange('model')});ck.appendChild(b)});
-function renderConsoles(){[...ck.children].forEach((b,i)=>{b.setAttribute('aria-checked',i===S.model);b.tabIndex=i===S.model?0:-1})}
-ck.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){S.model=(S.model+(e.key==='ArrowRight'?1:5))%6;onChange('model');ck.children[S.model].focus();e.preventDefault()}});
-
-/* footer key groups */
-function keyGroup(name,items,key){const g=document.querySelector(`[data-group="${name}"]`);g.setAttribute('role','radiogroup');
-  items.forEach(([lab,val])=>{const b=document.createElement('button');b.className='k';b.textContent=lab;b.setAttribute('role','radio');
-    b.addEventListener('click',()=>{S[key]=val;onChange(key)});b.dataset.val=String(val);g.appendChild(b)});
-  return ()=>[...g.children].forEach(b=>b.setAttribute('aria-checked',b.dataset.val===String(S[key])));}
-const rk=[keyGroup('os',[['1×','none'],['2×','2x'],['4×','4x'],['8×','8x']],'os'),
-          keyGroup('cal',[['−24','-24'],['−18','-18'],['−14','-14'],['−12','-12']],'cal'),
-          keyGroup('mode',[['CHANNEL','channel'],['BUS','bus']],'mode')];
-S.cal='-18';
-function toggle(id,key){const b=$(id);b.addEventListener('click',()=>{S[key]=!S[key];onChange(key)});return ()=>b.setAttribute('aria-pressed',S[key])}
-rk.push(toggle('#kMatch','matched'),toggle('#kAuto','auto'),toggle('#kByp','bypass'));
+renders.push(makeKnob($('#gChar'),{key:'harm',label:'HARMONICS',def:.5,bipolar:true,lo:'EVEN',hi:'ODD',fmt:kfmt.harm}));
+renders.push(makeKnob($('#gChar'),{key:'age',label:'AGE',def:.2,lo:'NEW',hi:'OLD',fmt:kfmt.pct}));
+renders.push(makeKnob($('#gChar'),{key:'noise',label:'NOISE',def:.3,lo:'OFF',hi:'MAX',fmt:kfmt.noise}));
+renders.push(makeKnob($('#gSt'),{key:'tol',label:'TOLERANCE',def:.45,lo:'0',hi:'MAX',fmt:kfmt.pct}));
+renders.push(makeKnob($('#gSt'),{key:'xt',label:'CROSSTALK',def:.35,lo:'OFF',hi:'−30',fmt:kfmt.xt}));
+{const c=document.createElement('div');c.className='kn';c.innerHTML=`<div class="chan"><div class="w"><button id="chDown" aria-label="Vorig kanaal">‹</button><output id="chOut">07</output><button id="chUp" aria-label="Volgend kanaal">›</button></div></div><div class="lbl">CHANNEL</div>`;$('#gSt').appendChild(c)}
+renders.push(makeKnob($('#gOut'),{key:'out',label:'LEVEL',def:.5,bipolar:true,lo:'−12',hi:'+12',fmt:kfmt.out}));
+renders.push(makeKnob($('#gOut'),{key:'mix',label:'MIX',def:1,lo:'DRY',hi:'WET',fmt:kfmt.pct}));
 $('#chDown').addEventListener('click',()=>{S.ch=S.ch<=1?48:S.ch-1;onChange('ch')});
 $('#chUp').addEventListener('click',()=>{S.ch=S.ch>=48?1:S.ch+1;onChange('ch')});
 
+/* option groups */
+function optGroup(name,items,key){const g=document.querySelector(`[data-group="${name}"]`);g.setAttribute('role','radiogroup');
+  items.forEach(([lab,val])=>{const b=document.createElement('button');b.className='o';b.textContent=lab;b.setAttribute('role','radio');b.dataset.val=String(val);
+    b.addEventListener('click',()=>{S[key]=val;onChange(key)});g.appendChild(b)});
+  return ()=>[...g.children].forEach(b=>b.setAttribute('aria-checked',b.dataset.val===String(S[key])))}
+S.cal='-18';
+const rk=[optGroup('os',[['1×','none'],['2×','2x'],['4×','4x'],['8×','8x']],'os'),optGroup('cal',[['−24','-24'],['−18','-18'],['−14','-14'],['−12','-12']],'cal'),optGroup('mode',[['CHANNEL','channel'],['BUS','bus']],'mode')];
+function toggle(id,key){const b=$(id);b.addEventListener('click',()=>{S[key]=!S[key];onChange(key)});return ()=>b.setAttribute('aria-pressed',S[key])}
+rk.push(toggle('#kMatch','matched'),toggle('#kAuto','auto'),toggle('#kByp','bypass'));
+
 /* zone table in the proposal */
 $('#zoneRows').innerHTML=ZONES.map((z,i)=>{const a=Math.pow(10,THD_LO+i/7*(THD_HI-THD_LO)),b=Math.pow(10,THD_LO+(i+1)/7*(THD_HI-THD_LO));
-  return `<tr><td class="spot"><span class="zbar" style="background:${z.c}"></span>${z.n}</td><td class="num">${fmtPct(a).replace(' %','')} – ${fmtPct(b)}</td><td>${z.txt}</td></tr>`}).join('');
+  return `<tr><td class="spot">${z.n}</td><td class="num">${fmtPct(a).replace(' %','')} – ${fmtPct(b)}</td><td>${z.txt}</td></tr>`}).join('');
 
-/* tabs */
-document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{S.view=t.dataset.v;document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===t));drawScreen()}));
+document.querySelectorAll('.view').forEach(t=>t.addEventListener('click',()=>{S.view=t.dataset.v;document.querySelectorAll('.view').forEach(x=>x.setAttribute('aria-selected',x===t));drawScreen()}));
 
-/* ------------------------------------------------------------------ screen */
-const cv=$('#scr'),cx2=cv.getContext('2d');
-function sizeCanvas(){const r=cv.getBoundingClientRect(),d=Math.max(2,window.devicePixelRatio||1);cv.width=428*d;cv.height=246*d;cx2.setTransform(d,0,0,d,0,0)}
-const C={grid:'rgba(143,214,201,.08)',axis:'#4d5d66',txt:'#6f7f88',foam:'#8fd6c9',amber:'#f0b240',red:'#e5432f',ink:'#ece6d8'};
-function drawScreen(){
-  const g=cx2,W=428,H=246;g.clearRect(0,0,W,H);g.font='600 9px "IBM Plex Mono", monospace';
-  if(S.view==='harm') drawHarm(g,W,H); else if(S.view==='xfer') drawXfer(g,W,H); else drawImg(g,W,H);
-}
-function drawHarm(g,W,H){
-  const L=40,R=W-14,T=30,B=H-26,dbMin=-140;
-  const y=db=>T+(B-T)*(db/dbMin);
-  g.strokeStyle=C.grid;g.lineWidth=1;g.fillStyle=C.txt;g.textAlign='right';g.textBaseline='middle';
-  for(let d=0;d>=dbMin;d-=20){g.beginPath();g.moveTo(L,y(d)+.5);g.lineTo(R,y(d)+.5);g.stroke();g.fillText(d===0?'0':d,L-6,y(d))}
-  g.save();g.translate(11,(T+B)/2);g.rotate(-Math.PI/2);g.textAlign='center';g.fillText('dBc',0,0);g.restore();
-  const h=cur.an.h, n=9, bw=(R-L)/n;
-  for(let k=2;k<=10;k++){
-    const db=Math.max(dbMin,20*Math.log10(h[k-1]/h[0]+1e-30)), x=L+bw*(k-2)+bw*.2, w=bw*.6, col=k%2===0?C.foam:C.amber;
-    const grd=g.createLinearGradient(0,y(db),0,B);grd.addColorStop(0,col);grd.addColorStop(1,col+'22');
-    g.fillStyle=grd;g.fillRect(x,y(db),w,B-y(db));
-    g.fillStyle=col;g.fillRect(x,y(db),w,2);
-    g.fillStyle=C.txt;g.textAlign='center';g.textBaseline='top';g.fillText('H'+k,x+w/2,B+7);
-    if(db>dbMin+6){g.fillStyle=C.ink;g.textBaseline='bottom';g.fillText(db.toFixed(0),x+w/2,y(db)-3)}
-  }
-  g.textAlign='left';g.textBaseline='top';g.fillStyle=C.foam;g.fillText('■ EVEN',L,10);g.fillStyle=C.amber;g.fillText('■ ODD',L+56,10);
-  g.textAlign='right';g.fillStyle=C.ink;g.font='600 12px "IBM Plex Mono", monospace';g.fillText('1 kHz · 0 VU · '+MODELS[S.model].name,R,8);
-}
-function drawXfer(g,W,H){
-  const P=cur.P,A=cur.an.A,U=Math.max(1.6,A*1.5),cxm=W/2,cym=H/2,sc=(H/2-18)/U;
-  g.strokeStyle=C.grid;g.lineWidth=1;
-  for(let i=-4;i<=4;i++){const v=i*U/4;g.beginPath();g.moveTo(cxm+v*sc,10);g.lineTo(cxm+v*sc,H-10);g.stroke();g.beginPath();g.moveTo(cxm-U*sc*1.35,cym-v*sc);g.lineTo(cxm+U*sc*1.35,cym-v*sc);g.stroke()}
-  // operating window
-  g.fillStyle='rgba(240,178,64,.08)';g.fillRect(cxm-A*sc,10,2*A*sc,H-20);
-  g.strokeStyle='rgba(240,178,64,.5)';g.setLineDash([3,4]);g.beginPath();g.moveTo(cxm-A*sc,10);g.lineTo(cxm-A*sc,H-10);g.moveTo(cxm+A*sc,10);g.lineTo(cxm+A*sc,H-10);g.stroke();g.setLineDash([]);
-  // clip level
-  g.strokeStyle='rgba(229,67,47,.45)';g.setLineDash([2,3]);g.beginPath();g.moveTo(cxm-U*sc*1.35,cym-sc);g.lineTo(cxm+U*sc*1.35,cym-sc);g.moveTo(cxm-U*sc*1.35,cym+sc);g.lineTo(cxm+U*sc*1.35,cym+sc);g.stroke();g.setLineDash([]);
-  g.strokeStyle=C.axis;g.beginPath();g.moveTo(cxm-U*sc,cym+U*sc);g.lineTo(cxm+U*sc,cym-U*sc);g.stroke();
-  g.strokeStyle=C.foam;g.lineWidth=2.2;g.beginPath();
-  for(let i=0;i<=300;i++){const u=-U+2*U*i/300,v=shape(u,P);const X=cxm+u*sc,Y=cym-v*sc;i?g.lineTo(X,Y):g.moveTo(X,Y)}g.stroke();
-  g.fillStyle=C.txt;g.textAlign='left';g.textBaseline='top';g.fillText('IN → OUT · 1.0 = CLIP',10,10);
-  g.fillStyle=C.amber;g.fillText('▮ SIGNAAL OP 0 VU',10,24);g.fillStyle=C.red;g.fillText('┄ CLIP',10,38);
-}
+/* ------------------------------------------------------------------ analysis window (monochrome) */
+const cv=$('#scr'),g2=cv.getContext('2d'),SW=280,SH=120;
+function sizeCanvas(){const d=Math.max(2,window.devicePixelRatio||1);cv.width=SW*d;cv.height=SH*d;g2.setTransform(d,0,0,d,0,0)}
 const gonio={L:new Float32Array(1024),R:new Float32Array(1024),has:false,corr:null};
-function drawImg(g,W,H){
-  const cxm=W/2,cym=H/2+6,rad=H/2-22;
-  g.strokeStyle=C.grid;g.lineWidth=1;
-  g.beginPath();g.arc(cxm,cym,rad,Math.PI,2*Math.PI);g.stroke();
-  g.beginPath();g.moveTo(cxm-rad,cym);g.lineTo(cxm+rad,cym);g.moveTo(cxm,cym);g.lineTo(cxm,cym-rad);
-  g.moveTo(cxm,cym);g.lineTo(cxm-rad*.707,cym-rad*.707);g.moveTo(cxm,cym);g.lineTo(cxm+rad*.707,cym-rad*.707);g.stroke();
-  g.fillStyle=C.txt;g.textAlign='center';g.textBaseline='bottom';g.fillText('M',cxm,cym-rad-3);g.fillText('L',cxm-rad*.72-6,cym-rad*.72);g.fillText('R',cxm+rad*.72+6,cym-rad*.72);
-  if(!gonio.has){g.fillStyle=C.txt;g.textBaseline='middle';g.fillText('Start de demo-loop of laad audio om het stereobeeld te zien',cxm,cym+12);return}
+function drawScreen(){const g=g2;g.clearRect(0,0,SW,SH);g.font='400 8px "IBM Plex Mono", monospace';g.lineWidth=1;
+  if(S.view==='harm') drawHarm(g); else if(S.view==='xfer') drawXfer(g); else drawImg(g)}
+function drawHarm(g){
+  const L=30,R=SW-12,T=12,B=SH-18,dbMin=-140,y=db=>T+(B-T)*(db/dbMin);
+  g.textAlign='right';g.textBaseline='middle';
+  for(let d=0;d>=dbMin;d-=35){g.strokeStyle='rgba(231,226,214,.06)';g.beginPath();g.moveTo(L,Math.round(y(d))+.5);g.lineTo(R,Math.round(y(d))+.5);g.stroke();g.fillStyle=INK3;g.fillText(d,L-6,y(d))}
+  const h=cur.an.h,bw=(R-L)/9;
+  for(let k=2;k<=10;k++){const db=Math.max(dbMin,20*Math.log10(h[k-1]/h[0]+1e-30)),x=Math.round(L+bw*(k-1.5))+.5;
+    g.strokeStyle=INK2;g.beginPath();g.moveTo(x,B);g.lineTo(x,y(db));g.stroke();
+    g.fillStyle=INK;if(k%2===0){g.fillRect(x-2.5,y(db)-2.5,5,5)}else{g.strokeStyle=INK;g.strokeRect(x-2,y(db)-2,4,4)}
+    g.fillStyle=INK3;g.textAlign='center';g.textBaseline='top';g.fillText(k,x,B+5)}
+  g.textAlign='right';g.textBaseline='top';g.fillStyle=INK2;g.fillText('THD '+fmtPct(cur.an.thd),R,4);
+}
+function drawXfer(g){
+  const P=cur.P,A=cur.an.A,U=Math.max(1.6,A*1.5),cx=SW/2,cy=SH/2,sc=(SH/2-10)/U;
+  g.strokeStyle='rgba(231,226,214,.06)';g.beginPath();g.moveTo(cx-U*sc*2,cy+.5);g.lineTo(cx+U*sc*2,cy+.5);g.moveTo(cx+.5,4);g.lineTo(cx+.5,SH-4);g.stroke();
+  g.fillStyle='rgba(231,226,214,.05)';g.fillRect(cx-A*sc,4,2*A*sc,SH-8);
+  g.setLineDash([2,3]);g.strokeStyle=INK3;g.beginPath();g.moveTo(cx-U*sc*2,cy-sc);g.lineTo(cx+U*sc*2,cy-sc);g.moveTo(cx-U*sc*2,cy+sc);g.lineTo(cx+U*sc*2,cy+sc);g.stroke();g.setLineDash([]);
+  g.strokeStyle=INK;g.lineWidth=1.4;g.beginPath();
+  for(let i=0;i<=240;i++){const u=-U*1.9+3.8*U*i/240,v=shape(u,P);const X=cx+u*sc,Y=cy-v*sc;i?g.lineTo(X,Y):g.moveTo(X,Y)}g.stroke();
+  g.fillStyle=INK3;g.textAlign='left';g.textBaseline='top';g.fillText('IN → OUT',8,4);g.textAlign='right';g.fillText('CLIP ┄',SW-8,cy-sc-12);
+}
+function drawImg(g){
+  const cx=SW/2,cy=SH-10,rad=SH-22;
+  g.strokeStyle='rgba(231,226,214,.08)';g.beginPath();g.arc(cx,cy,rad,Math.PI,2*Math.PI);g.moveTo(cx,cy);g.lineTo(cx,cy-rad);
+  g.moveTo(cx,cy);g.lineTo(cx-rad*.707,cy-rad*.707);g.moveTo(cx,cy);g.lineTo(cx+rad*.707,cy-rad*.707);g.stroke();
+  g.fillStyle=INK3;g.textAlign='center';g.textBaseline='bottom';g.fillText('L',cx-rad*.74-4,cy-rad*.74);g.fillText('R',cx+rad*.74+4,cy-rad*.74);
+  if(!gonio.has){g.textBaseline='middle';g.fillText('Speel audio af om het beeld te zien',cx,cy-rad*.35);return}
   let pk=1e-4;for(let i=0;i<1024;i++)pk=Math.max(pk,Math.abs(gonio.L[i]),Math.abs(gonio.R[i]));const s=rad*.9/Math.max(pk,.05);
-  g.fillStyle='rgba(143,214,201,.55)';
-  for(let i=0;i<1024;i++){const l=gonio.L[i],r=gonio.R[i];const m=(l+r)*.7071,sd=(r-l)*.7071;const X=cxm+sd*s,Y=cym-Math.abs(m)*s;g.fillRect(X,Y,1.4,1.4)}
+  g.fillStyle='rgba(231,226,214,.55)';
+  for(let i=0;i<1024;i++){const l=gonio.L[i],r=gonio.R[i];g.fillRect(cx+(r-l)*.7071*s,cy-Math.abs(l+r)*.7071*s,1.1,1.1)}
 }
 
 /* ------------------------------------------------------------------ VU meters */
-function buildVU(svg,label){
-  const d=el('defs',{},svg);const lg=el('radialGradient',{id:'vub'+label,cx:'50%',cy:'110%',r:'90%'},d);
-  el('stop',{offset:'0',['stop-color']:'#fff4d6'},lg);el('stop',{offset:'.7',['stop-color']:'#f1dfb0'},lg);el('stop',{offset:'1',['stop-color']:'#c9b480'},lg);
-  el('rect',{x:0,y:0,width:110,height:104,fill:`url(#vub${label})`},svg);
-  const cx=55,cy=112,r=78;const vuDeg=v=>{const t=(v+20)/23;return -48+96*Math.pow(clamp(t,0,1.15),1.35)};
-  el('path',{d:arcPath(cx,cy,r,vuDeg(-20),vuDeg(0)),stroke:'#2b2418','stroke-width':1.1,fill:'none'},svg);
-  el('path',{d:arcPath(cx,cy,r,vuDeg(0),vuDeg(3)),stroke:'#c8301f','stroke-width':4,fill:'none'},svg);
-  [-20,-10,-7,-5,-3,-2,-1,0,1,2,3].forEach(v=>{const a=vuDeg(v);const [x0,y0]=polar(cx,cy,r,a),[x1,y1]=polar(cx,cy,r+(v%5===0||v>=0?6:4),a);
-    el('line',{x1:x0,y1:y0,x2:x1,y2:y1,stroke:v>0?'#c8301f':'#2b2418','stroke-width':1},svg);
-    if([-20,-10,-5,-3,0,3].includes(v)){const [tx,ty]=polar(cx,cy,r+13,a);const t=el('text',{x:tx,y:ty,'text-anchor':'middle','dominant-baseline':'middle','font-size':7.5,'font-family':'Archivo, Arial, sans-serif','font-weight':600,fill:v>0?'#c8301f':'#2b2418'},svg);t.textContent=v>0?'+'+v:v}});
-  const t=el('text',{x:55,y:74,'text-anchor':'middle','font-size':11,'font-family':'Archivo, Arial, sans-serif','font-weight':700,fill:'#2b2418','letter-spacing':'1'},svg);t.textContent='VU';
-  const t2=el('text',{x:10,y:88,'font-size':7,'font-family':'Archivo, Arial, sans-serif','font-weight':700,fill:'#6e6146','letter-spacing':'1'},svg);t2.textContent=label;
-  const needle=el('line',{x1:cx,y1:cy,x2:cx,y2:cy-r-4,stroke:'#151210','stroke-width':1.2,'stroke-linecap':'round'},svg);
-  el('rect',{x:0,y:92,width:110,height:12,fill:'#1a1712'},svg);
-  el('rect',{x:0,y:0,width:110,height:46,fill:'rgba(255,255,255,.12)'},svg);
-  return v=>needle.setAttribute('transform',`rotate(${vuDeg(v)} ${cx} ${cy})`);
+function buildVU(svg){
+  el('rect',{x:0,y:0,width:122,height:90,fill:'#e6e0d0'},svg);
+  const gr=el('linearGradient',{id:'vv'+svg.id,x1:0,y1:0,x2:0,y2:1},el('defs',{},svg));el('stop',{offset:0,'stop-color':'#000','stop-opacity':.10},gr);el('stop',{offset:.4,'stop-color':'#000','stop-opacity':0},gr);
+  const cx=61,cy=108,r=82,vd=v=>{const t=(v+20)/23;return -46+92*Math.pow(clamp(t,0,1.12),1.35)};
+  el('path',{d:arcPath(cx,cy,r,vd(-20),vd(0)),stroke:'#1b1a17','stroke-width':.8,fill:'none'},svg);
+  el('path',{d:arcPath(cx,cy,r+1.5,vd(0),vd(3)),stroke:'#a8382b','stroke-width':3,fill:'none'},svg);
+  [-20,-10,-7,-5,-3,-2,-1,0,1,2,3].forEach(v=>{const a=vd(v),[x0,y0]=polar(cx,cy,r,a),[x1,y1]=polar(cx,cy,r+(v%5===0||v===-3?6:4),a);
+    el('line',{x1:x0,y1:y0,x2:x1,y2:y1,stroke:v>0?'#a8382b':'#1b1a17','stroke-width':.8},svg);
+    if([-20,-10,-5,-3,0,3].includes(v)){const [tx,ty]=polar(cx,cy,r+12,a);const t=el('text',{x:tx,y:ty,'text-anchor':'middle','dominant-baseline':'middle','font-size':6.5,'font-family':PANEL_FONT,fill:v>0?'#a8382b':'#1b1a17'},svg);t.textContent=v>0?'+'+v:Math.abs(v)}});
+  const t=el('text',{x:cx,y:62,'text-anchor':'middle','font-size':9,'letter-spacing':2,'font-family':PANEL_FONT,'font-weight':500,fill:'#1b1a17'},svg);t.textContent='VU';
+  const n=el('line',{x1:cx,y1:cy,x2:cx,y2:cy-r-3,stroke:'#121110','stroke-width':.9,'stroke-linecap':'round'},svg);
+  el('rect',{x:0,y:78,width:122,height:12,fill:'#0d0d0c'},svg);
+  el('rect',{x:0,y:0,width:122,height:90,fill:`url(#vv${svg.id})`},svg);
+  return v=>n.setAttribute('transform',`rotate(${vd(v)} ${cx} ${cy})`);
 }
-const vuL=buildVU($('#vuL'),'L'),vuR=buildVU($('#vuR'),'R');
+const vuL=buildVU($('#vuL')),vuR=buildVU($('#vuR'));
 const vu={L:-22,R:-22};vuL(-22);vuR(-22);
 
 /* ------------------------------------------------------------------ audio */
@@ -848,17 +768,17 @@ function startSynth(){
     next+=six;step++}},25);
   return {stop(){clearInterval(timer);bus.disconnect()}};
 }
-function stopAll(){if(synth){synth.stop();synth=null}if(src){try{src.stop()}catch(e){}src.disconnect();src=null}playing=false;$('#play').textContent='▶ Speel demo-loop'}
+function stopAll(){if(synth){synth.stop();synth=null}if(src){try{src.stop()}catch(e){}src.disconnect();src=null}playing=false;$('#play').textContent='Speel demo-loop'}
 $('#play').addEventListener('click',async()=>{
   if(!ac) buildGraph(); if(ac.state==='suspended') await ac.resume();
   if(playing){stopAll();$('#tstat').textContent='Gestopt.';return}
-  synth=startSynth();playing=true;$('#play').textContent='■ Stop';$('#tstat').textContent='Demo-loop speelt. Draai aan DRIVE en wissel van console; zet BYPASS aan om te vergelijken.';
+  synth=startSynth();playing=true;$('#play').textContent='Stop';$('#tstat').textContent='Demo-loop speelt. Draai aan DRIVE en wissel van console; zet BYPASS aan om te vergelijken.';
 });
 $('#loadBtn').addEventListener('click',()=>$('#file').click());
 $('#file').addEventListener('change',async e=>{const fl=e.target.files[0];if(!fl)return;
   if(!ac) buildGraph(); if(ac.state==='suspended') await ac.resume();
   try{const buf=await ac.decodeAudioData(await fl.arrayBuffer());stopAll();src=ac.createBufferSource();src.buffer=buf;src.loop=true;src.connect(G.input);src.start();playing=true;
-    $('#play').textContent='■ Stop';$('#tstat').textContent=`Speelt "${fl.name}" in een lus. Zorg dat 0 VU = past bij het niveau van je bestand.`}
+    $('#play').textContent='Stop';$('#tstat').textContent=`Speelt "${fl.name}" in een lus. Zorg dat 0 VU = past bij het niveau van je bestand.`}
   catch(err){$('#tstat').textContent='Dit bestand kan de browser niet openen. Probeer WAV, MP3 of AAC.'}
   e.target.value='';
 });
@@ -885,32 +805,29 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 
+
 /* ------------------------------------------------------------------ state changes */
 function onChange(key){
   if(['drive','harm','age','model','mode','tol','matched','ch'].includes(key)) compute();
   renderAll();
-  if(G){ if(!curvePending){curvePending=true;requestAnimationFrame(()=>{curvePending=false;updateAudio()})} }
+  if(G&&!curvePending){curvePending=true;requestAnimationFrame(()=>{curvePending=false;updateAudio()})}
 }
 function renderAll(){
-  renderDrive();renders.forEach(r=>r());renderConsoles();rk.forEach(r=>r());
+  renderDrive();renderRot();renders.forEach(r=>r());rk.forEach(r=>r());
   $('#chOut').textContent=String(S.ch).padStart(2,'0');
-  const h=cur.an.h, d=k=>(20*Math.log10(h[k-1]/h[0]+1e-30));
-  $('#rThd').textContent=fmtPct(cur.an.thd);$('#rH2').textContent=Math.max(-160,d(2)).toFixed(0)+' dB';$('#rH3').textContent=Math.max(-160,d(3)).toFixed(0)+' dB';
-  $('#rHead').textContent=(cur.P.H-cur.D>=0?'':'−')+Math.abs(cur.P.H-cur.D).toFixed(1)+' dB';
+  const h=cur.an.h,d=k=>Math.max(-160,20*Math.log10(h[k-1]/h[0]+1e-30)).toFixed(0);
+  $('#rH2').textContent=d(2);$('#rH3').textContent=d(3);$('#rHead').textContent=(cur.P.H-cur.D).toFixed(1);
   if(!gonio.has) $('#rCorr').textContent='—';
   $('#powerLed').classList.toggle('on',!S.bypass);
-  const lat={'none':0,'2x':'≈ 6','4x':'≈ 12','8x':'≈ 12'}[S.os];
-  $('#status').innerHTML=`${ac?(ac.sampleRate/1000).toFixed(1):'48.0'} kHz · ${S.os==='none'?'1×':S.os.replace('x','×')} · LATENCY ${lat} smp<br>v0.1.0 CONCEPT`;
+  const lat={'none':'0','2x':'6','4x':'12','8x':'12'}[S.os];
+  $('#status').innerHTML=`${ac?(ac.sampleRate/1000).toFixed(1):'48.0'} kHz · LATENCY ${lat} smp<br>v0.2.0`;
   drawScreen();
 }
-
-/* ------------------------------------------------------------------ fit stage */
 const stage=$('#stage'),box=$('#stageBox'),outer=$('#stageOuter');
-function fit(){const w=outer.clientWidth;const s=Math.max(.48,Math.min(1,w/1720));stage.style.transform=`scale(${s})`;box.style.width=(1720*s)+'px';box.style.height=(604*s)+'px'}
+function fit(){const w=outer.clientWidth,s=Math.max(.48,Math.min(1,w/1720));stage.style.transform=`scale(${s})`;box.style.width=(1720*s)+'px';box.style.height=(560*s)+'px'}
 window.addEventListener('resize',fit);fit();
-
 S.drive=3/7+.06;
 compute();sizeCanvas();renderAll();
-if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{drawScreen()});
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>drawScreen());
 })();
 </script>

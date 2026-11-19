@@ -364,4 +364,58 @@ void Face::place (juce::Component& component, const juce::String& id)
         }
 }
 
+// ---------------------------------------------------------------------------
+
+Follow::Follow (juce::Slider& knob, juce::RangedAudioParameter* enableParameter,
+                std::vector<std::pair<juce::RangedAudioParameter*, float>> targets,
+                std::function<bool()> condition)
+    : source (knob),
+      enable (enableParameter),
+      followers (std::move (targets)),
+      extraCondition (std::move (condition))
+{
+    source.onDragStart   = [this] { begin(); };
+    source.onValueChange = [this] { update(); };
+    source.onDragEnd     = [this] { end(); };
+}
+
+void Follow::begin()
+{
+    dragging = enable != nullptr && enable->getValue() >= 0.5f && (! extraCondition || extraCondition());
+    if (! dragging)
+        return;
+
+    sourceStart = (float) source.getValue();
+    followerStart.clear();
+    for (auto& [parameter, sign] : followers)
+    {
+        followerStart.push_back (parameter->convertFrom0to1 (parameter->getValue()));
+        parameter->beginChangeGesture();
+    }
+}
+
+void Follow::update()
+{
+    if (! dragging)
+        return;
+
+    const auto travel = (float) source.getValue() - sourceStart;
+    for (size_t i = 0; i < followers.size(); ++i)
+    {
+        auto* parameter = followers[i].first;
+        const auto target = parameter->getNormalisableRange().snapToLegalValue (followerStart[i] + followers[i].second * travel);
+        parameter->setValueNotifyingHost (parameter->convertTo0to1 (target));
+    }
+}
+
+void Follow::end()
+{
+    if (! dragging)
+        return;
+
+    for (auto& [parameter, sign] : followers)
+        parameter->endChangeGesture();
+    dragging = false;
+}
+
 } // namespace indiewave::ui::rendered

@@ -45,6 +45,8 @@ private:
     Face folded, opened;
     Extras foldedExtras, openExtras;
 
+    std::vector<std::unique_ptr<indiewave::ui::rendered::Follow>> links;
+
     bool open { false }, shownWant { false };
     int shownMode { -1 };
 

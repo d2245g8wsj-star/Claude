@@ -53,6 +53,35 @@ BeaconEditor::BeaconEditor (BeaconProcessor& p)
     for (auto* extras : { &foldedExtras, &openExtras })
         extras->split.onClick = [this] { splitClicked(); };
 
+    // The ganged controls, on every face that shows them.
+    auto& apvts = p.apvts;
+    auto* ironParameter = apvts.getParameter (pid::iron);
+    for (auto* face : { &folded, &opened })
+    {
+        for (const juce::String prefix : { "", "side_" })
+        {
+            const auto id = [&prefix] (const char* name) { return prefix + name; };
+            auto* dynLink = apvts.getParameter (id (pid::dynLink));
+
+            // Dynamic link: input and threshold move together, output the
+            // other way, so the drive changes and the level does not.
+            if (auto* input = face->get<juce::Slider> (id (pid::input)))
+                links.push_back (std::make_unique<rendered::Follow> (*input, dynLink,
+                    std::vector<std::pair<juce::RangedAudioParameter*, float>> {
+                        { apvts.getParameter (id (pid::threshold)), 1.0f }, { apvts.getParameter (id (pid::output)), -1.0f } }));
+            if (auto* threshold = face->get<juce::Slider> (id (pid::threshold)))
+                links.push_back (std::make_unique<rendered::Follow> (*threshold, dynLink,
+                    std::vector<std::pair<juce::RangedAudioParameter*, float>> {
+                        { apvts.getParameter (id (pid::input)), 1.0f }, { apvts.getParameter (id (pid::output)), -1.0f } }));
+        }
+
+        // Iron link: output and pad move together while the iron is in.
+        if (auto* output = face->get<juce::Slider> (pid::output))
+            links.push_back (std::make_unique<rendered::Follow> (*output, apvts.getParameter (pid::ironLink),
+                std::vector<std::pair<juce::RangedAudioParameter*, float>> { { apvts.getParameter (pid::ironPad), 1.0f } },
+                [ironParameter] { return ironParameter->getValue() >= 0.5f; }));
+    }
+
     setResizable (true, true);
     timerCallback();
 

@@ -176,4 +176,32 @@ private:
     std::map<juce::String, juce::Component*> byId;
 };
 
+/**
+    Moves other parameters along while a knob is dragged, by the same travel
+    (times a sign), when a link switch is on: the hardware's ganged controls,
+    such as a dynamic link or an iron link. Only the drag moves them, so
+    automation and recalls stay independent.
+*/
+class Follow
+{
+public:
+    Follow (juce::Slider& source, juce::RangedAudioParameter* enable,
+            std::vector<std::pair<juce::RangedAudioParameter*, float>> followers,
+            std::function<bool()> extraCondition = {});
+
+private:
+    void begin();
+    void update();
+    void end();
+
+    juce::Slider& source;
+    juce::RangedAudioParameter* enable;
+    std::vector<std::pair<juce::RangedAudioParameter*, float>> followers;
+    std::function<bool()> extraCondition;
+
+    bool dragging { false };
+    float sourceStart { 0.0f };
+    std::vector<float> followerStart;
+};
+
 } // namespace indiewave::ui::rendered

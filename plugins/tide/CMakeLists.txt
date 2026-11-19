@@ -52,16 +52,13 @@ juce_add_plugin(Tide
 
 target_sources(Tide PRIVATE
     src/PluginProcessor.cpp
-    src/PluginEditor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Rendered.cpp)
+    src/PluginEditor.cpp)
 
-target_include_directories(Tide PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+target_include_directories(Tide PRIVATE src)
 
-# The rendered panel: plate, filmstrips and panel.json, made by
-# shared/indiewave/art from art/spec.py.
-file(GLOB TIDE_PANEL_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/resources/panel/*)
-juce_add_binary_data(TidePanel HEADER_NAME TidePanelData.h NAMESPACE TidePanelData SOURCES ${TIDE_PANEL_FILES})
-set_target_properties(TidePanel PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+# The rendered panel, made by shared/indiewave/art from art/spec.py.
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/panel.cmake)
+indiewave_add_panel(Tide)
 
 # The matched design fits a 20 Hz high pass at 192 kHz from nearly equal
 # cosines; fused multiply-adds, which Clang uses by default on Apple silicon,
@@ -80,7 +77,6 @@ target_compile_definitions(Tide PUBLIC
     JUCE_STRICT_REFCOUNTEDPOINTER=1)
 
 target_link_libraries(Tide PRIVATE
-    TidePanel
     juce::juce_audio_utils
     juce::juce_dsp
     PUBLIC

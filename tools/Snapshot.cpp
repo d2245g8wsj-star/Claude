@@ -25,7 +25,7 @@ int main (int argc, char* argv[])
                                       : juce::File::getCurrentWorkingDirectory()
                                             .getChildFile ("crest.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : crest::designWidth;
+    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : crest::CrestEditor::designSize().x;
 
     crest::CrestProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
@@ -57,7 +57,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * crest::designHeight / crest::designWidth));
+    editor->setSize (width, juce::roundToInt ((double) width * crest::CrestEditor::designSize().y / crest::CrestEditor::designSize().x));
 
     // Feed the plugin while the message loop runs, so the meters and the curve
     // marker are showing a live signal at the moment the frame is taken rather

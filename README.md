@@ -394,7 +394,7 @@ without opening a window:
 ```bash
 cmake -B build -DCREST_BUILD_TOOLS=ON
 cmake --build build --target crest_shot --parallel
-./build/crest_shot_artefacts/Release/crest_shot docs/ui.png 1640
+./build/crest_shot_artefacts/Release/crest_shot docs/ui.png 1500
 ```
 
 ---
@@ -410,10 +410,12 @@ src/PluginProcessor.*   parameters, gain staging, oversampling, the audio chain
 src/dsp/ClipEnvelope.h  how long the clipper has been working, which drives Adapt
 src/dsp/HarmonicStage.h the band limited harmonic generator
 src/dsp/LowSplit.h      the sidechain low pass
-src/PluginEditor.*      the panel: bakelite knobs, LED ladders, lit keys, the display
+art/spec.py             the panel: colour, positions, legends, every moving part
+resources/panel/        the rendered plate and filmstrips (shared/indiewave/art)
+src/PluginEditor.*      the rendered panel with the live display behind its glass
 src/gui/Panel.*         the two live views in the display: waveform and transfer curve
 shared/indiewave/       the range's shared panel parts and the session checks
-resources/gui/          the rendered plate of the panel before 0.10 (no longer compiled in)
+resources/gui/          the plate of the panel before 0.10 (no longer compiled in)
 src/PluginEditor.*      layout, scaled as a whole from one design size
 tests/Tests.cpp         the offline checks
 tools/Snapshot.cpp      offscreen editor render

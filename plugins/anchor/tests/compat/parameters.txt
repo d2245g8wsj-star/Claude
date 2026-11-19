@@ -1,0 +1,31 @@
+attack | choice | 0.1 ms;0.3 ms;1 ms;3 ms;5 ms;10 ms;15 ms;30 ms | default 5
+bypass | bool | default 0
+dual_split | bool | default 0
+feedback | bool | default 0
+iron | bool | default 0
+iron_link | bool | default 0
+iron_pad | float | 0..15 step 1 skew 1 | default 0
+make_up | float | 0..20 step 0.25 skew 1 | default 0
+make_up_iron | float | 0..20 step 0.25 skew 1 | default 0
+mix | float | 0..100 step 0.1 skew 1 | default 100
+mode | choice | Dual Mono;Stereo;Mid/Side | default 1
+mute | bool | default 0
+ratio | choice | 1.5:1;2:1;4:1;10:1;INF | default 2
+release | choice | 50 ms;0.1 s;0.3 s;0.5 s;0.6 s;0.9 s;1.2 s;Auto | default 7
+sc_external | bool | default 0
+sc_filter | choice | Off;60 Hz;90 Hz;150 Hz;T1;T2 | default 0
+sc_listen | bool | default 0
+side_attack | choice | 0.1 ms;0.3 ms;1 ms;3 ms;5 ms;10 ms;15 ms;30 ms | default 5
+side_feedback | bool | default 0
+side_make_up | float | 0..20 step 0.25 skew 1 | default 0
+side_make_up_iron | float | 0..20 step 0.25 skew 1 | default 0
+side_mix | float | 0..100 step 0.1 skew 1 | default 100
+side_mute | bool | default 0
+side_ratio | choice | 1.5:1;2:1;4:1;10:1;INF | default 2
+side_release | choice | 50 ms;0.1 s;0.3 s;0.5 s;0.6 s;0.9 s;1.2 s;Auto | default 7
+side_sc_filter | choice | Off;60 Hz;90 Hz;150 Hz;T1;T2 | default 0
+side_sc_listen | bool | default 0
+side_thd | float | 0..100 step 1 skew 1 | default 0
+side_threshold | float | -20..20 step 0.1 skew 1 | default 4
+thd | float | 0..100 step 1 skew 1 | default 0
+threshold | float | -20..20 step 0.1 skew 1 | default 4

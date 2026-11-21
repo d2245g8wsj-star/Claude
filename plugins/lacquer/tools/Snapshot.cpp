@@ -21,7 +21,7 @@ int main (int argc, char* argv[])
                                       : juce::File::getCurrentWorkingDirectory()
                                             .getChildFile ("lacquer.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : 1600;
+    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : lacquer::designWidth;
 
     lacquer::LacquerProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
@@ -71,7 +71,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * dynamic_cast<lacquer::LacquerEditor&> (*editor).designSize().y / dynamic_cast<lacquer::LacquerEditor&> (*editor).designSize().x));
+    editor->setSize (width, juce::roundToInt ((double) width * editor->getHeight() / editor->getWidth()));
 
     // Run the plugin while the message loop runs, as a host would.
     struct Settle final : private juce::Timer

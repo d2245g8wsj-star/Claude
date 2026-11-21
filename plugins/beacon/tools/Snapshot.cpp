@@ -75,8 +75,7 @@ int main (int argc, char* argv[])
     }
 
     // Let the editor settle its fold first, then draw it at the scale asked for.
-    const auto design = dynamic_cast<beacon::BeaconEditor&> (*editor).designSize();
-    editor->setSize (juce::roundToInt ((float) design.x * scale), juce::roundToInt ((float) design.y * scale));
+    editor->setSize (juce::roundToInt (editor->getWidth() / 0.9f * scale), juce::roundToInt (beacon::designHeight * scale));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.

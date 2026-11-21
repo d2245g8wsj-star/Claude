@@ -117,7 +117,7 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DTIDE_BUILD_TESTS=ON -DTIDE_BUILD_TOOLS=ON
 cmake --build build --target tide_tests tide_shot --parallel
 ./build/tide_tests_artefacts/Release/tide_tests
-./build/tide_shot_artefacts/Release/tide_shot docs/ui.png 1800
+./build/tide_shot_artefacts/Release/tide_shot docs/ui.png 1640
 ```
 
 The checks assert: the prototypes against the specification (peaks, shelves,
@@ -136,9 +136,8 @@ src/dsp/Bands.h          the switch tables and the analogue prototypes
 src/dsp/MatchedDesign.h  analogue to digital: exact poles, fitted zeros; the biquad
 src/dsp/ChannelEq.h      one channel: smoothing, the signal path
 src/PluginProcessor.*    parameters, link, mid/side, In, cue
-art/spec.py              the panel: colour, positions, legends and every moving part
-resources/panel/         the rendered plate and filmstrips (made from art/, see below)
-src/PluginEditor.*       the rendered panel, scaled as a whole
+src/gui/Panel.*          bakelite knobs, toggles, lit buttons, all drawn in code
+src/PluginEditor.*       the panel layout, scaled as a whole from one design size
 tests/Tests.cpp          the offline checks
 tools/Snapshot.cpp       offscreen editor render
 ```
@@ -146,15 +145,3 @@ tools/Snapshot.cpp       offscreen editor render
 ## Licence
 
 As for the rest of this repository; see `../../LICENSE` and `../../NOTICE.md`.
-
-## Re-rendering the panel
-
-The panel is rendered in Blender, like the rest of the range, from `art/spec.py`
-with the shared kit in `shared/indiewave/art`:
-
-```bash
-python3 art/spec.py
-node ../../shared/indiewave/art/gen_prints.js art
-python ../../shared/indiewave/art/panel.py art        # needs: pip install bpy==5.3.0
-python ../../shared/indiewave/art/assemble.py art resources/panel
-```

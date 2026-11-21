@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Beacon VERSION 0.8.0 LANGUAGES C CXX)
+project(Beacon VERSION 0.7.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,13 +52,10 @@ juce_add_plugin(Beacon
 
 target_sources(Beacon PRIVATE
     src/PluginProcessor.cpp
-    src/PluginEditor.cpp)
+    src/PluginEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp)
 
 target_include_directories(Beacon PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
-
-# The rendered panel, made by shared/indiewave/art from art/spec.py.
-include(${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/panel.cmake)
-indiewave_add_panel(Beacon)
 
 target_compile_definitions(Beacon PUBLIC
     JUCE_WEB_BROWSER=0

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Anchor VERSION 0.4.0 LANGUAGES C CXX)
+project(Anchor VERSION 0.3.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,13 +52,10 @@ juce_add_plugin(Anchor
 
 target_sources(Anchor PRIVATE
     src/PluginProcessor.cpp
-    src/PluginEditor.cpp)
+    src/PluginEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/ui/Panel.cpp)
 
 target_include_directories(Anchor PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
-
-# The rendered panel, made by shared/indiewave/art from art/spec.py.
-include(${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/panel.cmake)
-indiewave_add_panel(Anchor)
 
 target_compile_definitions(Anchor PUBLIC
     JUCE_WEB_BROWSER=0

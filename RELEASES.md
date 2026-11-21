@@ -1,19 +1,20 @@
 # IndieWave Audio plugin suite: versions and releases
 
-Nine plugins live in this repository, and a tenth, Nazaré, is in development. Crest sits at the root; the others each
-have their own folder under `plugins/` and their own workflow.
+Nine plugins live in this repository, and a tenth, Nazaré, is in development.
+Crest sits at the root; the others each have their own folder under `plugins/`
+and their own workflow.
 
 | Plugin | What it is | Version | Folder | Workflow | Plugin code | Bundle id |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Crest** | Converter and clipper | 0.11.0 beta | `/` | `macos.yml` | `Crst` | `audio.indiewave.crest` |
-| **Breakwater** | Mastering limiter | 0.7.0 beta | `plugins/breakwater` | `breakwater.yml` | `Brkw` | `audio.indiewave.breakwater` |
-| **Beacon** | Vari-mu tube compressor | 0.8.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
-| **Swell** | Two channel harmonic equaliser | 0.5.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
-| **Hinge** | Two channel Baxandall shelving equaliser | 0.5.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
-| **Lacquer** | Dual passive inductor equaliser | 0.5.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
-| **Tide** | Three band mastering equaliser with mid/side | 0.4.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
-| **Anchor** | VCA bus compressor | 0.4.0 beta | `plugins/anchor` | `anchor.yml` | `Ancr` | `audio.indiewave.anchor` |
-| **Lantern** | Passive tube equaliser | 0.4.0 beta | `plugins/lantern` | `lantern.yml` | `Lntn` | `audio.indiewave.lantern` |
+| **Crest** | Converter and clipper | 0.10.0 beta | `/` | `macos.yml` | `Crst` | `audio.indiewave.crest` |
+| **Breakwater** | Mastering limiter | 0.6.0 beta | `plugins/breakwater` | `breakwater.yml` | `Brkw` | `audio.indiewave.breakwater` |
+| **Beacon** | Vari-mu tube compressor | 0.7.0 beta | `plugins/beacon` | `beacon.yml` | `Bcon` | `audio.indiewave.beacon` |
+| **Swell** | Two channel harmonic equaliser | 0.4.0 beta | `plugins/swell` | `swell.yml` | `Swll` | `audio.indiewave.swell` |
+| **Hinge** | Two channel Baxandall shelving equaliser | 0.4.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
+| **Lacquer** | Dual passive inductor equaliser | 0.4.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
+| **Tide** | Three band mastering equaliser with mid/side | 0.3.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
+| **Anchor** | VCA bus compressor | 0.3.0 beta | `plugins/anchor` | `anchor.yml` | `Ancr` | `audio.indiewave.anchor` |
+| **Lantern** | Passive tube equaliser | 0.3.0 beta | `plugins/lantern` | `lantern.yml` | `Lntn` | `audio.indiewave.lantern` |
 | **Nazaré** | Large format analog console | in development | `plugins/nazare` | not yet | `Nzre` | `audio.indiewave.nazare` |
 
 All nine build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
@@ -111,10 +112,6 @@ separated by spaces. It deletes each release together with its tag.
 ## Changes
 
 ### Crest
-- **0.11.0** - Rendered panel in the range's Nazaré style: sky blue lacquer,
-  bakelite knobs, pointer selectors for the character and the converter, an
-  IN/OUT moving coil meter, and the waveform, transfer curve and figures live
-  behind glass. Same parameters as 0.10.0, so sessions open as they were.
 - **0.10.0** - New panel in the range's look: brushed aluminium, rack ears,
   bakelite knobs, the IndieWave mark with the name in the left margin, LED
   ladders for IN and OUT and a black display with the waveform and the
@@ -123,11 +120,6 @@ separated by spaces. It deletes each release together with its tag.
   coefficient table exactly.
 
 ### Breakwater
-- **0.7.0** - Rendered panel in the range's Nazaré style: deep sea lacquer
-  with cream print, bakelite knobs, pointer selectors for the style, the
-  target and the converter, chrome toggles, and the scope, meters and
-  loudness live behind glass. Same parameters as 0.6.0, so sessions open as
-  they were.
 - **0.6.0** - In the range's frame: rack ears either side and the IndieWave
   mark beside the name. The layout, the Advanced panel and the remembered
   size are as before. Same parameters as 0.5.0, so sessions open as they
@@ -137,10 +129,9 @@ separated by spaces. It deletes each release together with its tag.
   remembered.
 
 ### Beacon
-- **0.8.0** - Rendered panel in the range's Nazaré style: apricot lacquer,
-  bakelite knobs, chrome toggles and a moving coil gain reduction meter per
-  row, the side row folding out for mid/side or a split dual mono. Same
-  parameters as 0.7.0, so sessions open as they were.
+- **Next** - The meters hold their reading between the host's blocks, so the
+  needle no longer drops back to rest for a frame when the host processes in
+  large blocks.
 - **0.7.0** - Tubes and iron modelled from the physics. The gain cell is a
   push-pull pair of remote cutoff tubes, so distortion rises with reduction
   as a mixed 2nd and 3rd series, TUBE colours without moving the
@@ -158,10 +149,6 @@ separated by spaces. It deletes each release together with its tag.
   mid/side mode.
 
 ### Swell
-- **0.5.0** - Rendered panel in the range's Nazaré style: butter yellow
-  lacquer, bakelite knobs, amber drive jewels, a moving coil meter per strip
-  and a pointer selector for DUAL / STEREO / M·S. Same parameters as 0.4.0, so
-  sessions open as they were.
 - **0.4.0** - A modern panel: satin graphite, aluminium knobs in coloured
   value arcs (coral, amber and cyan for the three bands), pill switches and
   LED bar meters, with the IndieWave mark. STEREO folds the unit to one row;
@@ -171,10 +158,6 @@ separated by spaces. It deletes each release together with its tag.
   as a new plugin).
 
 ### Hinge
-- **0.5.0** - Rendered panel in the range's Nazaré style: sage lacquer, cream
-  bakelite knobs, a pointer selector for STEREO / DUAL / M·S and a moving coil
-  meter per row, with a lamp that glows as the dynamic shelves work. Same
-  parameters as 0.4.0, so sessions open as they were.
 - **0.4.0** - New panel in the range's look, with the IndieWave mark: sand
   enamel, bakelite knobs with red, blue and olive scales. STEREO folds the
   unit to one row; DUAL and M/S fold out the second. Same switches as before
@@ -182,10 +165,6 @@ separated by spaces. It deletes each release together with its tag.
 - **0.3.0** - First public beta. Bit exact on Apple silicon.
 
 ### Lacquer
-- **0.5.0** - Rendered panel in the range's Nazaré style, in both finishes:
-  Classic White and Lacquer Black, with the band colours in the dots, the
-  switch icons, a red pilot jewel and a pointer selector for STEREO / DUAL /
-  M·S. Same parameters as 0.4.0, so sessions open as they were.
 - **0.4.0** - The panel folds: STEREO is one channel over the centre bar,
   DUAL and M/S fold the second out below. New mid/side mode (off in every
   earlier session, which sound as they did). The IndieWave mark in the bar;
@@ -194,17 +173,13 @@ separated by spaces. It deletes each release together with its tag.
   finishes.
 
 ### Tide
-- **0.4.0** - Rendered panel in the range's Nazaré style: seafoam lacquer,
-  nickel rack ears, an enamel badge, cream bakelite knobs, chrome toggles and
-  a pointer selector for the cue. Same parameters as 0.3.0, so sessions open
-  as they were.
 - **0.3.0** - First public beta.
 
 ### Anchor
-- **0.4.0** - Rendered panel in the range's Nazaré style: lavender lacquer,
-  stepped bakelite knobs, a moving coil gain reduction meter per half, and
-  the side (or right) half folding out beside the centre for mid/side or a
-  split dual mono. Same parameters as 0.3.0, so sessions open as they were.
+- **Next** - The gain reduction meter holds its reading between the host's
+  blocks, so it no longer jumps back to rest for a frame when the host
+  processes in large blocks. Switching IRON leaves the make up knob where
+  it is: the stage switched to takes the value the knob showed.
 - **0.3.0** - First public beta. A VCA bus compressor beside Beacon, in the
   same black panel, after the hardware's manual: stepped ratio, eight attack
   and eight release positions with AUTO, sidechain high passes and tilts, an
@@ -212,11 +187,9 @@ separated by spaces. It deletes each release together with its tag.
   with a make up for each.
 
 ### Lantern
-- **0.4.0** - Rendered panel in the range's Nazaré style: sand lacquer, the
-  four bands in their colours, a pointer selector for the listen focus, and
-  the response drawn live behind the centre glass; the side (or right) half
-  folds out beside it. Same parameters as 0.3.0, so sessions open as they
-  were.
+- **Next** - The meters hold their reading between the host's blocks.
+  Switching IRON leaves the output knob where it is: the stage switched to
+  takes the value the knob showed.
 - **0.3.0** - First public beta. A four band passive tube equaliser beside
   Beacon, after the hardware's manual: twelve positions a band with Q and
   bell or shelf on every band, proportional or constant Q, 5 or 15 dB gain
@@ -226,7 +199,7 @@ separated by spaces. It deletes each release together with its tag.
 
 ### Nazaré
 - **In development** - A large format analog console: six console models
-  fitted to reference measurements (`plugins/nazare/dsp`), the rendered panel
-  that set the range's style (`plugins/nazare/art`) and the concept page
-  (`plugins/nazare/docs`). There is no plugin build yet; plugin code `Nzre`
-  and bundle id `audio.indiewave.nazare` are reserved for it.
+  fitted to reference measurements (`plugins/nazare/dsp`), its rendered
+  panel (`plugins/nazare/art`) and the concept page (`plugins/nazare/docs`).
+  There is no plugin build yet; plugin code `Nzre` and bundle id
+  `audio.indiewave.nazare` are reserved for it.

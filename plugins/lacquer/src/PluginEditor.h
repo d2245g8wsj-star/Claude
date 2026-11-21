@@ -1,17 +1,19 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "indiewave/ui/Rendered.h"
+#include "gui/Panel.h"
+#include "indiewave/ui/Panel.h"
 
 namespace lacquer
 {
 
-/**
-    The rendered panel, in the range's Nazaré style (plugins/lacquer/art/spec.py).
-    Four faces: folded (stereo, one row) and open (dual or mid/side, two rows),
-    each in Classic White and Lacquer Black. The mode selector and the finish
-    switch choose; the editor's height follows the fold.
-*/
+/** Every coordinate in the editor is in these units; the face is scaled as one.
+    Folded (stereo, linked) the unit is one channel over the centre bar;
+    unfolded (dual or mid/side) the second channel hangs below the bar. */
+inline constexpr int designWidth        = 1400;
+inline constexpr int designHeightFolded = 376;
+inline constexpr int designHeightOpen   = 648;
+
 class LacquerEditor final : public juce::AudioProcessorEditor,
                             private juce::Timer
 {
@@ -22,34 +24,64 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    /** The size in points of the face for the current mode. */
-    juce::Point<int> designSize() const;
-
 private:
     void timerCallback() override;
-    void setMode (int index);
-    void show (bool open, int finish);
+    void applyFold();
 
-    using Face = indiewave::ui::rendered::Face;
-
-    struct Panel
+    /** One channel: six bands left to right, frequency above amount, and the
+        four switches at the right hand end. */
+    struct Strip
     {
-        Panel (const indiewave::ui::rendered::Art&, LacquerProcessor&, const juce::String& name, int finish);
+        Strip (LacquerProcessor&, int index);
 
-        Face face;
-        indiewave::ui::rendered::Selector mode;
-        indiewave::ui::rendered::Lamp pilot;
-        indiewave::ui::rendered::Switch finishSwitch;
+        std::vector<juce::Component*> components();
+
+        panel::SteppedKnob lowBoostFreq, lowBoostAmount, lowCutFreq, lowCutAmount;
+        panel::SteppedKnob midBoostFreq, midBoostAmount, midCutFreq, midCutAmount;
+        panel::SteppedKnob trebleBoostFreq, trebleQ, trebleBoostAmount, trebleCutFreq, trebleCutAmount;
+        panel::Toggle shift, buffer, transformer, eqIn;
     };
 
-    Panel& current();
+    class Face final : public juce::Component
+    {
+    public:
+        explicit Face (LacquerProcessor&);
 
-    LacquerProcessor& processor;
+        void paint (juce::Graphics&) override;
+        void resized() override;
+
+        void refresh();
+
+        bool isOpen() const noexcept { return open; }
+        std::function<void()> onFoldChanged;
+
+    private:
+        void layoutStrip (Strip&, float top);
+        void applyFinish (panel::Finish);
+        void setMode (int index);
+        void paintStripMarkings (juce::Graphics&, int index, float top) const;
+
+        LacquerProcessor& processor;
+        std::array<std::unique_ptr<Strip>, numChannelStrips> strips;
+
+        std::array<indiewave::ui::Key, 3> modeKeys;
+        indiewave::ui::FoldTab fold;
+        panel::SteppedKnob output;
+        panel::PilotLamp   pilot;
+        panel::FinishSelector finishSelector;
+
+        panel::Finish         finish  { panel::Finish::white };
+        const panel::Palette* palette { &panel::Palette::forFinish (panel::Finish::white) };
+
+        bool open { false };
+        int shownMode { -1 };
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
+    };
+
+    LacquerProcessor&   processor;
     juce::TooltipWindow tooltips { this, 650 };
-    std::array<std::unique_ptr<Panel>, 4> panels;   // folded/open x white/black
-
-    bool open { false };
-    int finish { -1 }, shownMode { -1 };
+    Face                face;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LacquerEditor)
 };

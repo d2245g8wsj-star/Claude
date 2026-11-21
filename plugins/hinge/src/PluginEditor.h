@@ -1,16 +1,18 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "indiewave/ui/Rendered.h"
+#include "indiewave/ui/Panel.h"
 
 namespace hinge
 {
 
-/**
-    The rendered panel, in the range's Nazaré style (plugins/hinge/art/spec.py).
-    Two faces: folded, one row for stereo; open, a second row for dual or
-    mid/side. The mode selector chooses, and the editor's height follows.
-*/
+/** Every coordinate in the editor is in these units; the face is scaled as one.
+    Folded (stereo, linked) the unit is one row; unfolded (dual or mid/side)
+    it carries a second row underneath. */
+inline constexpr int designWidth        = 1640;
+inline constexpr int designHeightFolded = 198;
+inline constexpr int designHeightOpen   = 352;
+
 class HingeEditor final : public juce::AudioProcessorEditor,
                           private juce::Timer
 {
@@ -21,32 +23,58 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    /** The size in points of the face for the current mode. */
-    juce::Point<int> designSize() const;
-
 private:
     void timerCallback() override;
-    void setMode (int index);
-    void showFace (bool open);
+    void applyFold();
 
-    using Face = indiewave::ui::rendered::Face;
+    using Knob = indiewave::ui::BakeliteKnob;
 
-    struct Extras
+    /** One channel's row: the low section, the high section, the dynamics,
+        output, engage and the meter. */
+    struct Strip
     {
-        Extras (Face&, bool open);
+        Strip (HingeProcessor&, int index);
 
-        indiewave::ui::rendered::Selector mode;
-        std::array<std::unique_ptr<indiewave::ui::rendered::Lamp>, 2> lamps;
-        std::array<std::unique_ptr<indiewave::ui::rendered::VuNeedles>, 2> meters;
+        std::vector<juce::Component*> components();
+        void layout (float rowCentre);
+
+        Knob lowCut, lowShelf, lowLevel, highLevel, highShelf, highCut;
+        Knob threshold, lowDyn, highDyn, output;
+        indiewave::ui::Key engage;
+        indiewave::ui::LedLadder meter;
+        float movement[2] {};
     };
 
-    HingeProcessor& processor;
-    juce::TooltipWindow tooltips { this, 650 };
-    Face folded, opened;
-    Extras foldedExtras, openExtras;
+    class Face final : public juce::Component
+    {
+    public:
+        explicit Face (HingeProcessor&);
 
-    bool open { false };
-    int shownMode { -1 };
+        void paint (juce::Graphics&) override;
+        void resized() override;
+        void refresh();
+
+        bool isOpen() const noexcept { return open; }
+        std::function<void()> onFoldChanged;
+
+    private:
+        void setMode (int index);
+        void paintRow (juce::Graphics&, int index, float rowCentre) const;
+
+        HingeProcessor& processor;
+        std::array<std::unique_ptr<Strip>, numChannelStrips> strips;
+        std::array<indiewave::ui::Key, 3> modeKeys;
+        indiewave::ui::FoldTab fold;
+
+        bool open { false };
+        int shownMode { -1 };
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
+    };
+
+    HingeProcessor&     processor;
+    juce::TooltipWindow tooltips { this, 650 };
+    Face                face;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HingeEditor)
 };

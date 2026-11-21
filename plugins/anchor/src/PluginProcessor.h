@@ -27,9 +27,8 @@ namespace pid
     inline constexpr const char* mute      = "mute";
     inline constexpr const char* mix       = "mix";
 
-    /** Make up gain. The unit keeps one value for each output stage, so
-        switching between GREEN and RED does not jump in level by whatever
-        the iron was being driven with. */
+    /** Make up gain, one value for each output stage. The editor carries the
+        knob's value over when IRON is switched, so the knob stays put. */
     inline constexpr const char* makeUp     = "make_up";
     inline constexpr const char* makeUpIron = "make_up_iron";
 

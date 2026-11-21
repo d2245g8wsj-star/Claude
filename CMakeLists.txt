@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Crest VERSION 0.11.0 LANGUAGES C CXX)
+project(Crest VERSION 0.10.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,13 +56,10 @@ juce_add_plugin(Crest
 target_sources(Crest PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
-    src/gui/Panel.cpp)
+    src/gui/Panel.cpp
+    shared/indiewave/ui/Panel.cpp)
 
 target_include_directories(Crest PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/shared)
-
-# The rendered panel, made by shared/indiewave/art from art/spec.py.
-include(${CMAKE_CURRENT_SOURCE_DIR}/shared/indiewave/panel.cmake)
-indiewave_add_panel(Crest)
 
 target_compile_definitions(Crest PUBLIC
     JUCE_WEB_BROWSER=0

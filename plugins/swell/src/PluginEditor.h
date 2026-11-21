@@ -1,15 +1,19 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "indiewave/ui/Rendered.h"
+#include "gui/Modern.h"
+#include "indiewave/ui/Panel.h"
 
 namespace swell
 {
 
-/**
-    The rendered panel, in the range's Nazaré style (plugins/swell/art/spec.py).
-    Folded for stereo (one strip for both channels), open for dual or mid/side.
-*/
+/** Every coordinate in the editor is in these units; the face is scaled as one.
+    Folded (stereo) the unit is one row; unfolded (dual or mid/side) it carries
+    the second strip underneath. */
+inline constexpr int designWidth        = 1640;
+inline constexpr int designHeightFolded = 214;
+inline constexpr int designHeightOpen   = 384;
+
 class SwellEditor final : public juce::AudioProcessorEditor,
                           private juce::Timer
 {
@@ -20,30 +24,55 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    /** The size in points of the face for the current mode. */
-    juce::Point<int> designSize() const;
-
 private:
     void timerCallback() override;
-    void showFace (bool open);
+    void applyFold();
 
-    using Face = indiewave::ui::rendered::Face;
-
-    struct Extras
+    /** One strip's row: input, the three bands, output, strip IN and the meter. */
+    struct Strip
     {
-        Extras (Face&, int rows);
+        Strip (SwellProcessor&, int index);
 
-        std::vector<std::unique_ptr<indiewave::ui::rendered::Lamp>> drive;     // row * 3 + band
-        std::vector<std::unique_ptr<indiewave::ui::rendered::VuNeedles>> meters;
+        std::vector<juce::Component*> components();
+        void layout (float rowCentre);
+
+        modern::ArcKnob input, loLevel, loFreq, midLevel, midFreq, hiLevel, hiFreq, output;
+        modern::Pill loIn, midIn, hiIn, active;
+        modern::DriveLed loDrive, midDrive, hiDrive;
+        modern::BarMeter meter;
     };
 
-    SwellProcessor& processor;
-    juce::TooltipWindow tooltips { this, 650 };
-    Face folded, opened;
-    Extras foldedExtras, openExtras;
+    class Face final : public juce::Component
+    {
+    public:
+        explicit Face (SwellProcessor&);
 
-    bool open { false };
-    int shownMode { -1 };
+        void paint (juce::Graphics&) override;
+        void resized() override;
+        void refresh();
+
+        bool isOpen() const noexcept { return open; }
+        std::function<void()> onFoldChanged;
+
+    private:
+        void setMode (StripMode);
+        void paintRow (juce::Graphics&, int index, float rowCentre) const;
+
+        SwellProcessor& processor;
+        std::array<std::unique_ptr<Strip>, numChannelStrips> strips;
+        modern::Segments modeSwitch { { "STEREO", "DUAL", "M/S" } };
+        indiewave::ui::FoldTab fold;
+
+        bool open { false };
+        int shownMode { -1 };
+        StripMode lastOpenMode { StripMode::dualMono };
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Face)
+    };
+
+    SwellProcessor&     processor;
+    juce::TooltipWindow tooltips { this, 650 };
+    Face                face;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SwellEditor)
 };

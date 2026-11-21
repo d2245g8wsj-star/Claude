@@ -61,8 +61,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    const auto design = dynamic_cast<hinge::HingeEditor&> (*editor).designSize();
-    editor->setSize (juce::roundToInt ((float) design.x * scale), juce::roundToInt ((float) design.y * scale));
+    editor->setSize (juce::roundToInt (hinge::designWidth * scale), juce::roundToInt (editor->getHeight() / 0.8f * scale));
 
     // Feed the plugin while the message loop runs, so the meters and lamps are
     // lit at the moment the frame is taken.

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Tide VERSION 0.4.0 LANGUAGES C CXX)
+project(Tide VERSION 0.3.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,13 +52,10 @@ juce_add_plugin(Tide
 
 target_sources(Tide PRIVATE
     src/PluginProcessor.cpp
-    src/PluginEditor.cpp)
+    src/PluginEditor.cpp
+    src/gui/Panel.cpp)
 
 target_include_directories(Tide PRIVATE src)
-
-# The rendered panel, made by shared/indiewave/art from art/spec.py.
-include(${CMAKE_CURRENT_SOURCE_DIR}/../../shared/indiewave/panel.cmake)
-indiewave_add_panel(Tide)
 
 # The matched design fits a 20 Hz high pass at 192 kHz from nearly equal
 # cosines; fused multiply-adds, which Clang uses by default on Apple silicon,
@@ -115,7 +112,7 @@ if(TIDE_BUILD_TOOLS)
     juce_add_console_app(tide_shot PRODUCT_NAME "tide_shot")
 
     target_sources(tide_shot PRIVATE tools/Snapshot.cpp)
-    target_include_directories(tide_shot PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
+    target_include_directories(tide_shot PRIVATE src)
     target_link_libraries(tide_shot PRIVATE
         Tide
         juce::juce_audio_utils

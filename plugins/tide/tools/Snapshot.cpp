@@ -21,7 +21,7 @@ int main (int argc, char* argv[])
                                       : juce::File::getCurrentWorkingDirectory()
                                             .getChildFile ("tide.png").getFullPathName());
 
-    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : tide::TideEditor::designSize().x;
+    const auto width = argc > 2 ? juce::String (argv[2]).getIntValue() : tide::designWidth;
 
     tide::TideProcessor processor;
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
@@ -62,7 +62,7 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-    editor->setSize (width, juce::roundToInt ((double) width * tide::TideEditor::designSize().y / tide::TideEditor::designSize().x));
+    editor->setSize (width, juce::roundToInt ((double) width * tide::designHeight / tide::designWidth));
 
     // Feed the plugin while the message loop runs, so the editor has settled
     // when the frame is taken.

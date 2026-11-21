@@ -160,8 +160,3 @@ tools/Snapshot.cpp      offscreen editor render
 ## Licence
 
 As for the rest of this repository; see `../../LICENSE` and `../../NOTICE.md`.
-
-## Re-rendering the panel
-
-The panel is rendered in Blender from `art/spec.py` with the range's kit, see
-`shared/indiewave/art/README.md`.

@@ -157,7 +157,7 @@ On Linux, JUCE needs the usual development headers (see the Crest README).
 cmake -B build -DHINGE_BUILD_TESTS=ON -DHINGE_BUILD_TOOLS=ON
 cmake --build build --target hinge_tests hinge_shot --parallel
 ./build/hinge_tests_artefacts/Release/hinge_tests
-./build/hinge_shot_artefacts/Release/hinge_shot docs/ui.png 0.8 stereo   # or dual, ms
+./build/hinge_shot_artefacts/Release/hinge_shot docs/ui.png 1.0 stereo   # or dual, ms
 ```
 
 The checks assert: the network's documented behaviour (half dB detents, shoulder
@@ -178,6 +178,7 @@ src/dsp/MatchedDesign.h  analogue to digital: exact poles, fitted zeros; the biq
 src/dsp/ChannelEq.h      one channel: smoothing, dynamics, the signal path
 src/dsp/Meters.h         audio thread to editor
 src/PluginProcessor.*    parameters, link, mid/side, control rate
+src/gui/Panel.*          knobs, lamps, meters, all drawn in code
 src/PluginEditor.*       layout, scaled as a whole from one design size
 tests/Tests.cpp          the offline checks
 tools/Snapshot.cpp       offscreen editor render
@@ -186,8 +187,3 @@ tools/Snapshot.cpp       offscreen editor render
 ## Licence
 
 As for the rest of this repository; see `../../LICENSE` and `../../NOTICE.md`.
-
-## Re-rendering the panel
-
-The panel is rendered in Blender from `art/spec.py` with the range's kit, see
-`shared/indiewave/art/README.md`.

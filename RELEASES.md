@@ -1,6 +1,6 @@
 # IndieWave Audio plugin suite: versions and releases
 
-Seven plugins live in this repository. Crest sits at the root; the others each
+Nine plugins live in this repository. Crest sits at the root; the others each
 have their own folder under `plugins/` and their own workflow.
 
 | Plugin | What it is | Version | Folder | Workflow | Plugin code | Bundle id |
@@ -12,8 +12,10 @@ have their own folder under `plugins/` and their own workflow.
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.4.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.4.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
 | **Tide** | Three band mastering equaliser with mid/side | 0.3.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
+| **Anchor** | VCA bus compressor | 0.3.0 beta | `plugins/anchor` | `anchor.yml` | `Ancr` | `audio.indiewave.anchor` |
+| **Lantern** | Passive tube equaliser | 0.3.0 beta | `plugins/lantern` | `lantern.yml` | `Lntn` | `audio.indiewave.lantern` |
 
-All seven build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
+All nine build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
 and Standalone for macOS and a 64 bit VST3 and Standalone for Windows, and
 share the manufacturer code `Idwv`. The plugin code and bundle id never change once a
 plugin is public: hosts use them to find the plugin in saved sessions.
@@ -37,7 +39,7 @@ Where each plugin starts reflects how settled it is:
 - **0.9** - feature complete, only polish left (Crest).
 - **0.5** - feature complete, layout still moving (Breakwater, Beacon).
 - **0.3** - complete and working, young and not yet used much (Swell, Hinge,
-  Lacquer, Tide).
+  Lacquer, Tide, Anchor, Lantern).
 
 ## Sessions keep working
 
@@ -167,3 +169,18 @@ separated by spaces. It deletes each release together with its tag.
 
 ### Tide
 - **0.3.0** - First public beta.
+
+### Anchor
+- **0.3.0** - First public beta. A VCA bus compressor beside Beacon, in the
+  same black panel, after the hardware's manual: stepped ratio, eight attack
+  and eight release positions with AUTO, sidechain high passes and tilts, an
+  external key, THD on the wet path, mix, mute, and the RED/GREEN output
+  with a make up for each.
+
+### Lantern
+- **0.3.0** - First public beta. A four band passive tube equaliser beside
+  Beacon, after the hardware's manual: twelve positions a band with Q and
+  bell or shelf on every band, proportional or constant Q, 5 or 15 dB gain
+  modes, band focus listen, active high and low pass after the passive
+  section, THD ahead of it, mute, and the RED/GREEN output with a level for
+  each, with the response drawn in the centre.

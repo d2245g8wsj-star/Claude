@@ -13,6 +13,8 @@ L = json.load(open(os.path.join(HERE, "layout.json")))
 FR = os.path.join(HERE, "renders", "frames")
 OUT = os.path.join(HERE, "..", "docs", "renders")  # what the concept page loads
 os.makedirs(OUT, exist_ok=True)
+RES = os.path.join(HERE, "..", "resources")  # what the plugin embeds
+os.makedirs(RES, exist_ok=True)
 W, H = L["size"]
 
 def clean(img):
@@ -42,12 +44,14 @@ for key in ("drive", "small", "console", "trim", "toggle", "jewel"):
     sheet = Image.new("RGBA", (w * cols, h * rows))
     for i, f in enumerate(fs): sheet.paste(f, ((i % cols) * w, (i // cols) * h))
     sheet.save(os.path.join(OUT, f"{key}.webp"), "WEBP", quality=90, method=6)
+    sheet.save(os.path.join(RES, f"{key}.png"), optimize=True)  # lossless, for the plugin binary
     meta["strips"][key] = {"w": w / k, "h": h / k, "n": len(fs), "cols": cols, "rows": rows}
 
 for name in ("plate_front", "plate_rear"):
     p = os.path.join(FR, name + ".png")
     if os.path.exists(p):
         Image.open(p).convert("RGB").save(os.path.join(OUT, name + ".jpg"), "JPEG", quality=92, subsampling=0, optimize=True)
+        Image.open(p).convert("RGB").save(os.path.join(RES, name + ".jpg"), "JPEG", quality=94, subsampling=0, optimize=True)
 
 json.dump(meta, open(os.path.join(OUT, "strips.json"), "w"), indent=1)
 

@@ -103,7 +103,7 @@ def build(key, v, eq, kind):
     return P
 
 # GLASS is Nazaré's own: the cleanest stage, odd only, a soft ceiling just above full scale
-GLASS_SHAPER = {"k1": 0.0, "a2": 2e-5, "a3": -4e-4, "clip_c": 1.25, "clip_p": 6.0}
+GLASS_SHAPER = {"k1": 0.0, "a2": 2e-5, "a3": -4e-4, "clip_c": 1.25, "clip_p": 12.0}
 
 def residuals(v, key, eq, kind, T):
     P = build(key, v, eq, kind); r = []

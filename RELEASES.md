@@ -1,6 +1,6 @@
 # IndieWave Audio plugin suite: versions and releases
 
-Seven plugins live in this repository. Crest sits at the root; the others each
+Eight plugins live in this repository. Crest sits at the root; the others each
 have their own folder under `plugins/` and their own workflow.
 
 | Plugin | What it is | Version | Folder | Workflow | Plugin code | Bundle id |
@@ -12,8 +12,9 @@ have their own folder under `plugins/` and their own workflow.
 | **Hinge** | Two channel Baxandall shelving equaliser | 0.4.0 beta | `plugins/hinge` | `hinge.yml` | `Hnge` | `audio.indiewave.hinge` |
 | **Lacquer** | Dual passive inductor equaliser | 0.4.0 beta | `plugins/lacquer` | `lacquer.yml` | `Lacq` | `audio.indiewave.lacquer` |
 | **Tide** | Three band mastering equaliser with mid/side | 0.3.0 beta | `plugins/tide` | `tide.yml` | `Tide` | `audio.indiewave.tide` |
+| **Nazare** | Large format analog console | 0.1.0 (first build) | `plugins/nazare` | `nazare.yml` | `Nzre` | `audio.indiewave.nazare` |
 
-All seven build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
+All eight build against JUCE 8.0.6, as a universal (arm64 + x86_64) VST3, AU
 and Standalone for macOS and a 64 bit VST3 and Standalone for Windows, and
 share the manufacturer code `Idwv`. The plugin code and bundle id never change once a
 plugin is public: hosts use them to find the plugin in saved sessions.
@@ -160,3 +161,9 @@ separated by spaces. It deletes each release together with its tag.
 
 ### Tide
 - **0.3.0** - First public beta.
+
+### Nazare
+- **0.1.0** - First build, not yet released. Six consoles fitted to measurements of a
+  reference console plugin, the drive knob calibrated in distortion, 4x
+  oversampling, per-channel spread, transient memory, and the panel rendered
+  in Blender with a front and a rear.

@@ -275,6 +275,21 @@ AnchorEditor::Face::Face (AnchorProcessor& p)
     addChildComponent (fold);
     fold.onClick = [this] { foldTabClicked(); };
 
+    // Switching IRON leaves the make up knob where it is: the stage switched to
+    // takes the value the other one had, for both channels.
+    iron.onClick = [this]
+    {
+        const auto toIron = iron.getToggleState();
+        for (const juce::String prefix : { "", "side_" })
+        {
+            auto* from = processor.apvts.getParameter (prefix + (toIron ? pid::makeUp : pid::makeUpIron));
+            auto* to   = processor.apvts.getParameter (prefix + (toIron ? pid::makeUpIron : pid::makeUp));
+            to->beginChangeGesture();
+            to->setValueNotifyingHost (from->getValue());
+            to->endChangeGesture();
+        }
+    };
+
     shownIron = iron.getToggleState();
     main.showStage (shownIron);
 
@@ -354,10 +369,10 @@ void AnchorEditor::Face::refresh()
     for (size_t ch = 0; ch < 2; ++ch)
     {
         auto& m = processor.meters.channels[ch];
-        reduction[ch] = MeterSource::take (m.reductionDb);
-        drive[ch]     = MeterSource::take (m.thdDrive);
-        in[ch]        = MeterSource::take (m.inPeak);
-        out[ch]       = MeterSource::take (m.outPeak);
+        reduction[ch] = MeterSource::take (m.reductionDb, held[ch][0]);
+        drive[ch]     = MeterSource::take (m.thdDrive, held[ch][1]);
+        in[ch]        = MeterSource::take (m.inPeak, held[ch][2]);
+        out[ch]       = MeterSource::take (m.outPeak, held[ch][3]);
     }
 
     const auto first = [this] (const std::array<float, 2>& v) { return open ? v[0] : juce::jmax (v[0], v[1]); };

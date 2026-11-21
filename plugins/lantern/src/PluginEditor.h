@@ -122,6 +122,8 @@ private:
         std::unique_ptr<Follow> ironFollow;
 
         float heat[2] {};
+        /** The meters' last readings: reduction, drive, input, output. */
+        std::array<std::array<MeterSource::Held, 4>, 2> held {};
         bool open { false };
         bool shownIron { false };
         int shownMode { -1 };

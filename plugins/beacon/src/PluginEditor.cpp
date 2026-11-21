@@ -362,10 +362,10 @@ void BeaconEditor::Face::refresh()
     for (size_t ch = 0; ch < 2; ++ch)
     {
         auto& m = processor.meters.channels[ch];
-        reduction[ch] = MeterSource::take (m.reductionDb);
-        drive[ch]     = MeterSource::take (m.thdDrive);
-        in[ch]        = MeterSource::take (m.inPeak);
-        out[ch]       = MeterSource::take (m.outPeak);
+        reduction[ch] = MeterSource::take (m.reductionDb, held[ch][0]);
+        drive[ch]     = MeterSource::take (m.thdDrive, held[ch][1]);
+        in[ch]        = MeterSource::take (m.inPeak, held[ch][2]);
+        out[ch]       = MeterSource::take (m.outPeak, held[ch][3]);
     }
 
     const auto first = [this] (const std::array<float, 2>& v) { return open ? v[0] : juce::jmax (v[0], v[1]); };

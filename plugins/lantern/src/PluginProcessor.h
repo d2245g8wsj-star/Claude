@@ -31,7 +31,8 @@ namespace pid
 
     inline constexpr const char* thd        = "thd";
 
-    /** Output level. The unit keeps one value for each output stage. */
+    /** Output level, one value for each output stage. The editor carries the
+        knob's value over when IRON is switched, so the knob stays put. */
     inline constexpr const char* output     = "output";
     inline constexpr const char* outputIron = "output_iron";
 

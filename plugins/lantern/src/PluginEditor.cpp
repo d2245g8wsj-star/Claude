@@ -357,6 +357,21 @@ LanternEditor::Face::Face (LanternProcessor& p)
     addChildComponent (fold);
     fold.onClick = [this] { foldTabClicked(); };
 
+    // Switching IRON leaves the output knob where it is: the stage switched to
+    // takes the value the other one had, for both channels.
+    iron.onClick = [this]
+    {
+        const auto toIron = iron.getToggleState();
+        for (const juce::String prefix : { "", "side_" })
+        {
+            auto* from = processor.apvts.getParameter (prefix + (toIron ? pid::output : pid::outputIron));
+            auto* to   = processor.apvts.getParameter (prefix + (toIron ? pid::outputIron : pid::output));
+            to->beginChangeGesture();
+            to->setValueNotifyingHost (from->getValue());
+            to->endChangeGesture();
+        }
+    };
+
     auto* ironParameter = p.apvts.getParameter (pid::iron);
     ironFollow = std::make_unique<Follow> (main.outputIron, p.apvts.getParameter (pid::ironLink), p.apvts.getParameter (pid::ironPad),
                                            [ironParameter] { return ironParameter->getValue() >= 0.5f; });
@@ -447,10 +462,10 @@ void LanternEditor::Face::refresh()
     for (size_t ch = 0; ch < 2; ++ch)
     {
         auto& m = processor.meters.channels[ch];
-        MeterSource::take (m.reductionDb);
-        MeterSource::take (m.inPeak);
-        drive[ch] = MeterSource::take (m.thdDrive);
-        out[ch]   = MeterSource::take (m.outPeak);
+        MeterSource::take (m.reductionDb, held[ch][0]);
+        MeterSource::take (m.inPeak, held[ch][2]);
+        drive[ch] = MeterSource::take (m.thdDrive, held[ch][1]);
+        out[ch]   = MeterSource::take (m.outPeak, held[ch][3]);
     }
 
     const auto toDb = [] (float linear) { return juce::Decibels::gainToDecibels (linear, -100.0f); };

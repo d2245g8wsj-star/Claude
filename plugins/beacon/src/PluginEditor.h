@@ -103,6 +103,8 @@ private:
         indiewave::ui::FoldTab fold;
 
         float heat[2] {};
+        /** The meters' last readings: reduction, drive, input, output. */
+        std::array<std::array<MeterSource::Held, 4>, 2> held {};
         bool open { false };
         int shownMode { -1 };
 
